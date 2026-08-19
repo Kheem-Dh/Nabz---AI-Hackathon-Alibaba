@@ -1,5 +1,4 @@
 // Large circular mic button. Pulses while listening.
-
 export default function MicButton({ listening, disabled, onClick }) {
   return (
     <button
@@ -12,9 +11,7 @@ export default function MicButton({ listening, disabled, onClick }) {
       <span className="mic-icon" aria-hidden="true">
         {listening ? '⏹' : '🎤'}
       </span>
-      <span className="mic-label">
-        {listening ? 'سن رہے ہیں…' : 'بولیں'}
-      </span>
+      <span className="mic-label">{listening ? 'سن رہے ہیں…' : 'بولیں'}</span>
     </button>
   )
 }

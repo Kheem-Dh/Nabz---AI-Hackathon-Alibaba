@@ -1,15 +1,19 @@
-"""Sehat Saathi (صحت ساتھی) — FastAPI backend.
+"""Nabz (نبض) — FastAPI backend.
 
-An AI health-triage assistant for rural Pakistan. It classifies urgency only;
-it never diagnoses or prescribes. All AI calls go through this backend so the
+A voice-first, Urdu-first AI health companion for underserved communities in
+Pakistan. It triages urgency only — it never diagnoses a disease and never
+prescribes or names a medicine. Every AI call goes through this backend so the
 DashScope API key never reaches the browser.
+
+This module only wires the application together: routers live in their own
+modules (auth, profiles, triage, labreport, prescription, summary, clinics).
 """
 from __future__ import annotations
 
+import io
 import logging
 import os
-
-import io
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Response
@@ -22,19 +26,34 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 
+# Import after load_dotenv so modules read env at import time correctly.
+from auth import router as auth_router  # noqa: E402
 from clinics import get_clinics  # noqa: E402
-from models import (  # noqa: E402
-    Clinic,
-    HealthResponse,
-    TriageRequest,
-    TriageResponse,
-)
-from triage import is_mock_mode, triage  # noqa: E402
+from db import init_db  # noqa: E402
+from labreport import router as labreport_router  # noqa: E402
+from prescription import router as prescription_router  # noqa: E402
+from profiles import router as profiles_router  # noqa: E402
+from schemas import Clinic, HealthResponse  # noqa: E402
+from sessions import router as triage_router  # noqa: E402
+from summary import router as summary_router  # noqa: E402
+from triage import is_mock_mode  # noqa: E402
+
+logger = logging.getLogger("nabz")
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Create tables (idempotent) and log the current mode at startup."""
+    init_db()
+    logger.info("Nabz backend started (mock_mode=%s)", is_mock_mode())
+    yield
+
 
 app = FastAPI(
-    title="Sehat Saathi API",
-    description="AI health-triage assistant for rural Pakistan.",
-    version="1.0.0",
+    title="Nabz API",
+    description="Voice-first, Urdu-first AI health companion for Pakistan.",
+    version="2.0.0",
+    lifespan=lifespan,
 )
 
 # The API key must never reach the frontend; the browser only talks to us.
@@ -51,31 +70,36 @@ app.add_middleware(
 )
 
 
+# --- Routers -----------------------------------------------------------------
+
+app.include_router(auth_router)
+app.include_router(profiles_router)
+app.include_router(triage_router)
+app.include_router(labreport_router)
+app.include_router(prescription_router)
+app.include_router(summary_router)
+
+
+# --- Misc endpoints ----------------------------------------------------------
+
+
 @app.get("/api/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     """Quick demo-day sanity check."""
     return HealthResponse(status="ok", mock_mode=is_mock_mode())
 
 
-@app.post("/api/triage", response_model=TriageResponse)
-def triage_endpoint(req: TriageRequest) -> TriageResponse:
-    """Classify the urgency of a symptom description."""
-    return triage(req.text)
-
-
 @app.get("/api/clinics", response_model=list[Clinic])
-def clinics_endpoint(city: str | None = None, province: str | None = None) -> list[Clinic]:
-    """Return nearby clinics / hospitals for the selected city.
-
-    Without a city, returns a representative default list.
-    """
+def clinics_endpoint(
+    city: str | None = None, province: str | None = None
+) -> list[Clinic]:
+    """Return sample KP health facilities, optionally reordered by city."""
     return get_clinics(city=city, province=province)
 
 
 # Cache a few recently synthesized clips in memory (advice repeats on replay).
 _TTS_CACHE: dict[tuple[str, str], bytes] = {}
 _TTS_CACHE_MAX = 32
-# gTTS only supports certain language codes; map ours onto supported ones.
 _TTS_LANG_MAP = {"ur": "ur", "hi": "hi", "en": "en"}
 
 
@@ -87,9 +111,8 @@ def tts_endpoint(
     """Return real spoken Urdu (or Hindi/English) audio for `text`.
 
     Uses gTTS so the voice actually pronounces Urdu script — browser
-    SpeechSynthesis on most machines has no Urdu voice and mangles the text
-    (often reading only the digits). The frontend uses this first and only
-    falls back to browser speech if it fails.
+    SpeechSynthesis on most machines has no Urdu voice. The frontend uses this
+    first and only falls back to browser speech if it fails.
     """
     gtts_lang = _TTS_LANG_MAP.get(lang, "ur")
     key = (gtts_lang, text)
@@ -103,7 +126,7 @@ def tts_endpoint(
         gTTS(text=text, lang=gtts_lang).write_to_fp(buf)
         audio = buf.getvalue()
     except Exception as exc:  # noqa: BLE001
-        logging.getLogger("sehat_saathi").error("TTS failed: %s", exc)
+        logger.error("TTS failed: %s", exc)
         raise HTTPException(status_code=503, detail="tts_unavailable")
 
     if len(_TTS_CACHE) >= _TTS_CACHE_MAX:
@@ -118,8 +141,4 @@ def tts_endpoint(
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {
-        "app": "Sehat Saathi",
-        "docs": "/docs",
-        "health": "/api/health",
-    }
+    return {"app": "Nabz", "docs": "/docs", "health": "/api/health"}

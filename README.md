@@ -450,10 +450,11 @@ Final result response:
 
 ### Document intelligence
 
-| Method | Endpoint            | Purpose                                      |
-| ------ | ------------------- | -------------------------------------------- |
-| `POST` | `/api/labreport`    | Extract + explain lab report for a profile   |
-| `POST` | `/api/prescription` | Extract a prescription for user confirmation |
+| Method | Endpoint                    | Purpose                                          |
+| ------ | --------------------------- | ------------------------------------------------ |
+| `POST` | `/api/labreport`            | Extract + explain lab report for a profile       |
+| `POST` | `/api/prescription`         | Extract a prescription for user confirmation     |
+| `POST` | `/api/prescription/confirm` | Save the user-reviewed medicines to the profile  |
 
 ### Clinician handoff
 
@@ -514,7 +515,9 @@ README.md
 
 ### Prerequisites
 
-- Python **3.11+**
+- Python **3.11 or 3.12** (recommended). The pinned dependency versions ship
+  prebuilt wheels for these; on very new interpreters (e.g. 3.14) some pinned
+  packages have no wheel yet and would need a compiler.
 - Node.js **18+**
 - npm
 - Optional: Alibaba Cloud Model Studio / DashScope API key
@@ -717,14 +720,15 @@ See [`PRIVACY.md`](PRIVACY.md) for the full privacy and consent statement.
 
 ### Pytest
 
-Run backend tests in mock mode:
+Run backend tests (mock mode is applied automatically by `conftest.py`, which
+also uses a throwaway SQLite file so your real `nabz.db` is untouched):
 
 ```bash
 cd server
-MOCK_MODE=true python -m pytest tests/ -q
+python -m pytest tests/ -q          # or ./venv/Scripts/python.exe -m pytest tests/ -q on Windows
 ```
 
-The test suite should cover at minimum:
+Expected: **16 passed**. The suite covers:
 
 - registration and login;
 - protected-route rejection without a token;
@@ -740,13 +744,14 @@ The test suite should cover at minimum:
 
 ### Safety evaluation harness
 
-From the repository root:
+From the repository root (drives the state machine directly — **no server
+needed**):
 
 ```bash
-python eval.py
+python eval.py                      # or ./server/venv/Scripts/python.exe eval.py
 ```
 
-`eval.py` uses **15+ scripted conversations** spanning:
+`eval.py` uses **16 scripted conversations** spanning:
 
 - `EMERGENCY`;
 - `DOCTOR_24H`;

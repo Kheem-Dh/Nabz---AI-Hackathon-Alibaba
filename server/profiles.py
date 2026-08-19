@@ -1,7 +1,7 @@
 """Profile (family vault) CRUD."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from db import get_db
@@ -107,14 +107,15 @@ def update_profile(
     return _to_out(profile)
 
 
-@router.delete("/{profile_id}", status_code=204)
+@router.delete("/{profile_id}", status_code=204, response_class=Response)
 def delete_profile(
     profile_id: int,
     account: Account = Depends(get_current_account),
     db: Session = Depends(get_db),
-) -> None:
+) -> Response:
     profile = _load_owned(db, account, profile_id)
     if profile.is_self:
         raise HTTPException(status_code=400, detail="cannot_delete_self_profile")
     db.delete(profile)
     db.commit()
+    return Response(status_code=204)
