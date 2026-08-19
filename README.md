@@ -1,153 +1,588 @@
+# Nabz — نبض
 
-# Sehat Saathi — صحت ساتھی
+> **آپ کی آواز، آپ کی صحت** · _Your voice, your health_
 
-> **آواز سے صحت کا مشورہ** · *Health advice by voice*
+**Nabz** is an Urdu-first, voice-first AI health companion for underserved communities in Pakistan, built for the **Alibaba Cloud AI Hackathon Pakistan 2026**.
 
-An AI health-**triage** assistant for rural Pakistan, built for the **Alibaba
-Cloud AI Hackathon 2026**. A user speaks their symptoms in Urdu; the app replies
-in **real spoken Urdu** (server-side TTS) and written Urdu with a clear urgency
-level, practical home-care and general medicine guidance, follow-up questions,
-and nearby clinics for the user's own city.
+Instead of behaving like a generic symptom checker, Nabz guides the user through a **personalized, one-question-at-a-time triage conversation**, shows a live analysis of what has been collected, identifies emergency red flags early, and produces a clear urgency recommendation:
 
-**Sehat Saathi does not diagnose a specific disease and never recommends
-prescription-only medicine.** It classifies urgency into one of three levels,
-gives *general* self-care information, and always directs people to a real
-doctor:
+| Level             | Urdu                       | Meaning                                            |
+| ----------------- | -------------------------- | -------------------------------------------------- |
+| 🚑 **EMERGENCY**  | فوری مدد                   | Go to a hospital / emergency service now           |
+| 🩺 **DOCTOR_24H** | ڈاکٹر سے 24 گھنٹے میں ملیں | See a clinician within 24 hours                    |
+| 🏠 **HOME_CARE**  | گھر پر دیکھ بھال           | Home care, monitoring, and escalation instructions |
 
-| Level | Urdu | Meaning |
-|-------|------|---------|
-| 🚑 **EMERGENCY** | فوری علاج | Go to a hospital now |
-| 🩺 **DOCTOR_24H** | 24 گھنٹے میں ڈاکٹر | See a doctor within 24 hours |
-| 🏠 **HOME_CARE** | گھر پر دیکھ بھال | Rest and monitor at home |
+Nabz also includes a **family Medical Vault**, **lab-report explanation**, **prescription extraction with human confirmation**, **nearby-clinic handoff**, and a **print/share doctor summary**.
 
-Each result also includes **گھریلو علاج** (home remedies), **دوا کی عمومی
-رہنمائی** (general OTC medicine guidance, e.g. paracetamol for fever, ORS for
-dehydration — with "confirm the dose with a pharmacist/doctor" caveats and no
-prescription drugs), **خطرے کی علامات** (warning signs), and **follow-up
-questions** so the assistant can understand the user better and refine its
-advice.
+> **Safety boundary:** Nabz is not a doctor, does not diagnose a specific disease, and does not independently prescribe medication. Prescription scanning only extracts information from an existing clinician-issued prescription and requires user confirmation before anything is saved.
 
 ---
 
-## The problem
+## Why Nabz
 
-Rural Pakistan has one of the world's most stretched primary-care systems.
-Basic Health Units are sparse, literacy is low, and the first instinct when
-someone falls ill is often to wait — sometimes fatally — or to travel hours to
-a hospital for something that could have been managed at home. People who *do*
-need emergency care don't always recognise the red flags.
+Many health applications assume that the user can comfortably read English, type a detailed history, understand medical terminology, and decide which symptoms matter. That assumption excludes many people in rural and underserved communities.
 
-Two barriers make most health apps useless here: **language** (interfaces are in
-English) and **literacy** (they assume reading and typing). Sehat Saathi is
-**voice-first** and **Urdu-first**: you speak, it speaks back, and color + icons
-carry the meaning so it works even if you can't read.
+Nabz is designed around a different interaction model:
 
-It is a **triage** tool, not a doctor. It answers one question well: *"How
-urgently do I need to see a real clinician, and where is one?"*
+- **Urdu first** — Urdu leads every patient-facing screen; English is available as a smaller translation.
+- **Voice first** — users can speak naturally instead of typing a medical history.
+- **One question at a time** — the system asks only the single most useful next question.
+- **Low-literacy friendly** — large touch targets, icons, color-coded urgency, quick replies, replay, and spoken prompts.
+- **Family centered** — one account can maintain separate health profiles for multiple family members.
+- **Clinician connected** — the final goal is to help the user reach appropriate care and give the clinician a concise handoff summary.
+- **Safety first** — emergency red flags short-circuit the conversation instead of waiting for the AI to finish a full interview.
+
+The core question Nabz answers is:
+
+> **“How urgently should this person seek care, what information matters right now, and how can we make the next interaction with a real clinician more effective?”**
+
+---
+
+## Core user journey
+
+The current product flow is designed as a cohesive mobile experience:
+
+1. **Home / Listen** — tap the microphone and describe the problem in Urdu.
+2. **Listening state** — live transcript confirms what Nabz heard.
+3. **Conversational triage** — Nabz asks one high-value follow-up question at a time.
+4. **Live analysis** — collected findings appear as chips while confidence and the remaining uncertainty are shown transparently.
+5. **Triage result** — Emergency, See a doctor within 24 hours, or Home care.
+6. **Nearby care** — appropriate clinics or hospitals are shown with directions.
+7. **Medical Vault** — maintain separate records for family members.
+8. **Profile detail** — conditions, allergies, medicines, recent triage, labs, and timeline.
+9. **Lab report explanation** — upload a report for structured extraction and a plain-Urdu explanation.
+10. **Doctor handoff summary** — generate a concise English clinical summary for print/share.
+11. **Privacy & consent** — health information is account-scoped, deletable, and not used for model training.
+12. **Register / Log in** — account-based access with family profiles.
+13. **Prescription scan** — photograph a printed or handwritten prescription.
+14. **Confirm extracted medicines** — review and edit every extracted field before saving it to the selected profile.
+
+---
+
+## What makes the triage different
+
+### Multi-turn, not one-shot
+
+Nabz does **not** immediately jump from a symptom sentence to a final result unless an emergency red flag is already present.
+
+For a non-emergency presentation, the backend creates a triage session and progressively gathers context:
+
+```text
+User symptom
+   ↓
+Emergency red-flag guardrail
+   ↓
+Ask ONE most useful question
+   ↓
+User answers by voice / quick reply / text
+   ↓
+Update collected findings + confidence
+   ↓
+Ask another question only if needed
+   ↓
+Final urgency result
+```
+
+The system asks a maximum of **5 follow-up questions**. If important uncertainty remains after that point, it produces a result and safely escalates to at least **DOCTOR_24H** when appropriate rather than continuing indefinitely.
+
+### Emergency short-circuit
+
+If an emergency red flag appears in the initial complaint or any later turn, Nabz stops questioning and returns **EMERGENCY immediately**.
+
+Examples of automatic emergency red flags include:
+
+- chest pain;
+- difficulty breathing;
+- unconsciousness;
+- severe bleeding;
+- seizures;
+- stroke signs such as facial droop, slurred speech, or one-sided weakness;
+- severe dehydration in a child;
+- high fever in an infant under 3 months;
+- pregnancy complications such as bleeding, severe pain, or reduced fetal movement;
+- poisoning;
+- serious injury;
+- suicidal thoughts.
+
+The red-flag layer is intentionally conservative: an emergency should never be delayed simply because the conversational AI wants more information.
+
+---
+
+## Live analysis
+
+Every conversational turn returns a small, structured analysis object so the UI can show the user what Nabz has understood so far.
+
+Example:
+
+```json
+{
+  "analysis": {
+    "collected": [
+      {
+        "label_urdu": "بخار",
+        "label_english": "Fever",
+        "value_urdu": "3 دن",
+        "value_english": "3 days"
+      },
+      {
+        "label_urdu": "عمر",
+        "label_english": "Age",
+        "value_urdu": "6 سال",
+        "value_english": "6 years"
+      }
+    ],
+    "still_checking_urdu": "سانس اور پانی کی کمی کی علامات",
+    "confidence": 0.72,
+    "questions_asked": 3
+  }
+}
+```
+
+The frontend renders this as:
+
+- collected-finding chips;
+- **Still checking… / ابھی دیکھ رہے ہیں…**;
+- a calm confidence/progress indicator;
+- an early-analysis state and a near-complete state.
+
+This is not presented as diagnostic certainty. It is a transparent representation of how complete the triage information is.
+
+---
+
+## Personalized family Medical Vault
+
+A single account can own multiple patient profiles — for example Ammi, Bilal, Sana, and Rayan — while keeping each person's information isolated.
+
+Each profile can contain:
+
+- display name and relation label;
+- age and gender;
+- blood group;
+- chronic conditions;
+- allergies;
+- current medicines;
+- medicine dose, schedule, and with-food instructions;
+- profile notes;
+- past triage sessions;
+- uploaded lab reports;
+- scanned prescriptions;
+- longitudinal health timeline.
+
+The **active profile** is injected into every relevant AI interaction. Nabz therefore addresses the selected person by name and can use that profile's known conditions, allergies, medicines, and recent labs as context.
+
+Patient data is never pulled from a global medicine or history pool. Every saved item belongs to the selected profile.
+
+---
+
+## Lab-report explanation
+
+Users can upload an image or PDF lab report for the selected profile.
+
+Nabz uses **Qwen-VL** to:
+
+1. extract structured test names and values;
+2. identify values outside the provided reference range;
+3. provide a plain-Urdu explanation addressed to the selected profile;
+4. include an English explanation;
+5. save the report to the profile timeline.
+
+The lab workflow does **not** diagnose a disease. It ends with a clear instruction to discuss abnormal or concerning results with a qualified clinician.
+
+---
+
+## Prescription scan + confirmation
+
+Nabz can read a printed or handwritten clinician-issued prescription using **Qwen-VL**.
+
+The extraction is structured approximately as:
+
+```json
+{
+  "date": "2026-08-19",
+  "doctor_name": "Dr. A. Khan",
+  "clinic": "Family Clinic",
+  "medicines": [
+    {
+      "name": "Amoxicillin",
+      "strength": "250 mg",
+      "frequency": "3 times/day",
+      "duration": "5 days",
+      "notes": "1 tsp",
+      "confidence": 0.94
+    }
+  ],
+  "unreadable": false,
+  "raw_text": "..."
+}
+```
+
+### Safety rule: extraction is never an automatic save
+
+Handwritten prescriptions can be ambiguous. Nabz therefore:
+
+- assigns confidence to extracted medicine fields;
+- visibly flags low-confidence values;
+- marks a document `unreadable` when necessary;
+- **never invents a medicine, strength, dose, frequency, or duration**;
+- always shows a **Confirm extracted medicines** screen;
+- allows editing before saving;
+- saves confirmed medicines only to the selected patient's Vault;
+- retains a reference to the original prescription image.
+
+Prescription extraction is document reading, **not prescribing**.
+
+---
+
+## Doctor handoff summary
+
+Nabz can generate a concise English clinical handoff for the selected profile.
+
+The summary can include:
+
+- patient demographics;
+- latest chief complaint;
+- relevant history;
+- chronic conditions;
+- current medications;
+- allergies;
+- latest triage status;
+- recent lab findings.
+
+The UI provides **Print** and **Share** actions with print-friendly styling.
+
+The purpose is to make a clinician's limited time more effective — not to replace clinical assessment or documentation.
+
+---
+
+## Design system
+
+The UI follows the mobile designs shown in the project mockups.
+
+- **Primary:** teal `#0F9D8A`
+- **Background:** warm off-white
+- **Cards:** white, rounded (~16 px), soft shadow
+- **Status colors:** reserved only for triage state
+  - red = emergency
+  - amber = see doctor within 24 hours
+  - green = home care
+- **Typography:** Urdu leads; English translation is smaller and secondary
+- **Urdu font:** Noto Nastaliq Urdu
+- **Direction:** full RTL support where appropriate
+- **Mobile width:** designed around a ~480 px content container
+- **Navigation:** Home · Vault · Clinics
+- **Accessibility:** large touch targets, microphone-first interaction, quick replies, replay, typed fallback
+- **Persistent clinical disclaimer:**
+  - `یہ ڈاکٹر کا متبادل نہیں ہے`
+  - `This is not a substitute for a doctor.`
 
 ---
 
 ## Architecture
 
-```
-  ┌──────────────┐   speech    ┌──────────────────────┐   HTTPS   ┌────────────────────────┐
-  │  User speaks │ ─────────►  │   React + Vite (SPA)  │ ────────► │   FastAPI backend       │
-  │  Urdu (mic)  │  Web Speech │   - useSpeechReco.    │  /api/... │   - /api/triage         │
-  │              │ ◄─────────  │   - useTextToSpeech   │ ◄──────── │   - /api/clinics        │
-  └──────────────┘  spoken     │   - triage UI/cards   │   JSON    │   - /api/health         │
-                    reply      └──────────────────────┘           │        │                │
-                                                                   │        ▼                │
-                                                                   │   Qwen (qwen-plus)      │
-                                                                   │   via Alibaba Cloud     │
-                                                                   │   Model Studio          │
-                                                                   │   (DashScope, OpenAI-   │
-                                                                   │    compatible endpoint) │
-                                                                   └────────────────────────┘
+```text
+┌────────────────────────────────────────────────────────────────────────────┐
+│                              User / Family                                 │
+│                     Urdu voice · quick reply · text                        │
+└───────────────────────────────┬────────────────────────────────────────────┘
+                                │
+                                ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│                         React 18 + Vite SPA                                │
+│                                                                            │
+│  • Urdu / RTL UI                  • Conversational triage                   │
+│  • useSpeechRecognition           • Live analysis                          │
+│  • useTextToSpeech                • Family Medical Vault                    │
+│  • Lab / prescription upload      • Doctor handoff                          │
+└───────────────────────────────┬────────────────────────────────────────────┘
+                                │ HTTPS / JSON + JWT
+                                ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│                         FastAPI backend                                    │
+│                                                                            │
+│  Auth & JWT        Triage state machine       Profile/Vault APIs            │
+│  Safety guards     Qwen structured parsing    Upload handling               │
+│  Clinic lookup     Summary generation         Mock-mode fallbacks           │
+└───────────────┬─────────────────────────┬───────────────────────┬───────────┘
+                │                         │                       │
+                ▼                         ▼                       ▼
+┌───────────────────────┐   ┌─────────────────────────┐   ┌──────────────────┐
+│ Qwen text model       │   │ Qwen-VL vision model    │   │ SQLite / SQLA    │
+│ qwen-plus default     │   │ qwen-vl-plus default    │   │ family Vault     │
+│                       │   │                         │   │ sessions/timeline│
+│ Conversational triage │   │ Labs + prescriptions    │   │ users/profiles   │
+└───────────────────────┘   └─────────────────────────┘   └──────────────────┘
+                \___________________________  _______________________________/
+                                            \/
+                              Alibaba Cloud Model Studio
+                                   DashScope API
 
-  🔑 The DashScope API key lives ONLY on the backend. It never reaches the browser.
+🔐 DASHSCOPE_API_KEY and JWT_SECRET stay on the backend only.
 ```
-
-- **Speech-to-text**: browser Web Speech API (`lang="ur-PK"`), isolated in
-  `useSpeechRecognition` so a cloud ASR can be swapped in later.
-- **Text-to-speech (real Urdu voice)**: the backend `/api/tts` endpoint uses
-  **gTTS** to synthesize genuine spoken Urdu, played by the browser. This is the
-  primary voice; the browser `SpeechSynthesis` is only a fallback. (Browser TTS
-  on most machines has no Urdu voice and mispronounces the script — often reading
-  only the digits — so we do NOT rely on it.) Isolated in `useTextToSpeech`.
-- **Location**: a province → city picker (all provinces/territories of Pakistan)
-  drives clinic results for the user's own city instead of a fixed district.
-- **AI**: Qwen (`qwen-plus` default, `qwen-max` configurable) through the
-  OpenAI-compatible DashScope endpoint. A strict system prompt enforces
-  triage + general (non-prescription) guidance + always-escalate-when-uncertain.
-- **UI**: mobile-first, with a widened two-column **desktop web layout**
-  (result + guidance in the main column, clinics in a sticky sidebar).
 
 ---
 
-## Repo structure
+## Technology stack
 
+### Frontend
+
+- React 18
+- Vite
+- Urdu / RTL layout support
+- Browser Web Speech API for STT (`lang="ur-PK"`)
+- Browser `SpeechSynthesis` for TTS where available
+  - prefer an Urdu voice;
+  - fall back to `hi-IN` when needed;
+  - replay control on assistant turns
+
+Speech is isolated behind hooks so a stronger cloud ASR/TTS implementation can replace browser services later without redesigning the UI.
+
+### Backend
+
+- Python 3.11+
+- FastAPI
+- uvicorn
+- Pydantic v2
+- SQLAlchemy
+- SQLite for the hackathon build, with a data layer that can migrate to a managed database
+- `python-dotenv`
+- JWT authentication
+- password hashing using passlib / bcrypt
+
+### AI
+
+- Alibaba Cloud Model Studio / DashScope
+- OpenAI-compatible API
+- text model: `qwen-plus` by default
+- vision model: `qwen-vl-plus` by default
+- strict JSON outputs
+- Pydantic validation
+- safe parsing and fallback behavior
+- 20-second AI timeout target
+
+OpenAI-compatible base URL:
+
+```text
+https://dashscope-intl.aliyuncs.com/compatible-mode/v1
 ```
-client/                 React app (Vite)
+
+---
+
+## API overview
+
+### Authentication
+
+| Method | Endpoint             | Purpose                                        |
+| ------ | -------------------- | ---------------------------------------------- |
+| `POST` | `/api/auth/register` | Create account with full name, phone, password |
+| `POST` | `/api/auth/login`    | Authenticate and issue JWT                     |
+| `GET`  | `/api/auth/me`       | Return authenticated account                   |
+
+### Conversational triage
+
+| Method | Endpoint             | Purpose                                                     |
+| ------ | -------------------- | ----------------------------------------------------------- |
+| `POST` | `/api/triage/start`  | Start a profile-specific triage session                     |
+| `POST` | `/api/triage/answer` | Submit one answer and receive next question or final result |
+
+Start request:
+
+```json
+{
+  "profile_id": 4,
+  "text": "میرے بچے کو تین دن سے بخار ہے"
+}
+```
+
+Question-turn response:
+
+```json
+{
+  "type": "question",
+  "session_id": "session-id",
+  "patient_name": "Rayan",
+  "question_urdu": "ریان، کیا آپ کو سانس لینے میں دشواری ہو رہی ہے؟",
+  "question_english": "Rayan, are you having trouble breathing?",
+  "quick_replies": [
+    { "urdu": "ہاں", "english": "Yes" },
+    { "urdu": "نہیں", "english": "No" },
+    { "urdu": "پتہ نہیں", "english": "Don't know" }
+  ],
+  "analysis": {
+    "collected": [],
+    "still_checking_urdu": "سانس کی علامات",
+    "confidence": 0.3,
+    "questions_asked": 1
+  },
+  "mock": true
+}
+```
+
+Final result response:
+
+```json
+{
+  "type": "result",
+  "session_id": "session-id",
+  "patient_name": "Rayan",
+  "analysis": {
+    "collected": [],
+    "still_checking_urdu": "",
+    "confidence": 0.89,
+    "questions_asked": 3
+  },
+  "level": "DOCTOR_24H",
+  "advice_urdu": "ریان کو ڈاکٹر سے 24 گھنٹے کے اندر دکھائیں۔",
+  "advice_english": "Rayan should be seen by a doctor within 24 hours.",
+  "reason_english": "Persistent fever and reduced appetite require clinical review.",
+  "mock": true
+}
+```
+
+### Medical Vault
+
+| Method   | Endpoint             | Purpose                            |
+| -------- | -------------------- | ---------------------------------- |
+| `GET`    | `/api/profiles`      | List account profiles              |
+| `POST`   | `/api/profiles`      | Create a family profile            |
+| `GET`    | `/api/profiles/{id}` | Get profile detail                 |
+| `PUT`    | `/api/profiles/{id}` | Update profile                     |
+| `DELETE` | `/api/profiles/{id}` | Delete profile and associated data |
+
+### Document intelligence
+
+| Method | Endpoint            | Purpose                                      |
+| ------ | ------------------- | -------------------------------------------- |
+| `POST` | `/api/labreport`    | Extract + explain lab report for a profile   |
+| `POST` | `/api/prescription` | Extract a prescription for user confirmation |
+
+### Clinician handoff
+
+| Method | Endpoint                    | Purpose                                 |
+| ------ | --------------------------- | --------------------------------------- |
+| `GET`  | `/api/summary/{profile_id}` | Generate concise doctor handoff summary |
+
+### Miscellaneous
+
+| Method | Endpoint       | Purpose                                     |
+| ------ | -------------- | ------------------------------------------- |
+| `GET`  | `/api/clinics` | Return sample KP BHUs / clinics / hospitals |
+| `GET`  | `/api/health`  | Backend status and mock-mode state          |
+
+Protected Vault, triage, report, and summary routes require the JWT session token.
+
+---
+
+## Repository layout
+
+The project is organized as a React frontend and FastAPI backend:
+
+```text
+client/
   src/
-    hooks/              useSpeechRecognition, useTextToSpeech
-    components/         MicButton, ResultCard, ClinicList, LocationPicker
-    pakistan.js         provinces → cities dataset
-    App.jsx, api.js, levels.js, styles.css
+    components/          UI components
+    hooks/               speech recognition / speech synthesis
+    pages/               onboarding, auth, triage, vault, reports, summary
+    api/                 backend client
+    App.jsx
+
 server/
-  main.py               FastAPI app + routes (triage, clinics, health, tts) + CORS
-  triage.py             Qwen client, system prompt, JSON parsing, mock + fallback
-  clinics.py            city-aware clinic lookup
-  models.py             pydantic v2 models
-  tests/test_triage.py  pytest (mock mode)
+  main.py                FastAPI application and route registration
+  auth/                  register/login/JWT/password hashing
+  triage/                state machine, guardrails, prompts, parsing
+  profiles/              family Vault data access
+  reports/               lab + prescription Qwen-VL workflows
+  summary/               doctor handoff generation
+  clinics/               clinic lookup data/service
+  db/                    SQLAlchemy models/session
+  uploads/               local development upload storage
+  tests/                 pytest suite
   requirements.txt
-eval.py                 safety eval harness (12 cases)
-TESTING.md
-.env.example
-Makefile
+
+eval.py                  scripted safety evaluation harness
+TESTING.md                test cases + manual smoke tests
+PRIVACY.md                privacy / consent behavior
+.env.example              environment template
+.gitignore
+README.md
 ```
+
+> Exact internal module filenames may evolve; the public API boundaries and product behavior above are the stable contract.
 
 ---
 
 ## Setup
 
-### 1. Backend (Python 3.11+)
+### Prerequisites
+
+- Python **3.11+**
+- Node.js **18+**
+- npm
+- Optional: Alibaba Cloud Model Studio / DashScope API key
+
+The complete product remains demoable in **MOCK_MODE** without external credentials.
+
+### 1. Backend
 
 ```bash
 cd server
 python3 -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Environment / secrets
+Windows:
 
-```bash
-cp .env.example server/.env       # then edit server/.env
+```powershell
+cd server
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-`server/.env` values:
+### 2. Environment variables
 
-- `DASHSCOPE_API_KEY` — your Alibaba Cloud Model Studio key. **Leave blank to run
-  in mock mode automatically.**
-- `QWEN_MODEL` — `qwen-plus` (default) or `qwen-max`.
-- `MOCK_MODE` — `true` forces keyword mock responses (no API calls).
-- `CORS_ORIGINS` — allowed frontend origins (defaults cover the Vite dev server).
+Create the backend environment file from the example:
 
-> The backend loads `.env` from its own working directory, so put it at
-> `server/.env`.
+```bash
+cp .env.example server/.env
+```
 
-#### How to get a DashScope API key
+Configure:
 
-1. Go to **Alibaba Cloud Model Studio** (International):
+```env
+DASHSCOPE_API_KEY=
+QWEN_MODEL=qwen-plus
+QWEN_VL_MODEL=qwen-vl-plus
+JWT_SECRET=replace-with-a-long-random-secret
+MOCK_MODE=true
+CORS_ORIGINS=http://localhost:5173
+```
+
+Environment variables:
+
+| Variable            | Purpose                                                     |
+| ------------------- | ----------------------------------------------------------- |
+| `DASHSCOPE_API_KEY` | Alibaba Cloud Model Studio API key                          |
+| `QWEN_MODEL`        | Text model, default `qwen-plus`                             |
+| `QWEN_VL_MODEL`     | Vision model for labs/prescriptions, default `qwen-vl-plus` |
+| `JWT_SECRET`        | Secret used to sign authentication tokens                   |
+| `MOCK_MODE`         | Force local deterministic demo responses                    |
+| `CORS_ORIGINS`      | Allowed frontend origins                                    |
+
+### 3. Get a DashScope key
+
+1. Open Alibaba Cloud Model Studio:
    <https://modelstudio.console.alibabacloud.com/>
-2. Sign in / create an Alibaba Cloud account and activate Model Studio.
-3. Open **API-KEY** management and **Create API Key**.
-4. Copy it into `server/.env` as `DASHSCOPE_API_KEY`.
-5. The app uses the OpenAI-compatible endpoint
-   `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`, so no extra SDK
-   config is needed.
+2. Sign in or create an Alibaba Cloud account.
+3. Activate Model Studio.
+4. Open **API-KEY** management.
+5. Create a key.
+6. Put the value in `server/.env` as `DASHSCOPE_API_KEY`.
+7. Set `MOCK_MODE=false` when you are ready to use real Qwen calls.
 
-### 3. Frontend (Node 18+)
+Never place the DashScope key in Vite environment variables or frontend code.
+
+### 4. Frontend
 
 ```bash
 cd client
@@ -156,105 +591,358 @@ npm install
 
 ---
 
-## Running
+## Running locally
 
-Open **two terminals**.
+Open two terminals.
 
-**Terminal 1 — backend:**
+### Terminal 1 — FastAPI
+
 ```bash
 cd server
 source venv/bin/activate
 uvicorn main:app --reload --port 8000
 ```
 
-**Terminal 2 — frontend:**
+### Terminal 2 — React
+
 ```bash
 cd client
 npm run dev
 ```
 
-Then open <http://localhost:5173>.
+Open:
 
-### Mock mode vs. real mode
+```text
+http://localhost:5173
+```
 
-- **Mock mode** (default when no key): keyword heuristic maps obvious emergency
-  terms → EMERGENCY, fever/cough → DOCTOR_24H, mild → HOME_CARE. Responses carry
-  `"mock": true` and the UI shows a small *demo / mock mode* badge. **The entire
-  app is fully demoable with zero credentials.**
-- **Real mode**: set a valid `DASHSCOPE_API_KEY` and `MOCK_MODE=false`. Triage is
-  driven by Qwen; on any API/parse/timeout failure the backend returns a safe
-  `DOCTOR_24H` fallback and logs the raw model output server-side.
+Backend health check:
 
-Check which mode you're in:
 ```bash
 curl -s http://localhost:8000/api/health
-# {"status":"ok","mock_mode":true}
+```
+
+Example mock response:
+
+```json
+{
+  "status": "ok",
+  "mock_mode": true
+}
 ```
 
 ---
 
-## Tests & the safety eval
+## Mock mode vs real mode
 
-**pytest (mock mode):**
-```bash
-cd server && MOCK_MODE=true python -m pytest tests/ -q
+### Mock mode
+
+Set:
+
+```env
+MOCK_MODE=true
 ```
 
-**Safety eval** — 12 fixed cases against the live endpoint; exits non-zero if any
-true emergency is under-triaged:
+or leave `DASHSCOPE_API_KEY` empty.
+
+Mock mode is intended for reliable development and hackathon demos. It returns deterministic sample behavior for:
+
+- conversational triage;
+- emergency red-flag paths;
+- follow-up questions;
+- live-analysis findings;
+- lab-report extraction;
+- prescription extraction;
+- low-confidence prescription fields.
+
+AI responses include:
+
+```json
+{ "mock": true }
+```
+
+### Real mode
+
+Set:
+
+```env
+DASHSCOPE_API_KEY=your-real-key
+MOCK_MODE=false
+```
+
+Real mode sends text tasks to Qwen and visual document tasks to Qwen-VL through Alibaba Cloud Model Studio.
+
+The backend must still apply safety controls outside the model:
+
+- emergency keyword / red-flag guardrails;
+- strict JSON parsing;
+- Pydantic validation;
+- allowed triage enums only;
+- maximum five questions;
+- timeout handling;
+- safe `DOCTOR_24H` fallback when the model fails or output cannot be trusted;
+- server-side logging of invalid raw model output.
+
+---
+
+## Authentication and privacy
+
+### Authentication
+
+- registration requires full name, phone number, and password;
+- passwords are stored only as secure hashes;
+- login issues a JWT session token;
+- protected requests include the token;
+- account data is isolated between users.
+
+### Privacy model
+
+Nabz is designed around the following commitments:
+
+- health data belongs to the account;
+- profile data is patient-specific;
+- consent is requested before health data or uploads are saved;
+- users can delete their information;
+- deleting a profile should delete its associated health history;
+- uploaded health data is not used to train AI models;
+- API keys never reach the browser.
+
+See [`PRIVACY.md`](PRIVACY.md) for the full privacy and consent statement.
+
+> For a hackathon/demo deployment, do not represent local SQLite/upload storage as production-grade medical-record infrastructure. A real deployment requires formal security, privacy, retention, access-control, audit, clinical-safety, and regulatory review.
+
+---
+
+## Tests
+
+### Pytest
+
+Run backend tests in mock mode:
+
 ```bash
-# backend must be running on :8000
+cd server
+MOCK_MODE=true python -m pytest tests/ -q
+```
+
+The test suite should cover at minimum:
+
+- registration and login;
+- protected-route rejection without a token;
+- profile CRUD;
+- triage start returning a question;
+- triage answer eventually returning a result;
+- emergency red flag returning `EMERGENCY` immediately with no extra questions;
+- maximum-question behavior;
+- lab report structured output;
+- prescription structured output;
+- doctor summary generation;
+- clinic list response.
+
+### Safety evaluation harness
+
+From the repository root:
+
+```bash
 python eval.py
 ```
 
-See [TESTING.md](TESTING.md) for the full case list and manual smoke tests.
+`eval.py` uses **15+ scripted conversations** spanning:
+
+- `EMERGENCY`;
+- `DOCTOR_24H`;
+- `HOME_CARE`;
+- emergency short-circuit cases;
+- ambiguous cases;
+- non-health input.
+
+The key safety assertion is:
+
+> **No scripted emergency should be under-triaged or forced through unnecessary follow-up questions.**
+
+See [`TESTING.md`](TESTING.md) for the expected conversations and manual smoke tests.
 
 ---
 
-## 60-second demo script (for judges)
+## 60-second judge demo
 
-1. **(0:00)** Open <http://localhost:5173>. Point out the big mic, the Urdu
-   tagline, and the persistent *"not a substitute for a doctor"* disclaimer.
-   Pick your **province → city** so clinics are local.
-2. **(0:10)** *"Speech works in the browser, but for demo reliability we'll type —
-   this fallback is deliberate for noisy hackathon rooms."* Type:
-   **`Mujhe shadid bukhar hai`** → **Get advice**.
-3. **(0:22)** A **YELLOW 24 گھنٹے میں ڈاکٹر** card appears, shows *"آپ نے کہا…"*
-   (the transcript), and **auto-speaks real Urdu** (server-side gTTS). Point out
-   **گھریلو علاج** (home remedies), **دوا کی عمومی رہنمائی** (paracetamol/ORS,
-   with the pharmacist caveat), and **خطرے کی علامات** (warning signs).
-4. **(0:38)** Show the **follow-up questions** and type an answer
-   (e.g. *"3 din se, umar 30, khansi bhi"*) → **Update advice** re-triages with
-   the added context. Expand **"Why?"** for judges.
-5. **(0:48)** Point to the **Nearby — <your city>** sidebar; tap **Directions**
-   for the Google Maps hand-off. Then **نئی بات**, type
-   **`seenay mein dard hai aur saans nahi aa rahi`** → **RED EMERGENCY** with a
-   pulsing **Call Rescue 1122** button.
-6. **(0:58)** Close: *"Urdu-first voice triage with real spoken Urdu, practical
-   guidance, and local clinics — on Alibaba Cloud Qwen — and it runs with zero
-   credentials in mock mode, so it never fails on stage."*
+### 0:00–0:08 — Open Nabz
+
+Show the **Home / Listen** screen.
+
+> “Nabz is an Urdu-first AI health companion for families who may not be comfortable typing or reading medical English.”
+
+Select a profile — for example **Rayan, age 6**.
+
+### 0:08–0:20 — Speak a symptom
+
+Tap the microphone and say a rehearsed Urdu symptom statement such as:
+
+```text
+میرے بچے کو تین دن سے بخار ہے اور وہ کم کھا رہا ہے
+```
+
+Show the live transcript.
+
+### 0:20–0:34 — Conversational triage + live analysis
+
+Nabz asks **one** question:
+
+```text
+ریان، کیا آپ کو سانس لینے میں دشواری ہو رہی ہے؟
+```
+
+Use a quick reply such as **No / نہیں**.
+
+Point to the live analysis panel as it fills:
+
+- Fever — 3 days
+- Age — 6
+- Breathing — OK
+- Still checking… hydration / severity
+- confidence increasing as the interview becomes complete
+
+### 0:34–0:44 — Final result
+
+Show the color-coded urgency result, Replay, **Why? / کیوں؟**, and the nearby-clinic handoff.
+
+Emphasize:
+
+> “If an emergency sign appears at any point, Nabz stops questioning immediately.”
+
+### 0:44–0:55 — Prescription intelligence
+
+Open **Scan prescription** and use a clean demo prescription.
+
+Show Qwen-VL extracting the medicine fields, then stop on **Confirm extracted medicines**.
+
+Point out the low-confidence field:
+
+> “Nabz never silently trusts handwriting. Nothing is saved until the user confirms it.”
+
+### 0:55–1:00 — Close
+
+Open the selected family profile / doctor handoff view.
+
+> “Nabz connects Urdu voice triage, family health context, Alibaba Cloud Qwen intelligence, and a safer handoff to real healthcare — in one low-literacy-friendly workflow.”
+
+---
+
+## Demo reliability checklist
+
+For the stage demo:
+
+- use a rehearsed triage conversation;
+- keep a text fallback available if the venue microphone is noisy;
+- use `MOCK_MODE=true` as a zero-credential fallback;
+- use a **clean printed sample prescription** for the live Qwen-VL flow;
+- keep the prescription confirmation screen in the demo even if extraction confidence is high;
+- verify the emergency short-circuit path before presenting;
+- preselect the intended family profile;
+- keep the browser microphone permission already granted.
+
+---
+
+## Safety principles
+
+Nabz is deliberately designed as a **triage and health-information assistant**, not an autonomous clinician.
+
+### Nabz may
+
+- collect a symptom history;
+- ask high-value follow-up questions;
+- identify urgency bands;
+- identify emergency red flags;
+- provide simple non-diagnostic care-navigation guidance;
+- explain a lab report in plain language;
+- extract information from an existing prescription;
+- organize confirmed health information in a family Vault;
+- generate a clinician handoff summary.
+
+### Nabz must not
+
+- claim a definitive diagnosis;
+- delay an emergency to complete an interview;
+- independently prescribe medicine;
+- invent prescription text that cannot be read;
+- silently save uncertain prescription extraction;
+- mix data between family profiles;
+- expose API keys to the browser;
+- present AI confidence as medical certainty;
+- represent itself as a substitute for a qualified clinician.
 
 ---
 
 ## Roadmap
 
-- **More languages**: Pashto and Sindhi (and Punjabi) voice + prompts.
-- **WhatsApp bot**: reach users with no app install, via voice notes.
-- **Offline mode**: on-device keyword triage when connectivity drops.
-- **Alkhidmat / BHU integration**: live clinic directory with real availability
-  and geolocation-based "nearest open unit".
-- **Cloud ASR/TTS**: swap the browser speech hooks for Alibaba Cloud speech
-  services for better Urdu accuracy on low-end phones.
+### Language and access
+
+- Pashto voice + prompts
+- Sindhi voice + prompts
+- Punjabi voice + prompts
+- stronger cloud speech recognition for low-end devices
+- Urdu cloud TTS
+
+### Distribution
+
+- WhatsApp voice-note bot
+- offline / low-connectivity triage
+- SMS-assisted follow-up
+
+### Clinical access
+
+- Alkhidmat clinic integration
+- Basic Health Unit directory integration
+- real-time nearest-open-facility lookup
+- appointment / referral handoff
+
+### Platform
+
+- managed production database
+- encrypted object storage
+- formal audit trail
+- stronger role-based access controls
+- consent/version tracking
+- clinical safety monitoring and model evaluation dashboard
 
 ---
 
-## ⚠️ Medical disclaimer
+## Product positioning
 
-**یہ ڈاکٹر کا متبادل نہیں ہے۔** Sehat Saathi is **not** a substitute for a
-doctor. It does not diagnose a specific disease and never recommends
-prescription-only medicine. Any home-remedy or over-the-counter guidance it
-gives (e.g. paracetamol, ORS) is **general information only** — always confirm
-medicines and doses with a pharmacist or doctor, and never give medicine to
-infants, children, or pregnant women without a doctor. In an emergency, contact
-local emergency services (Rescue **1122**) or go to the nearest hospital
-immediately. Always consult a qualified healthcare professional.
+Nabz is not trying to become “an AI doctor.”
+
+The product is designed to become the **first safe digital step between a family's concern and appropriate real-world care**:
+
+```text
+Speak in Urdu
+   → understand the concern
+   → ask only what matters
+   → catch danger early
+   → personalize using the right family profile
+   → explain health documents clearly
+   → organize confirmed information
+   → hand off to a real clinician
+```
+
+That combination — **voice + Urdu + conversational triage + visible analysis + family context + Qwen-VL document intelligence + clinician handoff** — is the core Nabz experience.
+
+---
+
+## Medical disclaimer
+
+**یہ ڈاکٹر کا متبادل نہیں ہے۔**
+
+Nabz is **not a substitute for a doctor or emergency service**. It does not provide a definitive diagnosis and does not independently prescribe medication. Triage output is informational and is intended to help users recognize urgency and seek appropriate professional care.
+
+Prescription scanning only attempts to extract information from a prescription already issued by a clinician. Users must confirm extracted medicine names, strengths, frequencies, durations, and other instructions against the original prescription or with a pharmacist/doctor before relying on them.
+
+Lab-report explanations are educational summaries and are not a diagnosis or treatment plan.
+
+If there is severe difficulty breathing, chest pain, unconsciousness, major bleeding, seizures, stroke symptoms, poisoning, a serious injury, severe pregnancy-related symptoms, suicidal thoughts, or another emergency concern, seek emergency medical help immediately.
+
+---
+
+## Project
+
+**Nabz — نبض**  
+_آپ کی آواز، آپ کی صحت · Your voice, your health_  
+Built for the **Alibaba Cloud AI Hackathon Pakistan 2026**.

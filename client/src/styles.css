@@ -1,0 +1,1054 @@
+:root {
+  --teal: #0f9d8a;
+  --teal-dark: #0b7d6e;
+  --teal-light: #e6f6f3;
+  --bg: #f4f7f7;
+  --card: #ffffff;
+  --text: #1f2d2b;
+  --muted: #6b7c79;
+  --border: #e3ecea;
+  --shadow: 0 6px 20px rgba(15, 157, 138, 0.12);
+  --radius: 20px;
+
+  /* Triage colors — used ONLY for result cards. */
+  --red: #e53935;
+  --red-bg: #fdecea;
+  --yellow: #f5a623;
+  --yellow-bg: #fff6e5;
+  --green: #2e9e5b;
+  --green-bg: #e8f6ee;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.urdu {
+  font-family: 'Noto Nastaliq Urdu', 'Poppins', serif;
+  direction: rtl;
+  line-height: 2.1;
+}
+
+/* --- Layout shell --- */
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--teal-light) 0%, var(--bg) 40%);
+}
+
+.app-container {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.04);
+}
+
+.app-main {
+  flex: 1;
+  padding: 8px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Result screen base layout (mobile: stacked). Desktop grid is in the media
+   query below — declared AFTER this so it wins at wide widths. */
+.result-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+.result-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ============================================================
+   DESKTOP / WEB LAYOUT
+   Mobile-first above; these widen the app into a real web page.
+   ============================================================ */
+@media (min-width: 900px) {
+  .app-shell {
+    background: linear-gradient(180deg, var(--teal-light) 0%, var(--bg) 320px);
+    padding: 0;
+  }
+  .app-container {
+    max-width: 1080px;
+    background: transparent;
+    box-shadow: none;
+    padding: 0 28px 28px;
+  }
+  .app-main {
+    padding: 8px 0 32px;
+  }
+
+  /* Landing: hero on top, then input + location side by side. */
+  .landing {
+    gap: 32px;
+  }
+  .landing-cols {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    width: 100%;
+  }
+  .landing-cols > * {
+    flex: 1;
+    margin: 0;
+  }
+  .type-fallback,
+  .location-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: var(--shadow);
+  }
+
+  /* Result: main column + sticky clinics sidebar. */
+  .result-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr);
+    gap: 24px;
+    align-items: start;
+    width: 100%;
+  }
+  .result-col {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+  }
+  .side-col {
+    position: sticky;
+    top: 16px;
+  }
+  .clinic-grid {
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .guidance {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .guidance-block.tone-red,
+  .followups {
+    grid-column: 1 / -1;
+  }
+
+  .app-header {
+    padding: 34px 20px 10px;
+  }
+  .app-title .urdu {
+    font-size: 2.8rem;
+  }
+  .mic-button {
+    width: 190px;
+    height: 190px;
+  }
+  .result-card {
+    padding: 30px 28px;
+  }
+}
+
+/* --- Header --- */
+.app-header {
+  text-align: center;
+  padding: 24px 20px 8px;
+}
+
+.app-title {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.app-title .urdu {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--teal-dark);
+}
+
+.app-title-en {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+
+.app-tagline {
+  margin: 6px 0 0;
+  font-size: 1.15rem;
+  color: var(--text);
+}
+
+.app-tagline-en {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* --- Landing --- */
+.landing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding-top: 12px;
+}
+
+.landing-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.hero-hint {
+  margin: 4px 0 0;
+  font-size: 1.15rem;
+  color: var(--teal-dark);
+}
+
+.hero-hint-en {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.mic-button {
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+  border: none;
+  background: radial-gradient(circle at 50% 40%, var(--teal) 0%, var(--teal-dark) 100%);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 10px 30px rgba(15, 157, 138, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mic-button:active {
+  transform: scale(0.96);
+}
+
+.mic-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mic-icon {
+  font-size: 3.4rem;
+  line-height: 1;
+}
+
+.mic-label {
+  font-family: 'Noto Nastaliq Urdu', serif;
+  font-size: 1.1rem;
+}
+
+.mic-button.listening {
+  animation: pulse 1.4s ease-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(15, 157, 138, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 28px rgba(15, 157, 138, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(15, 157, 138, 0);
+  }
+}
+
+/* --- Type fallback --- */
+.type-fallback {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.type-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.type-label .urdu {
+  font-size: 1.15rem;
+}
+
+.type-label-en {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.type-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  font-size: 1.1rem;
+  resize: vertical;
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.type-input:focus {
+  border-color: var(--teal);
+}
+
+.submit-btn {
+  padding: 15px;
+  border: none;
+  border-radius: 16px;
+  background: var(--teal);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Noto Nastaliq Urdu', 'Poppins', serif;
+  box-shadow: var(--shadow);
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.submit-btn:hover {
+  background: var(--teal-dark);
+}
+
+.submit-btn:active {
+  transform: scale(0.98);
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Notices --- */
+.notice {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--teal-light);
+  border-radius: 14px;
+  text-align: center;
+  font-size: 0.92rem;
+  color: var(--teal-dark);
+}
+
+.notice-warn {
+  background: var(--yellow-bg);
+  color: #9a6a00;
+  padding: 12px 16px;
+  border-radius: 14px;
+  text-align: center;
+  font-size: 0.92rem;
+}
+
+/* --- Listening --- */
+.listening {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding-top: 8px;
+}
+
+.listening-hint {
+  font-size: 1.15rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.live-transcript {
+  width: 100%;
+  min-height: 90px;
+  padding: 16px 18px;
+  background: var(--card);
+  border: 2px dashed var(--teal);
+  border-radius: 16px;
+  font-size: 1.3rem;
+  text-align: center;
+  color: var(--text);
+}
+
+.live-transcript .placeholder {
+  color: var(--muted);
+}
+
+.cancel-btn {
+  padding: 12px 24px;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: 'Noto Nastaliq Urdu', 'Poppins', serif;
+}
+
+/* --- Loading --- */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 0;
+  text-align: center;
+}
+
+.spinner {
+  width: 54px;
+  height: 54px;
+  border: 5px solid var(--teal-light);
+  border-top-color: var(--teal);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-en {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.loading-query {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+/* --- Result card --- */
+.result-card {
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  border: 2px solid var(--border);
+  background: var(--card);
+  animation: rise 0.3s ease;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.result-icon {
+  font-size: 3.6rem;
+  line-height: 1;
+}
+
+.result-level-urdu {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.result-level-en {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.result-level-sub {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.advice-urdu {
+  font-size: 1.35rem;
+  margin: 18px 0 6px;
+  color: var(--text);
+}
+
+.advice-english {
+  font-size: 0.92rem;
+  color: var(--muted);
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+
+.advice-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.replay-btn {
+  padding: 10px 20px;
+  border: 2px solid currentColor;
+  border-radius: 30px;
+  background: transparent;
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: 'Noto Nastaliq Urdu', 'Poppins', serif;
+  color: inherit;
+}
+
+.mock-badge {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 3px 12px;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/* Level color theming */
+.level-emergency {
+  background: var(--red-bg);
+  border-color: var(--red);
+  color: var(--red);
+}
+.level-doctor {
+  background: var(--yellow-bg);
+  border-color: var(--yellow);
+  color: #b47100;
+}
+.level-home {
+  background: var(--green-bg);
+  border-color: var(--green);
+  color: var(--green);
+}
+.result-card .advice-urdu,
+.result-card .advice-english {
+  color: var(--text);
+}
+
+/* Why + new query */
+.why-toggle {
+  margin-top: 16px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.why-body {
+  margin-top: 8px;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 12px;
+  text-align: left;
+  font-size: 0.86rem;
+  color: var(--text);
+}
+
+.why-body p {
+  margin: 6px 0 0;
+}
+
+.new-query-btn {
+  display: block;
+  width: 100%;
+  margin-top: 18px;
+  padding: 14px;
+  border: none;
+  border-radius: 16px;
+  background: var(--teal);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Noto Nastaliq Urdu', 'Poppins', serif;
+}
+
+/* --- Transcript chip --- */
+.transcript-chip {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+  color: var(--text);
+  text-align: center;
+}
+
+.transcript-label {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.transcript-text {
+  font-weight: 500;
+}
+
+.tts-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 4px 0 0;
+}
+
+/* --- Guidance blocks --- */
+.guidance {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.guidance-block {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.guidance-block.tone-green {
+  background: var(--green-bg);
+  border-color: rgba(46, 158, 91, 0.35);
+}
+.guidance-block.tone-blue {
+  background: #eaf3fb;
+  border-color: #bcd9f2;
+}
+.guidance-block.tone-red {
+  background: var(--red-bg);
+  border-color: rgba(229, 57, 53, 0.3);
+}
+
+.guidance-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.guidance-title .urdu {
+  font-size: 1.15rem;
+}
+
+.guidance-title-en {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.guidance-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.guidance-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+  padding-top: 7px;
+}
+
+.guidance-list li:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.guidance-ur {
+  font-size: 1.12rem;
+  line-height: 1.9;
+  color: var(--text);
+}
+
+.guidance-en {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.medicine-disclaimer {
+  margin: 10px 0 0;
+  font-size: 0.95rem;
+  color: #8a5a00;
+  background: var(--yellow-bg);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.medicine-disclaimer-en {
+  display: block;
+  direction: ltr;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.76rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* --- Follow-up questions + refine --- */
+.followups {
+  margin-top: 16px;
+  text-align: left;
+  background: var(--teal-light);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.followup-list {
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.followup-list li {
+  display: flex;
+  flex-direction: column;
+}
+
+.followup-list li .urdu {
+  font-size: 1.1rem;
+  color: var(--teal-dark);
+}
+
+.refine-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.refine-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 1.05rem;
+  resize: vertical;
+  background: var(--card);
+  outline: none;
+}
+
+.refine-input:focus {
+  border-color: var(--teal);
+}
+
+.refine-btn {
+  padding: 11px;
+  border: none;
+  border-radius: 12px;
+  background: var(--teal);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Noto Nastaliq Urdu', 'Poppins', serif;
+}
+
+.refine-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Location picker --- */
+.location-card {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.location-card-inline {
+  margin-top: 4px;
+}
+
+.location-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 10px;
+  text-align: center;
+}
+
+.location-heading .urdu {
+  font-size: 1.1rem;
+  color: var(--teal-dark);
+}
+
+.location-heading-en {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.location-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.location-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.location-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 74px;
+}
+
+.location-label .urdu {
+  font-size: 1.05rem;
+}
+
+.location-label-en {
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.location-select {
+  flex: 1;
+  padding: 11px 12px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 1rem;
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+}
+
+.location-select:focus {
+  border-color: var(--teal);
+}
+
+.location-select:disabled {
+  opacity: 0.55;
+}
+
+.location-current {
+  margin: 10px 0 0;
+  text-align: center;
+  color: var(--teal-dark);
+  font-size: 1.05rem;
+}
+
+/* --- Rescue banner --- */
+.rescue-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--red);
+  color: #fff;
+  text-decoration: none;
+  padding: 14px;
+  border-radius: 16px;
+  font-size: 1.3rem;
+  box-shadow: 0 6px 18px rgba(229, 57, 53, 0.35);
+  animation: pulse-red 1.6s ease-out infinite;
+}
+
+.rescue-en {
+  font-size: 0.85rem;
+  font-family: 'Poppins', sans-serif;
+  letter-spacing: 0.04em;
+}
+
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.5); }
+  70% { box-shadow: 0 0 0 20px rgba(229, 57, 53, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0); }
+}
+
+.clinic-phone-muted {
+  color: var(--muted) !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* --- Clinics --- */
+.clinics {
+  margin-top: 4px;
+}
+
+.clinics-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 0 12px;
+}
+
+.clinics-title .urdu {
+  font-size: 1.4rem;
+  color: var(--teal-dark);
+}
+
+.clinics-title-en {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.clinic-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.clinic-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.clinic-name {
+  font-weight: 600;
+  font-size: 1.02rem;
+  color: var(--text);
+}
+
+.clinic-meta {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.clinic-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.clinic-phone,
+.clinic-directions {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.clinic-phone {
+  background: var(--teal-light);
+  color: var(--teal-dark);
+}
+
+.clinic-directions {
+  background: var(--teal);
+  color: #fff;
+}
+
+/* --- Error --- */
+.error-state {
+  text-align: center;
+  padding: 30px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-icon {
+  font-size: 3rem;
+}
+
+.error-en {
+  color: var(--muted);
+  margin: 0;
+}
+
+.error-detail {
+  font-size: 0.78rem;
+  color: var(--muted);
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.error-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* --- Footer --- */
+.app-footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(6px);
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.app-footer .urdu {
+  font-size: 1rem;
+  color: var(--teal-dark);
+}
+
+.footer-en {
+  font-size: 0.74rem;
+  color: var(--muted);
+}

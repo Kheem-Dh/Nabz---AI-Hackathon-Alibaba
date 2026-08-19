@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+venv/
+.venv/
+env/
+
+# Node / Vite
+node_modules/
+dist/
+build/
+.vite/
+
+# Environment + local data (NEVER commit)
+.env
+.env.local
+server/.env
+server/nabz.db
+server/nabz.db-journal
+server/uploads/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
