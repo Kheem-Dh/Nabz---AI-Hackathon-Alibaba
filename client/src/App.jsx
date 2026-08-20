@@ -99,6 +99,13 @@ function TopBar({ minimal = false }) {
             <div className="brand-pulse urdu">آپ کی آواز، آپ کی صحت</div>
           </div>
         </div>
+        {!minimal && (
+          <nav className="desktop-nav" aria-label="Primary navigation">
+            <button onClick={() => navigate('/')}>Home</button>
+            <button onClick={() => navigate('/vault')}>Medical Vault</button>
+            <button onClick={() => navigate('/clinics')}>Nearby Care</button>
+          </nav>
+        )}
         <div className="row">
           {!minimal && <LocationChip compact />}
           <button

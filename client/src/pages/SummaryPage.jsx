@@ -158,6 +158,34 @@ export default function SummaryPage() {
               </div>
             )}
 
+            {data.recent_documents?.length > 0 && (
+              <div className="summary-section">
+                <h3>Recent Vault documents</h3>
+                <ul>
+                  {data.recent_documents.map((document, index) => (
+                    <li key={index}>
+                      <strong>{document.title}</strong> ({document.type})
+                      {document.notes ? ` — ${document.notes}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {data.medicine_evidence?.length > 0 && (
+              <div className="summary-section">
+                <h3>WHO references for clinician-confirmed medicines</h3>
+                {data.medicine_evidence.map((evidence) => (
+                  <div key={evidence.medicine_id}>
+                    <p><strong>{evidence.medicine_name}</strong> — {evidence.source_status}</p>
+                    <p>{evidence.evidence_summary}</p>
+                    <p className="no-print"><a href={evidence.who_source_url} target="_blank" rel="noreferrer">WHO source ↗</a></p>
+                    <p><em>{evidence.safety_note}</em></p>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <p className="summary-foot">{data.footer}</p>
           </div>
 

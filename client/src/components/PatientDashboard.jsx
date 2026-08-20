@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getDashboard } from '../api'
+import { getDashboard, seedDemoProfile } from '../api'
+import { useProfiles } from '../context/ProfileContext'
 
 const DOC_LABELS = {
   xray: 'X-ray',
@@ -10,9 +11,17 @@ const DOC_LABELS = {
   other: 'Other',
 }
 
-export default function PatientDashboard({ profile, onOpenVault }) {
+export default function PatientDashboard({ profile, onOpenVault, onOpenSummary }) {
+  const { refresh } = useProfiles()
   const [dashboard, setDashboard] = useState(null)
   const [error, setError] = useState('')
+  const [seeding, setSeeding] = useState(false)
+
+  async function loadDashboard() {
+    const data = await getDashboard(profile.id)
+    setDashboard(data)
+    return data
+  }
 
   useEffect(() => {
     let alive = true
@@ -26,7 +35,7 @@ export default function PatientDashboard({ profile, onOpenVault }) {
     }
   }, [profile.id])
 
-  if (error) return null
+  if (error && !dashboard) return <div className="form-error">{error}</div>
   if (!dashboard) {
     return (
       <div className="patient-dashboard patient-dashboard-loading">
@@ -37,6 +46,21 @@ export default function PatientDashboard({ profile, onOpenVault }) {
   }
 
   const counts = Object.entries(dashboard.document_counts || {})
+  const canSeedHassan = dashboard.patient_name.toLowerCase() === 'hassan' && dashboard.document_total === 0
+
+  async function seedHassan() {
+    setSeeding(true)
+    setError('')
+    try {
+      await seedDemoProfile(profile.id)
+      await Promise.all([loadDashboard(), refresh()])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSeeding(false)
+    }
+  }
+
   return (
     <section className="patient-dashboard">
       <div className="pd-head">
@@ -49,11 +73,21 @@ export default function PatientDashboard({ profile, onOpenVault }) {
               .join(' · ') || 'Personal health dashboard'}
           </div>
         </div>
-        <button className="pd-vault-btn" onClick={onOpenVault}>Open vault ›</button>
+        <div className="pd-head-actions">
+          <button className="pd-vault-btn" onClick={onOpenSummary}>Doctor view</button>
+          <button className="pd-vault-btn" onClick={onOpenVault}>Open vault ›</button>
+        </div>
       </div>
 
       <p className="pd-summary-ur urdu">{dashboard.summary_urdu}</p>
       <p className="pd-summary-en">{dashboard.summary_english}</p>
+
+      {canSeedHassan && (
+        <button className="pd-demo-seed" onClick={seedHassan} disabled={seeding}>
+          {seeding ? 'Preparing demo record…' : '＋ Load Hassan’s synthetic demo history'}
+        </button>
+      )}
+      {error && <div className="form-error">{error}</div>}
 
       <div className="pd-stats">
         <div><strong>{dashboard.document_total}</strong><span>Documents</span></div>
@@ -110,6 +144,24 @@ export default function PatientDashboard({ profile, onOpenVault }) {
           <span>Recent documents</span>
           {dashboard.recent_documents.map((document) => (
             <button key={document.id} onClick={onOpenVault}>{document.title} ›</button>
+          ))}
+        </div>
+      )}
+
+      {dashboard.medicine_evidence?.length > 0 && (
+        <div className="pd-evidence">
+          <div className="pd-evidence-head">
+            <span>WHO medicine reference</span>
+            <small>For clinician-confirmed Vault medicines—not a new recommendation</small>
+          </div>
+          {dashboard.medicine_evidence.map((evidence) => (
+            <article key={evidence.medicine_id}>
+              <strong>{evidence.medicine_name} {evidence.recorded_details}</strong>
+              <span>{evidence.source_status}</span>
+              <p>{evidence.evidence_summary}</p>
+              <a href={evidence.who_source_url} target="_blank" rel="noreferrer">Open WHO source ↗</a>
+              <small>{evidence.safety_note}</small>
+            </article>
           ))}
         </div>
       )}

@@ -21,6 +21,9 @@ router = APIRouter(prefix="/api/triage", tags=["triage"])
 
 
 def _profile_payload(profile: Profile) -> dict[str, Any]:
+    recent_entries = sorted(
+        list(profile.timeline), key=lambda entry: entry.created_at, reverse=True
+    )[:8]
     return {
         "id": profile.id,
         "display_name": profile.display_name,
@@ -30,7 +33,31 @@ def _profile_payload(profile: Profile) -> dict[str, Any]:
         "blood_group": profile.blood_group,
         "chronic_conditions": list(profile.chronic_conditions or []),
         "allergies": list(profile.allergies or []),
-        "current_medicines": [m.name for m in profile.medicines],
+        "notes": profile.notes,
+        "current_medicines": [
+            {
+                "name": medicine.name,
+                "strength": medicine.strength,
+                "frequency": medicine.frequency,
+                "duration": medicine.duration,
+                "source": medicine.source,
+                "prescription_date": medicine.prescription_date,
+            }
+            for medicine in profile.medicines
+        ],
+        "recent_record": [
+            {
+                "kind": entry.kind,
+                "title": entry.title,
+                "subtitle": entry.subtitle,
+                "level": entry.level,
+                "date": entry.created_at.isoformat(),
+                "flagged_lab_values": (entry.payload or {}).get("flagged", [])[:6]
+                if entry.kind == "lab"
+                else [],
+            }
+            for entry in recent_entries
+        ],
     }
 
 

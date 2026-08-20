@@ -118,7 +118,7 @@ def is_suicidal_text(text: str) -> bool:
 # --- Profile context helpers -------------------------------------------------
 
 def _profile_context(profile: dict[str, Any]) -> str:
-    """Format the active profile so the model can address them by name."""
+    """Format a bounded, patient-owned Vault snapshot for the model."""
     parts = [f"Patient name: {profile.get('display_name', 'the patient')}"]
     if profile.get("relation"):
         parts.append(f"Relation to caller: {profile['relation']}")
@@ -131,14 +131,50 @@ def _profile_context(profile: dict[str, Any]) -> str:
     if profile.get("allergies"):
         parts.append("Allergies: " + ", ".join(profile["allergies"]))
     if profile.get("current_medicines"):
-        parts.append("Current medicines: " + ", ".join(profile["current_medicines"]))
+        medicines = []
+        for medicine in profile["current_medicines"]:
+            if isinstance(medicine, dict):
+                detail = " ".join(
+                    str(medicine.get(field, "")).strip()
+                    for field in ["name", "strength", "frequency", "duration"]
+                    if medicine.get(field)
+                )
+                source = medicine.get("source")
+                medicines.append(f"{detail} (source: {source})" if source else detail)
+            else:
+                medicines.append(str(medicine))
+        parts.append("Current recorded medicines: " + "; ".join(medicines))
+    if profile.get("notes"):
+        parts.append("Patient history note: " + str(profile["notes"])[:1000])
+    if profile.get("recent_record"):
+        record_lines = []
+        for entry in profile["recent_record"][:8]:
+            if not isinstance(entry, dict):
+                continue
+            line = " | ".join(
+                str(value)
+                for value in [
+                    entry.get("date"),
+                    entry.get("kind"),
+                    entry.get("title"),
+                    entry.get("subtitle"),
+                    entry.get("level"),
+                ]
+                if value
+            )
+            flagged = entry.get("flagged_lab_values") or []
+            if flagged:
+                line += " | flagged lab values: " + json.dumps(flagged, ensure_ascii=False)
+            record_lines.append(line)
+        if record_lines:
+            parts.append("Recent patient Vault record:\n- " + "\n- ".join(record_lines))
     return "\n".join(parts)
 
 
 # --- System prompt (real Qwen path) ------------------------------------------
 
 SYSTEM_PROMPT = """\
-You are "Nabz" (نبض) — a caring health-triage assistant for Pakistani families,
+You are "Nabz" (نبض) — an expert, careful health-triage assistant for Pakistani families,
 communicating primarily in simple spoken Urdu. Your job is to gather just
 enough information to classify how urgently the patient needs a real clinician,
 then either ask ONE more question or return a final result.
@@ -147,6 +183,10 @@ STRICT RULES:
 - Always ADDRESS THE PATIENT BY NAME in Urdu. The name is given below.
 - Ask ONE question at a time — the single most useful question given what you
   already know. Keep it short and simple, in spoken Urdu.
+- Do not follow a canned checklist. Before choosing the question, reason about
+  which still-unknown fact would most change urgency or the clinician handoff:
+  onset/course, exact location/appearance, severity/function, relevant
+  associated symptoms, exposure/injury, age/pregnancy, or Vault risk factors.
 - Every question must be directly related to the chief complaint or the
   patient's latest answer. Do not repeat information the patient already gave.
 - Do NOT default to a breathing question for unrelated complaints. Ask about
@@ -157,6 +197,9 @@ STRICT RULES:
 - Provide 2–4 tappable quick replies for low-literacy users
   (e.g., ہاں / نہیں / پتہ نہیں), each with its English label too.
 - NEVER diagnose a disease. NEVER prescribe or name a medicine.
+- Use the Vault only when it is relevant. Never invent a history item. If a
+  recorded allergy, chronic condition, confirmed medicine, lab, or prior
+  urgency result changes the next question or care level, state that clearly.
 - Only three urgency levels: EMERGENCY, DOCTOR_24H, HOME_CARE.
 - When uncertain, escalate to the more urgent level.
 - Do NOT keep asking after 5 total questions — force a result.
@@ -198,6 +241,12 @@ Result turn:
   "advice_urdu": "2–4 short spoken-Urdu sentences addressed by name, ending with a reminder to see a real doctor",
   "advice_english": "faithful English translation of advice_urdu",
   "reason_english": "ONE sentence explaining the classification, referencing the profile where relevant",
+  "suggestions_urdu": ["2–4 practical, complaint-specific actions the patient can safely take now; no drug names or doses"],
+  "suggestions_english": ["faithful English translations in the same order"],
+  "exercise_suggestions_urdu": ["Only gentle, low-risk movement when clearly relevant; otherwise an empty list"],
+  "exercise_suggestions_english": ["faithful English translations in the same order"],
+  "doctor_handoff_english": "A concise factual handoff: complaint, onset/course, key positives/negatives, relevant Vault history, and urgency. No diagnosis.",
+  "vault_context_used": ["Only the exact relevant Vault items used; empty list if none"],
   "analysis": {
     "collected": [ ... same shape as above ... ],
     "still_checking_urdu": "",
@@ -209,6 +258,13 @@ Result turn:
 Reason_english MUST visibly reflect any personalization (e.g., existing
 diabetes, age, pregnancy, chronic condition). Never give generic un-addressed
 advice when a profile is provided.
+Advice must be specific and operational, not generic filler. Include what to
+monitor, what to avoid, what information or document to take to the clinician,
+and the exact worsening signs that should trigger escalation. Do not recommend
+medication, creams, antibiotics, supplements, or doses.
+Exercise guidance is optional. Never suggest exercise for chest pain,
+breathlessness, serious injury, severe pain, neurologic symptoms, pregnancy
+complications, or any EMERGENCY result.
 """
 
 
@@ -442,6 +498,18 @@ def _emergency_turn(profile: dict[str, Any], session_id: int, turns: list[dict],
         advice_urdu=advice_ur,
         advice_english=advice_en,
         reason_english=reason,
+        suggestions_urdu=[
+            "ابھی ریسکیو 1122 کو کال کریں یا قریب ترین ہسپتال جائیں۔",
+            "مریض کو اکیلا نہ چھوڑیں اور تمام والٹ رپورٹس اور ادویات کی فہرست ساتھ لے جائیں۔",
+        ],
+        suggestions_english=[
+            "Call Rescue 1122 now or go to the nearest hospital.",
+            "Do not leave the patient alone; take the Vault reports and confirmed-medicine list.",
+        ],
+        doctor_handoff_english=(
+            f"{profile.get('display_name', 'The patient')} reported a deterministic "
+            "emergency red flag and was directed to immediate emergency care without follow-up questions."
+        ),
         analysis=analysis,
         mock=True,
     )
@@ -897,6 +965,88 @@ def _mock_result(profile: dict[str, Any], session_id: int, turns: list[dict]) ->
     else:  # EMERGENCY handled above; safety net:
         return _emergency_turn(profile, session_id, turns, suicidal=False)
 
+    kind = _complaint_kind(text)
+    suggestions_ur: list[str]
+    suggestions_en: list[str]
+    exercise_ur: list[str] = []
+    exercise_en: list[str] = []
+    if kind == "skin":
+        suggestions_ur = [
+            "آج نشان کی صاف تصویر روشنی میں کسی سِکے یا پیمانے کے ساتھ لیں تاکہ پھیلاؤ کا موازنہ ہو سکے۔",
+            "جگہ کو صاف اور خشک رکھیں، نہ کھجائیں، اور ڈاکٹر کے دیکھنے تک کوئی نئی کریم یا دیسی نسخہ نہ لگائیں۔",
+            "اگر سرخی تیزی سے پھیلے، جگہ گرم یا سوجی ہو، پیپ نکلے، بخار آئے، یا شدید درد ہو تو فوراً طبی مدد لیں۔",
+        ]
+        suggestions_en = [
+            "Take a clear photo today in good light beside a coin or ruler so any spread can be compared.",
+            "Keep it clean and dry, avoid scratching, and do not apply a new cream or home remedy before clinical review.",
+            "Seek urgent care if redness spreads quickly, the area becomes hot or swollen, pus appears, fever develops, or pain becomes severe.",
+        ]
+    elif kind == "fever":
+        suggestions_ur = [
+            "درجہ حرارت اور اس کا وقت لکھیں، پانی پیتے رہیں، اور پیشاب کی مقدار پر نظر رکھیں۔",
+            "اپنی حالیہ لیب رپورٹس اور استعمال ہونے والی تصدیق شدہ ادویات کی فہرست ڈاکٹر کو دکھائیں۔",
+            "سانس میں مشکل، بے ہوشی، گردن اکڑنے، شدید کمزوری، یا پانی نہ رکنے پر فوری ہسپتال جائیں۔",
+        ]
+        suggestions_en = [
+            "Record the temperature with time, keep taking fluids, and monitor urine output.",
+            "Show the clinician recent lab reports and the list of confirmed medicines already in the Vault.",
+            "Seek emergency care for breathing difficulty, fainting, a stiff neck, profound weakness, or inability to keep fluids down.",
+        ]
+    elif kind == "stomach":
+        suggestions_ur = [
+            "چھوٹے گھونٹ بار بار لیں اور الٹی یا دست کی تعداد لکھیں۔",
+            "خون، شدید مسلسل درد، بے ہوشی، بہت کم پیشاب، یا پانی نہ رکنے پر فوری ہسپتال جائیں۔",
+        ]
+        suggestions_en = [
+            "Take frequent small sips and record how often vomiting or diarrhoea occurs.",
+            "Seek emergency care for blood, severe constant pain, fainting, very little urine, or inability to keep fluids down.",
+        ]
+    elif kind == "pain":
+        suggestions_ur = [
+            "درد کی جگہ، شدت، شروع ہونے کا وقت، اور کس حرکت سے بڑھتا ہے لکھ لیں۔",
+            "اگر چوٹ نہیں لگی، درد ہلکا ہے، اور سن پن یا کمزوری نہیں تو صرف آرام دہ حد تک نرم حرکت کریں؛ درد بڑھے تو رک جائیں۔",
+            "شدید ہوتا درد، کمزوری، سن پن، بخار، یا حرکت نہ ہونے پر فوری طبی معائنہ کرائیں۔",
+        ]
+        suggestions_en = [
+            "Record the exact location, severity, onset, and which movements make the pain worse.",
+            "Only if there was no injury and there is no numbness or weakness, try gentle pain-free movement and stop if pain increases.",
+            "Get urgent assessment for escalating severe pain, weakness, numbness, fever, or inability to move.",
+        ]
+        exercise_ur = ["صرف درد سے پاک حد میں آہستہ حرکت کریں؛ زور والی ورزش یا وزن اٹھانے سے گریز کریں۔"]
+        exercise_en = ["Use only gentle movement within a pain-free range; avoid forceful exercise or lifting."]
+    else:
+        suggestions_ur = [
+            "علامات کے شروع ہونے، شدت، اور تبدیلی کا مختصر نوٹ بنائیں۔",
+            "اپنا والٹ خلاصہ اور حالیہ رپورٹس ڈاکٹر کو دکھائیں۔",
+            "حالت تیزی سے بگڑے یا کوئی ہنگامی علامت آئے تو فوراً ہسپتال جائیں۔",
+        ]
+        suggestions_en = [
+            "Make a short note of symptom onset, severity, and changes over time.",
+            "Show the clinician the Vault summary and recent reports.",
+            "Go to emergency care if the condition worsens quickly or any red flag appears.",
+        ]
+
+    vault_used: list[str] = []
+    if profile.get("chronic_conditions"):
+        vault_used.append("Chronic conditions: " + ", ".join(profile["chronic_conditions"]))
+    if profile.get("allergies"):
+        vault_used.append("Allergies: " + ", ".join(profile["allergies"]))
+    medicine_names = [
+        medicine.get("name", "") if isinstance(medicine, dict) else str(medicine)
+        for medicine in profile.get("current_medicines", [])
+    ]
+    if any(medicine_names):
+        vault_used.append("Confirmed medicines: " + ", ".join(filter(None, medicine_names)))
+    handoff_bits = [
+        f"Patient: {profile.get('display_name', 'the patient')}",
+        f"reported: {_first_symptom(turns)}",
+        f"conversation detail: {_joined_answers(turns)}",
+        f"triage level: {level.value}",
+    ]
+    if vault_used:
+        handoff_bits.append("relevant Vault record: " + "; ".join(vault_used))
+    doctor_handoff = ". ".join(bit.strip(" .") for bit in handoff_bits if bit) + "."
+
     analysis = TriageAnalysis(
         collected=_collect_from_turns(turns),
         still_checking_urdu="",
@@ -912,6 +1062,12 @@ def _mock_result(profile: dict[str, Any], session_id: int, turns: list[dict]) ->
         advice_urdu=advice_ur,
         advice_english=advice_en,
         reason_english=reason,
+        suggestions_urdu=suggestions_ur,
+        suggestions_english=suggestions_en,
+        exercise_suggestions_urdu=exercise_ur,
+        exercise_suggestions_english=exercise_en,
+        doctor_handoff_english=doctor_handoff,
+        vault_context_used=vault_used,
         analysis=analysis,
         mock=True,
     )
@@ -1006,6 +1162,12 @@ def _strip_fences(raw: str) -> str:
     return t.strip()
 
 
+def _short_string_list(value: Any, limit: int = 5) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip()[:500] for item in value[:limit] if str(item).strip()]
+
+
 def _safe_fallback(profile: dict[str, Any], session_id: int, turns: list[dict]) -> TriageTurn:
     name = _name_ur(profile)
     return TriageTurn(
@@ -1024,6 +1186,19 @@ def _safe_fallback(profile: dict[str, Any], session_id: int, turns: list[dict]) 
             "immediately."
         ),
         reason_english="Fallback response used because the model output could not be trusted.",
+        suggestions_urdu=[
+            "علامات کب شروع ہوئیں اور کیسے بدلیں، یہ لکھ کر ڈاکٹر کو دکھائیں۔",
+            "اپنا والٹ خلاصہ، رپورٹس، الرجی، اور تصدیق شدہ ادویات کی فہرست ساتھ لے جائیں۔",
+        ],
+        suggestions_english=[
+            "Write down when symptoms began and how they changed, then show this to the clinician.",
+            "Take the Vault summary, reports, allergies, and confirmed-medicine list.",
+        ],
+        doctor_handoff_english=(
+            f"{profile.get('display_name', 'The patient')} requires clinician review "
+            "within 24 hours because the AI response could not be safely validated; "
+            "use the attached conversation and Vault record for assessment."
+        ),
         analysis=TriageAnalysis(
             collected=_collect_from_turns(turns),
             still_checking_urdu="", still_checking_english="",
@@ -1102,6 +1277,18 @@ def _turn_from_qwen_json(
         advice_urdu=str(data.get("advice_urdu", "")).strip(),
         advice_english=str(data.get("advice_english", "")).strip(),
         reason_english=str(data.get("reason_english", "")).strip(),
+        suggestions_urdu=_short_string_list(data.get("suggestions_urdu"), 4),
+        suggestions_english=_short_string_list(data.get("suggestions_english"), 4),
+        exercise_suggestions_urdu=_short_string_list(
+            data.get("exercise_suggestions_urdu"), 3
+        ),
+        exercise_suggestions_english=_short_string_list(
+            data.get("exercise_suggestions_english"), 3
+        ),
+        doctor_handoff_english=(
+            str(data.get("doctor_handoff_english", "")).strip()[:2000] or None
+        ),
+        vault_context_used=_short_string_list(data.get("vault_context_used"), 8),
         analysis=analysis,
         mock=False,
     )
@@ -1161,7 +1348,7 @@ def qwen_next_turn(profile: dict[str, Any], session_id: int, turns: list[dict]) 
         completion = client.chat.completions.create(
             model=model,
             messages=messages,
-            temperature=0.2,
+            temperature=0.45,
             response_format={"type": "json_object"},
             # Qwen3.7 enables hybrid thinking by default.  Triage needs a
             # short structured turn, not a long reasoning trace.

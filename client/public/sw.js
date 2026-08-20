@@ -8,7 +8,7 @@
  *   - Network-first for /api/* so health data is never stale — the SW never
  *     caches JWT-bearing responses.
  */
-const CACHE = 'nabz-shell-v1'
+const CACHE = 'nabz-shell-v2-desktop-dashboard'
 const SHELL = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-maskable.svg']
 
 self.addEventListener('install', (event) => {

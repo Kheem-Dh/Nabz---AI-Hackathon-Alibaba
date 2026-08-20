@@ -30,49 +30,71 @@ export default function HomePage() {
   }
 
   return (
-    <div className="page">
-      <ActiveProfileBar />
-
-      <div className="section-title">
-        <span className="ur urdu">کس کے لیے؟</span>
-        <span className="en">Change who this is for</span>
+    <div className="page home-page">
+      <div className="home-heading">
+        <div>
+          <span className="home-kicker">PATIENT WORKSPACE</span>
+          <h1>{active.display_name}&apos;s health dashboard</h1>
+          <p>One private record for triage, documents, medicines, and doctor handoff.</p>
+        </div>
+        <ActiveProfileBar />
       </div>
-      <ProfileSwitcher />
 
-      <PatientDashboard
-        key={`dashboard-${active.id}`}
-        profile={active}
-        onOpenVault={() => navigate(`/profile/${active.id}/documents`)}
-      />
+      <div className="home-web-grid">
+        <aside className="home-patient-column">
+          <div className="home-panel">
+            <div className="section-title">
+              <span className="ur urdu">کس کے لیے؟</span>
+              <span className="en">Switch patient</span>
+            </div>
+            <ProfileSwitcher />
+          </div>
 
-      {/* key forces a fresh conversation when the active profile changes */}
-      <TriageConversation key={active.id} profile={active} />
+          <PatientDashboard
+            key={`dashboard-${active.id}`}
+            profile={active}
+            onOpenVault={() => navigate(`/profile/${active.id}/documents`)}
+            onOpenSummary={() => navigate(`/summary/${active.id}`)}
+          />
 
-      <div className="section-title" style={{ marginTop: 6 }}>
-        <span className="ur urdu">فوری کام</span>
-        <span className="en">Quick actions</span>
-      </div>
-      <div className="tile-grid">
-        <button className="tile" onClick={() => navigate(`/profile/${active.id}/lab`)}>
-          <span className="tile-icon">🧪</span>
-          <span className="tile-ur urdu">لیب رپورٹ</span>
-          <span className="tile-en">Explain a lab report</span>
-        </button>
-        <button className="tile" onClick={() => navigate(`/profile/${active.id}/prescription`)}>
-          <span className="tile-icon">📝</span>
-          <span className="tile-ur urdu">نسخہ اسکین</span>
-          <span className="tile-en">Scan a prescription</span>
-        </button>
-        <button className="tile" onClick={() => navigate(`/profile/${active.id}/documents`)}>
-          <span className="tile-icon">🗂️</span>
-          <span className="tile-ur urdu">میڈیکل والٹ</span>
-          <span className="tile-en">Open the vault</span>
-        </button>
-        <button className="tile" onClick={() => navigate(`/summary/${active.id}`)}>
-          <span className="tile-icon">🩺</span>
-          <span className="tile-ur urdu">ڈاکٹر خلاصہ</span>
-          <span className="tile-en">Doctor handoff summary</span>
-        </button>
+          <div className="home-panel quick-panel">
+            <div className="section-title" style={{ marginTop: 0 }}>
+              <span className="ur urdu">فوری کام</span>
+              <span className="en">Quick actions</span>
+            </div>
+            <div className="tile-grid">
+              <button className="tile" onClick={() => navigate(`/profile/${active.id}/lab`)}>
+                <span className="tile-icon">🧪</span>
+                <span className="tile-ur urdu">لیب رپورٹ</span>
+                <span className="tile-en">Explain a lab report</span>
+              </button>
+              <button className="tile" onClick={() => navigate(`/profile/${active.id}/prescription`)}>
+                <span className="tile-icon">📝</span>
+                <span className="tile-ur urdu">نسخہ اسکین</span>
+                <span className="tile-en">Confirm a prescription</span>
+              </button>
+              <button className="tile" onClick={() => navigate(`/profile/${active.id}/documents`)}>
+                <span className="tile-icon">🗂️</span>
+                <span className="tile-ur urdu">میڈیکل والٹ</span>
+                <span className="tile-en">Open patient documents</span>
+              </button>
+              <button className="tile" onClick={() => navigate(`/summary/${active.id}`)}>
+                <span className="tile-icon">🩺</span>
+                <span className="tile-ur urdu">ڈاکٹر خلاصہ</span>
+                <span className="tile-en">Doctor handoff summary</span>
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <section className="home-care-column">
+          <div className="care-workspace-title">
+            <div><span>ADAPTIVE TRIAGE</span><h2>Describe what is happening now</h2></div>
+            <small>Live Qwen when configured; offline safety engine otherwise</small>
+          </div>
+          {/* key forces a fresh conversation when the active profile changes */}
+          <TriageConversation key={active.id} profile={active} />
+        </section>
       </div>
     </div>
   )

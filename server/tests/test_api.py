@@ -429,6 +429,10 @@ def test_dashboard_is_patient_specific(client, auth):
     assert body["profile_notes"] == "Uses an inhaler during winter."
     assert "Hassan" in body["summary_english"]
 
+    doctor_summary = client.get(f"/api/summary/{family['id']}", headers=headers).json()
+    assert doctor_summary["recent_documents"]
+    assert doctor_summary["medicine_evidence"] == []
+
     self_dashboard = client.get(f"/api/dashboard/{self_id}", headers=headers).json()
     assert self_dashboard["patient_name"] == self_profile["display_name"]
     assert self_dashboard["document_total"] == 0
@@ -439,6 +443,53 @@ def test_dashboard_is_patient_specific(client, auth):
     ).json()
     other_headers = {"Authorization": f"Bearer {other['token']}"}
     assert client.get(f"/api/dashboard/{family['id']}", headers=other_headers).status_code == 404
+
+
+def test_hassan_demo_seed_populates_private_vault_and_informs_triage(client, auth):
+    headers, _account, _self_id = auth
+    hassan = client.post(
+        "/api/profiles",
+        headers=headers,
+        json={"display_name": "Hassan", "relation": "Self"},
+    ).json()
+
+    seeded = client.post(f"/api/demo/seed/{hassan['id']}", headers=headers)
+    assert seeded.status_code == 200, seeded.text
+    assert seeded.json()["seeded"] is True
+    assert client.post(f"/api/demo/seed/{hassan['id']}", headers=headers).json()["seeded"] is False
+
+    dashboard = client.get(f"/api/dashboard/{hassan['id']}", headers=headers).json()
+    assert dashboard["document_total"] == 4
+    assert dashboard["document_counts"] == {
+        "skin": 1,
+        "lab": 1,
+        "prescription": 1,
+        "xray": 1,
+    }
+    assert dashboard["current_medicines"][0]["source"] == "prescription"
+    assert dashboard["medicine_evidence"][0]["medicine_name"] == "Cetirizine"
+    assert "WHO 2025" in dashboard["medicine_evidence"][0]["source_status"]
+    assert dashboard["medicine_evidence"][0]["who_source_url"].startswith("https://")
+    assert "Ibuprofen — reported rash" in dashboard["allergies"]
+
+    turn = client.post(
+        "/api/triage/start",
+        headers=headers,
+        json={"profile_id": hassan["id"], "text": "mere right arm pe surkh nishan hai"},
+    ).json()
+    for answer in ["teen din se", "kharish hai", "thora phail raha hai"]:
+        if turn["type"] == "result":
+            break
+        turn = client.post(
+            "/api/triage/answer",
+            headers=headers,
+            json={"session_id": turn["session_id"], "text": answer},
+        ).json()
+    assert turn["type"] == "result"
+    assert turn["suggestions_english"]
+    assert turn["doctor_handoff_english"]
+    assert any("Ibuprofen" in item for item in turn["vault_context_used"])
+    assert not any("Ibuprofen" in item for item in turn["suggestions_english"])
 
 
 # --- Summary -----------------------------------------------------------------

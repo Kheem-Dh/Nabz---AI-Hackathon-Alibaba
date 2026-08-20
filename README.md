@@ -40,7 +40,18 @@ Nabz also includes a **family Medical Vault**, **lab-report explanation**, **pre
   stored-document counts, confirmed medicines, conditions, and allergies.
 - Prescription extraction remains temporary until the user confirms it; only
   then are the reviewed medicines and original paper attached to the Vault.
-- Backend suite: **25/25 green**; safety evaluation: **16/16 green**.
+- Desktop browsers now receive a two-column patient workspace with the Vault
+  context beside the transcript-driven triage conversation; mobile retains the
+  compact voice-first flow.
+- Real Qwen turns receive a bounded snapshot of the selected patient's history,
+  allergies, clinician-confirmed medicines, recent labs/documents, and prior
+  urgency results. Final cards include practical next steps and a copyable,
+  diagnosis-free doctor handoff.
+- Mock mode includes an authenticated, idempotent Hassan demo-record seeder.
+- WHO reference cards annotate clinician-confirmed medicines only. They link to
+  the [2025 WHO Model List of Essential Medicines](https://www.who.int/publications/i/item/B09474)
+  and never select a new medicine or alter a prescription.
+- Backend suite: **26/26 green**; safety evaluation: **16/16 green**.
 
 ---
 
@@ -544,6 +555,8 @@ Final result response:
 | `POST`   | `/api/documents` | Store a lab, image/scan, or other document |
 | `GET`    | `/api/documents/{entry_id}/file` | Authenticated original-file view |
 | `DELETE` | `/api/documents/{entry_id}` | Delete a directly uploaded document |
+| `POST`   | `/api/demo/seed/{profile_id}` | Seed synthetic Vault history in mock mode |
+| `GET`    | `/api/medicine-evidence/{profile_id}` | WHO references for confirmed medicines |
 
 ### Document intelligence
 

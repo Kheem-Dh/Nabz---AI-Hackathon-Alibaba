@@ -93,6 +93,17 @@ class VaultDocumentOut(BaseModel):
     deletable: bool = True
 
 
+class MedicineEvidenceOut(BaseModel):
+    medicine_id: int
+    medicine_name: str
+    recorded_details: str
+    source_status: str
+    evidence_summary: str
+    who_source_title: str
+    who_source_url: str
+    safety_note: str
+
+
 class DashboardOut(BaseModel):
     profile_id: int
     patient_name: str
@@ -104,6 +115,7 @@ class DashboardOut(BaseModel):
     chronic_conditions: list[str] = Field(default_factory=list)
     allergies: list[str] = Field(default_factory=list)
     current_medicines: list[MedicineOut] = Field(default_factory=list)
+    medicine_evidence: list[MedicineEvidenceOut] = Field(default_factory=list)
     document_counts: dict[str, int] = Field(default_factory=dict)
     document_total: int = 0
     latest_triage: Optional[dict[str, Any]] = None
@@ -208,6 +220,12 @@ class TriageTurn(BaseModel):
     advice_urdu: Optional[str] = None
     advice_english: Optional[str] = None
     reason_english: Optional[str] = None
+    suggestions_urdu: list[str] = Field(default_factory=list)
+    suggestions_english: list[str] = Field(default_factory=list)
+    exercise_suggestions_urdu: list[str] = Field(default_factory=list)
+    exercise_suggestions_english: list[str] = Field(default_factory=list)
+    doctor_handoff_english: Optional[str] = None
+    vault_context_used: list[str] = Field(default_factory=list)
 
     # Hints the frontend for facility filtering:
     #   emergency_hospital | clinic_or_bhu | optional
@@ -358,4 +376,6 @@ class SummaryResponse(BaseModel):
     allergies: list[str]
     recent_triage: Optional[dict[str, Any]] = None
     recent_labs: list[dict[str, Any]] = Field(default_factory=list)
+    recent_documents: list[dict[str, Any]] = Field(default_factory=list)
+    medicine_evidence: list[MedicineEvidenceOut] = Field(default_factory=list)
     footer: str

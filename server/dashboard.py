@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from db import get_db
 from documents import list_profile_documents
+from medicine_evidence import evidence_for_medicine
 from models_db import Account, Profile, TimelineEntry
 from schemas import DashboardOut, MedicineOut, TimelineEntryOut
 from security import get_current_account
@@ -75,6 +76,11 @@ def get_dashboard(
         chronic_conditions=list(profile.chronic_conditions or []),
         allergies=list(profile.allergies or []),
         current_medicines=[MedicineOut.model_validate(med) for med in profile.medicines],
+        medicine_evidence=[
+            evidence_for_medicine(medicine)
+            for medicine in profile.medicines
+            if medicine.source == "prescription"
+        ],
         document_counts=counts,
         document_total=len(documents),
         latest_triage=latest_triage,

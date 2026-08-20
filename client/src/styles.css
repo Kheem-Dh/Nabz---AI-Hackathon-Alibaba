@@ -28,7 +28,7 @@
   --shadow-soft: 0 2px 8px rgba(31, 45, 43, 0.06);
   --shadow-btn: 0 6px 16px rgba(15, 157, 138, 0.28);
 
-  --container: 480px;
+  --container: 1180px;
   --nav-h: 64px;
   --font-en: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   --font-ur: 'Noto Nastaliq Urdu', serif;
@@ -166,6 +166,9 @@ a {
   font-size: 18px;
   display: grid;
   place-items: center;
+}
+.desktop-nav {
+  display: none;
 }
 
 /* --- Cards ------------------------------------------------------------- */
@@ -856,6 +859,109 @@ textarea.input {
   padding: 3px 8px;
   margin-top: 12px;
   letter-spacing: 0.4px;
+}
+
+.care-plan-card,
+.handoff-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow-soft);
+}
+.care-plan-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.care-plan-head .urdu {
+  font-weight: 700;
+  font-size: 17px;
+}
+.care-plan-head small {
+  color: var(--ink-mute);
+}
+.care-plan-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #fff;
+  background: var(--teal);
+  font-weight: 700;
+}
+.care-plan-list {
+  margin: 0;
+  padding-left: 24px;
+}
+.care-plan-list li {
+  padding: 7px 4px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  border-top: 1px solid var(--line);
+}
+.care-plan-list li > span {
+  display: block;
+}
+.care-plan-list li .urdu {
+  color: var(--ink);
+  font-size: 15px;
+}
+.exercise-card {
+  border-left: 4px solid var(--teal);
+}
+.exercise-line {
+  margin: 6px 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.exercise-line span {
+  display: block;
+}
+.exercise-line .urdu {
+  color: var(--ink);
+  font-size: 15px;
+}
+.handoff-card {
+  background: #172f2c;
+  color: #fff;
+}
+.handoff-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.handoff-head strong,
+.handoff-head span {
+  display: block;
+}
+.handoff-head span {
+  opacity: 0.66;
+  font-size: 10px;
+}
+.handoff-head button {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  padding: 5px 10px;
+}
+.handoff-card p {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.handoff-vault {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.handoff-vault span {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 7px;
+  font-size: 9px;
 }
 
 /* --- Notices / states -------------------------------------------------- */
@@ -1594,6 +1700,17 @@ textarea.input {
   font-size: 11px;
   color: var(--ink-mute);
 }
+.pd-demo-seed {
+  width: 100%;
+  margin: 2px 0 12px;
+  border: 1px dashed var(--teal);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--teal-dark);
+  padding: 9px;
+  font-size: 11px;
+  font-weight: 700;
+}
 .pd-vault-btn {
   border: 1px solid var(--teal-100);
   border-radius: 10px;
@@ -1603,6 +1720,12 @@ textarea.input {
   font-weight: 700;
   padding: 8px 10px;
   white-space: nowrap;
+}
+.pd-head-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
 }
 .pd-summary-ur {
   margin: 12px 0 2px;
@@ -1693,6 +1816,55 @@ textarea.input {
   text-align: left;
   font-size: 11px;
   font-weight: 600;
+}
+.pd-evidence {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--teal-100);
+}
+.pd-evidence-head span,
+.pd-evidence-head small {
+  display: block;
+}
+.pd-evidence-head span {
+  color: var(--teal-dark);
+  font-size: 11px;
+  font-weight: 700;
+}
+.pd-evidence-head small {
+  color: var(--ink-mute);
+  font-size: 9px;
+}
+.pd-evidence article {
+  margin-top: 7px;
+  padding: 9px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+.pd-evidence article strong,
+.pd-evidence article > span,
+.pd-evidence article > small {
+  display: block;
+}
+.pd-evidence article strong {
+  font-size: 11px;
+}
+.pd-evidence article > span {
+  color: var(--teal-dark);
+  font-size: 9px;
+  font-weight: 700;
+}
+.pd-evidence article p,
+.pd-evidence article > small {
+  margin: 4px 0;
+  color: var(--ink-mute);
+  font-size: 9px;
+}
+.pd-evidence article a {
+  color: var(--teal-dark);
+  font-size: 9px;
+  font-weight: 700;
 }
 
 /* Patient document vault */
@@ -1897,4 +2069,204 @@ textarea.input {
   padding: 6px 10px;
   font-size: 12px;
   border-radius: 999px;
+}
+
+/* --- Responsive desktop workspace ------------------------------------ */
+
+.care-workspace-title {
+  display: none;
+}
+.home-heading {
+  display: flex;
+  flex-direction: column;
+}
+.home-heading > div:first-child {
+  display: none;
+}
+.home-patient-column,
+.home-care-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  body {
+    background:
+      radial-gradient(circle at top left, rgba(15, 157, 138, 0.08), transparent 32%),
+      var(--bg);
+  }
+  .app-container {
+    padding: 0 24px;
+  }
+  .topbar {
+    top: 12px;
+    margin-top: 12px;
+    padding: 14px 22px;
+    border-radius: 18px;
+  }
+  .topbar-row {
+    min-height: 42px;
+  }
+  .desktop-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    margin-right: 18px;
+  }
+  .desktop-nav button {
+    border: none;
+    border-radius: 10px;
+    padding: 9px 13px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.82);
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .desktop-nav button:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+  }
+  .app-main {
+    padding: 28px 0 90px;
+  }
+  .bottom-nav {
+    display: none;
+  }
+  .disclaimer {
+    position: static;
+    transform: none;
+    max-width: none;
+    margin-top: auto;
+    border-radius: 14px 14px 0 0;
+  }
+  .home-page {
+    gap: 22px;
+  }
+  .home-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .home-heading > div:first-child {
+    display: block;
+  }
+  .home-heading h1 {
+    margin: 2px 0 3px;
+    font-size: 27px;
+    letter-spacing: -0.5px;
+  }
+  .home-heading p {
+    margin: 0;
+    color: var(--ink-mute);
+    font-size: 12px;
+  }
+  .home-kicker,
+  .care-workspace-title span {
+    color: var(--teal-dark);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+  }
+  .home-heading .active-profile-bar {
+    width: 330px;
+    margin: 0;
+    flex: 0 0 auto;
+  }
+  .home-web-grid {
+    display: grid;
+    grid-template-columns: minmax(310px, 0.78fr) minmax(520px, 1.5fr);
+    gap: 22px;
+    align-items: start;
+  }
+  .home-patient-column,
+  .home-care-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .home-panel,
+  .home-care-column {
+    background: rgba(255, 255, 255, 0.52);
+    border: 1px solid rgba(227, 236, 234, 0.9);
+    border-radius: 18px;
+    padding: 16px;
+  }
+  .home-care-column {
+    padding: 20px;
+    min-height: 620px;
+  }
+  .care-workspace-title {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 0 2px 4px;
+  }
+  .care-workspace-title h2 {
+    margin: 3px 0 0;
+    font-size: 19px;
+  }
+  .care-workspace-title small {
+    max-width: 245px;
+    color: var(--ink-mute);
+    text-align: right;
+  }
+  .patient-dashboard {
+    padding: 20px;
+  }
+  .quick-panel .tile-grid {
+    gap: 8px;
+  }
+  .quick-panel .tile {
+    min-height: 112px;
+    padding: 12px;
+  }
+  .quick-panel .tile .tile-icon {
+    font-size: 20px;
+  }
+  .quick-panel .tile .tile-ur {
+    font-size: 14px;
+  }
+  .hero-card,
+  .q-card,
+  .result-card {
+    padding: 28px 34px;
+  }
+  .result-card {
+    text-align: left;
+  }
+  .result-icon,
+  .result-level-ur,
+  .result-level-en,
+  .result-level-sub {
+    text-align: center;
+  }
+  .facility-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .facility-card {
+    min-height: 145px;
+  }
+  .facility-emergency {
+    min-height: auto;
+    margin-bottom: 10px;
+  }
+  .nearby .section-title {
+    margin-top: 18px;
+  }
+  .page:not(.home-page) {
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 1160px) {
+  .home-web-grid {
+    grid-template-columns: 380px minmax(0, 1fr);
+  }
 }

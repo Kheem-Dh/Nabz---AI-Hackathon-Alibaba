@@ -158,6 +158,7 @@ export function getNearbyFacilities({ urgency = 'DOCTOR_24H', latitude, longitud
 
 export const getSummary = (profileId) => jsonReq(`/api/summary/${profileId}`, 'GET')
 export const getDashboard = (profileId) => jsonReq(`/api/dashboard/${profileId}`, 'GET')
+export const seedDemoProfile = (profileId) => jsonReq(`/api/demo/seed/${profileId}`, 'POST')
 
 export async function getClinics(city, province) {
   const params = new URLSearchParams()

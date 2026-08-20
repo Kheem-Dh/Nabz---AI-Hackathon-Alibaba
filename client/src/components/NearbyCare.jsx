@@ -18,7 +18,7 @@ export default function NearbyCare({ urgency = 'DOCTOR_24H', title = null }) {
           urgency,
           latitude: preference?.latitude ?? undefined,
           longitude: preference?.longitude ?? undefined,
-          limit: urgency === 'EMERGENCY' ? 4 : 6,
+          limit: 4,
         })
         if (alive) setState({ loading: false, error: null, data })
       } catch (err) {
