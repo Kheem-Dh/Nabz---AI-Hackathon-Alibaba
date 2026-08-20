@@ -1,0 +1,746 @@
+<title>Nabz Architecture</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Nastaliq+Urdu:wght@600&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+  :root {
+    --bg: #f6f4ef;
+    --surface: #ffffff;
+    --surface-2: #f0ede6;
+    --ink: #1d2b2a;
+    --ink-soft: #55645f;
+    --ink-mute: #8a9793;
+    --line: #e2ddd3;
+    --line-strong: #cfc9bd;
+    --accent: #0f9d8a;
+    --accent-strong: #0b7d6e;
+    --accent-050: #e7f6f3;
+    --accent-ink: #0b6d60;
+    --red: #cf3b3b;
+    --amber: #c47a00;
+    --green: #128a4c;
+    --red-050: #fbe9e9;
+    --amber-050: #f8f0df;
+    --green-050: #e5f4ec;
+    --shadow: 0 2px 4px rgba(20, 40, 36, 0.04), 0 10px 30px rgba(20, 40, 36, 0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1615;
+      --surface: #16201e;
+      --surface-2: #1c2a27;
+      --ink: #e9efec;
+      --ink-soft: #a9b7b2;
+      --ink-mute: #6f817d;
+      --line: #27332f;
+      --line-strong: #33423d;
+      --accent: #2fc7b3;
+      --accent-strong: #4fd6c4;
+      --accent-050: #143029;
+      --accent-ink: #7fe0d2;
+      --red: #ff7a7a;
+      --amber: #f0b13f;
+      --green: #3fd287;
+      --red-050: #2c1a1a;
+      --amber-050: #2a2314;
+      --green-050: #13291f;
+      --shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 12px 34px rgba(0, 0, 0, 0.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1615;
+    --surface: #16201e;
+    --surface-2: #1c2a27;
+    --ink: #e9efec;
+    --ink-soft: #a9b7b2;
+    --ink-mute: #6f817d;
+    --line: #27332f;
+    --line-strong: #33423d;
+    --accent: #2fc7b3;
+    --accent-strong: #4fd6c4;
+    --accent-050: #143029;
+    --accent-ink: #7fe0d2;
+    --red: #ff7a7a;
+    --amber: #f0b13f;
+    --green: #3fd287;
+    --red-050: #2c1a1a;
+    --amber-050: #2a2314;
+    --green-050: #13291f;
+    --shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 12px 34px rgba(0, 0, 0, 0.4);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 56px 24px 96px;
+  }
+
+  /* --- Header --- */
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: "Sora", sans-serif;
+    font-weight: 700;
+    font-size: clamp(30px, 6vw, 46px);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin: 0 0 8px;
+    text-wrap: balance;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  h1 .ur {
+    font-family: "Noto Nastaliq Urdu", serif;
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 0.82em;
+    line-height: 1;
+  }
+  .lede {
+    font-size: 18px;
+    color: var(--ink-soft);
+    max-width: 64ch;
+    margin: 0;
+  }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 22px;
+  }
+  .tag {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 5px 12px;
+  }
+  .tag b {
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+
+  /* --- Sections --- */
+  section {
+    margin-top: 60px;
+  }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+  }
+  .sec-num {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  h2 {
+    font-family: "Sora", sans-serif;
+    font-weight: 600;
+    font-size: clamp(20px, 3.5vw, 26px);
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .sec-sub {
+    color: var(--ink-soft);
+    font-size: 15px;
+    margin: -8px 0 22px;
+    max-width: 68ch;
+  }
+
+  figure {
+    margin: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 24px 20px 16px;
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+  figure svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-width: 640px;
+    color: var(--ink);
+  }
+  figcaption {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+    font-size: 13.5px;
+    color: var(--ink-soft);
+  }
+  figcaption b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* SVG semantic classes (page CSS applies to SVG elements) */
+  .n-surface { fill: var(--surface); }
+  .n-panel { fill: var(--surface-2); }
+  .n-line { stroke: var(--line-strong); }
+  .n-ink { fill: var(--ink); }
+  .n-soft { fill: var(--ink-soft); }
+  .n-mute { fill: var(--ink-mute); }
+  .n-accent-fill { fill: var(--accent); }
+  .n-accent-stroke { stroke: var(--accent); }
+  .n-accent-tint { fill: var(--accent-050); }
+  .n-accent-ink { fill: var(--accent-ink); }
+  .n-flow { stroke: var(--ink-mute); }
+  .box-label { font-family: "Sora", sans-serif; font-weight: 600; }
+  .chip-label { font-family: "IBM Plex Sans", sans-serif; }
+  .mono { font-family: "IBM Plex Mono", monospace; }
+  .red-fill { fill: var(--red); } .red-tint { fill: var(--red-050); } .red-stroke { stroke: var(--red); }
+  .amber-fill { fill: var(--amber); } .amber-tint { fill: var(--amber-050); } .amber-stroke { stroke: var(--amber); }
+  .green-fill { fill: var(--green); } .green-tint { fill: var(--green-050); } .green-stroke { stroke: var(--green); }
+
+  /* --- Data model cards --- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .card h3 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 14px;
+    margin: 0 0 4px;
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+  .card .rel {
+    font-size: 12px;
+    color: var(--ink-mute);
+    font-family: "IBM Plex Mono", monospace;
+    margin-bottom: 10px;
+  }
+  .card ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13.5px;
+  }
+  .card li {
+    padding: 3px 0;
+    color: var(--ink-soft);
+    border-top: 1px solid var(--line);
+  }
+  .card li:first-child { border-top: none; }
+  .card li b { color: var(--ink); font-weight: 600; }
+  .card.key { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset, var(--shadow); }
+
+  /* --- Compare (mock vs real) --- */
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 620px) { .compare { grid-template-columns: 1fr; } }
+  .lane {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+  .lane.real { border-color: var(--accent); }
+  .lane h3 {
+    font-family: "Sora", sans-serif;
+    font-size: 16px;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .lane .cond {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    color: var(--ink-mute);
+    margin-bottom: 12px;
+  }
+  .lane ul { margin: 0; padding-left: 18px; font-size: 14px; color: var(--ink-soft); }
+  .lane li { margin: 4px 0; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+  /* --- Endpoint table --- */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); min-width: 560px; }
+  th, td { text-align: left; padding: 11px 16px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  th {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    background: var(--surface-2);
+  }
+  tr:last-child td { border-bottom: none; }
+  td .verb {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: var(--accent-050);
+    color: var(--accent-ink);
+  }
+  td.path { font-family: "IBM Plex Mono", monospace; color: var(--ink); font-size: 13px; }
+  td.gu { color: var(--ink-mute); font-family: "IBM Plex Mono", monospace; font-size: 11px; }
+
+  .note {
+    margin-top: 22px;
+    background: var(--accent-050);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 14px;
+    color: var(--accent-ink);
+  }
+  .note b { color: var(--accent-ink); }
+
+  footer {
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    color: var(--ink-mute);
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  footer .ur { font-family: "Noto Nastaliq Urdu", serif; color: var(--ink-soft); }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">System Architecture · End-to-End</p>
+    <h1>Nabz <span class="ur">نبض</span></h1>
+    <p class="lede">
+      A voice-first, Urdu-first AI health-triage companion. The browser captures speech; a React SPA
+      talks only to a FastAPI backend; the backend owns every AI call, safety guardrail, and byte of
+      patient data. It triages urgency — it never diagnoses or prescribes.
+    </p>
+    <div class="meta-row">
+      <span class="tag"><b>Frontend</b> React 18 · Vite · RTL</span>
+      <span class="tag"><b>Backend</b> FastAPI · Pydantic v2</span>
+      <span class="tag"><b>AI</b> Qwen + Qwen-VL · DashScope</span>
+      <span class="tag"><b>Data</b> SQLite · SQLAlchemy</span>
+      <span class="tag"><b>Auth</b> JWT · bcrypt</span>
+    </div>
+  </header>
+
+  <!-- ============ FIGURE 1: LAYER SPINE ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2>The request path, top to bottom</h2>
+    </div>
+    <p class="sec-sub">
+      Every user action flows down one spine: voice or tap in the browser, through the React SPA,
+      across a single JWT-authenticated JSON boundary, into FastAPI — which fans out to the Qwen
+      models and the SQLite vault. The AI keys live only below that boundary.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 900 812" role="img"
+        aria-label="Layered architecture: user speaks or taps in the browser; the React SPA sends JSON with a bearer JWT to FastAPI; FastAPI's JWT guard, routers and safety layer call the Qwen text model, the Qwen-VL vision model on Alibaba Cloud DashScope, and the SQLite vault. API keys stay server-side.">
+        <defs>
+          <marker id="ar" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto">
+            <path d="M1,1 L8,5 L1,9" fill="none" stroke="var(--ink-mute)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          </marker>
+        </defs>
+
+        <!-- LAYER 1: USER -->
+        <rect x="180" y="16" width="540" height="66" rx="14" class="n-accent-tint n-accent-stroke" stroke-width="1.5" />
+        <text x="450" y="43" text-anchor="middle" class="box-label n-accent-ink" font-size="16">User &amp; Family</text>
+        <text x="450" y="64" text-anchor="middle" class="chip-label n-soft" font-size="12.5">Urdu voice · quick-reply chips · typed fallback</text>
+
+        <line x1="450" y1="82" x2="450" y2="118" class="n-flow" stroke-width="1.6" marker-end="url(#ar)" />
+        <text x="462" y="104" class="mono n-mute" font-size="11">speak / tap</text>
+
+        <!-- LAYER 2: REACT SPA -->
+        <rect x="70" y="120" width="760" height="150" rx="16" class="n-surface n-line" stroke-width="1.5" />
+        <text x="92" y="146" class="box-label n-ink" font-size="15">React 18 + Vite SPA</text>
+        <text x="808" y="146" text-anchor="end" class="mono n-mute" font-size="11">RTL · Urdu-lead UI</text>
+
+        <!-- inner chips -->
+        <rect x="92" y="162" width="160" height="86" rx="10" class="n-panel n-line" stroke-width="1" />
+        <text x="172" y="184" text-anchor="middle" class="chip-label n-ink" font-size="12.5" font-weight="600">Speech hooks</text>
+        <text x="172" y="204" text-anchor="middle" class="mono n-soft" font-size="10.5">useSpeechRecognition</text>
+        <text x="172" y="220" text-anchor="middle" class="mono n-mute" font-size="10">STT · lang=ur-PK</text>
+        <text x="172" y="238" text-anchor="middle" class="mono n-mute" font-size="10">useTextToSpeech · TTS</text>
+
+        <rect x="264" y="162" width="160" height="86" rx="10" class="n-panel n-line" stroke-width="1" />
+        <text x="344" y="184" text-anchor="middle" class="chip-label n-ink" font-size="12.5" font-weight="600">Contexts</text>
+        <text x="344" y="204" text-anchor="middle" class="mono n-soft" font-size="10.5">AuthContext · token</text>
+        <text x="344" y="222" text-anchor="middle" class="mono n-soft" font-size="10.5">ProfileContext</text>
+        <text x="344" y="238" text-anchor="middle" class="mono n-mute" font-size="10">active patient</text>
+
+        <rect x="436" y="162" width="180" height="86" rx="10" class="n-panel n-line" stroke-width="1" />
+        <text x="526" y="184" text-anchor="middle" class="chip-label n-ink" font-size="12.5" font-weight="600">Pages</text>
+        <text x="526" y="204" text-anchor="middle" class="mono n-soft" font-size="10.5">Home · Vault · Clinics</text>
+        <text x="526" y="222" text-anchor="middle" class="mono n-soft" font-size="10.5">Lab · Rx · Summary</text>
+        <text x="526" y="238" text-anchor="middle" class="mono n-mute" font-size="10">Live-analysis panel</text>
+
+        <rect x="628" y="162" width="180" height="86" rx="10" class="n-panel n-line" stroke-width="1" />
+        <text x="718" y="184" text-anchor="middle" class="chip-label n-ink" font-size="12.5" font-weight="600">api.js client</text>
+        <text x="718" y="204" text-anchor="middle" class="mono n-soft" font-size="10.5">fetch + Bearer JWT</text>
+        <text x="718" y="222" text-anchor="middle" class="mono n-mute" font-size="10">Vite proxy /api</text>
+        <text x="718" y="238" text-anchor="middle" class="mono n-mute" font-size="10">no AI keys here</text>
+
+        <line x1="450" y1="270" x2="450" y2="318" class="n-flow" stroke-width="1.8" marker-end="url(#ar)" />
+        <rect x="352" y="282" width="196" height="24" rx="12" class="n-accent-tint" />
+        <text x="450" y="298" text-anchor="middle" class="mono n-accent-ink" font-size="11">HTTPS · JSON · Bearer JWT</text>
+
+        <!-- BOUNDARY line -->
+        <line x1="40" y1="320" x2="860" y2="320" class="n-accent-stroke" stroke-width="1.2" stroke-dasharray="3 5" opacity="0.7" />
+        <text x="860" y="336" text-anchor="end" class="mono n-accent-ink" font-size="10.5">🔒 trust boundary — secrets stay below</text>
+
+        <!-- LAYER 3: FASTAPI -->
+        <rect x="70" y="346" width="760" height="196" rx="16" class="n-surface n-line" stroke-width="1.5" />
+        <text x="92" y="372" class="box-label n-ink" font-size="15">FastAPI backend</text>
+        <text x="808" y="372" text-anchor="end" class="mono n-mute" font-size="11">uvicorn · CORS</text>
+
+        <!-- guard -->
+        <rect x="92" y="386" width="716" height="34" rx="9" class="n-accent-tint n-accent-stroke" stroke-width="1.2" />
+        <text x="104" y="407" class="chip-label n-accent-ink" font-size="12" font-weight="600">JWT auth guard</text>
+        <text x="796" y="407" text-anchor="end" class="mono n-accent-ink" font-size="10.5">get_current_account() on every vault / triage / report route</text>
+
+        <!-- routers -->
+        <rect x="92" y="428" width="350" height="100" rx="10" class="n-panel n-line" stroke-width="1" />
+        <text x="108" y="449" class="chip-label n-ink" font-size="12.5" font-weight="600">Routers</text>
+        <text x="108" y="470" class="mono n-soft" font-size="10.5">auth · profiles · triage</text>
+        <text x="108" y="488" class="mono n-soft" font-size="10.5">labreport · prescription</text>
+        <text x="108" y="506" class="mono n-soft" font-size="10.5">summary · clinics · health · tts</text>
+        <text x="108" y="522" class="mono n-mute" font-size="10">triage/start · triage/answer state machine</text>
+
+        <!-- safety -->
+        <rect x="458" y="428" width="350" height="100" rx="10" class="n-panel n-line" stroke-width="1" />
+        <text x="474" y="449" class="chip-label n-ink" font-size="12.5" font-weight="600">Safety &amp; parsing layer</text>
+        <text x="474" y="470" class="mono n-soft" font-size="10.5">emergency red-flag guardrails</text>
+        <text x="474" y="488" class="mono n-soft" font-size="10.5">strict JSON · Pydantic validate</text>
+        <text x="474" y="506" class="mono n-soft" font-size="10.5">≤5 questions · 20s timeout</text>
+        <text x="474" y="522" class="mono n-mute" font-size="10">safe DOCTOR_24H fallback on failure</text>
+
+        <!-- three arrows down -->
+        <line x1="230" y1="542" x2="230" y2="586" class="n-flow" stroke-width="1.6" marker-end="url(#ar)" />
+        <text x="240" y="568" class="mono n-mute" font-size="10">text</text>
+        <line x1="450" y1="542" x2="450" y2="586" class="n-flow" stroke-width="1.6" marker-end="url(#ar)" />
+        <text x="460" y="568" class="mono n-mute" font-size="10">image</text>
+        <line x1="690" y1="542" x2="690" y2="586" class="n-flow" stroke-width="1.6" marker-end="url(#ar)" />
+        <text x="700" y="568" class="mono n-mute" font-size="10">ORM</text>
+
+        <!-- LAYER 4: three sinks -->
+        <rect x="70" y="588" width="320" height="118" rx="14" class="n-surface n-accent-stroke" stroke-width="1.4" />
+        <text x="230" y="614" text-anchor="middle" class="box-label n-ink" font-size="13.5">Alibaba Cloud Model Studio · DashScope</text>
+        <rect x="86" y="626" width="140" height="66" rx="9" class="n-accent-tint" />
+        <text x="156" y="650" text-anchor="middle" class="chip-label n-accent-ink" font-size="12" font-weight="600">Qwen text</text>
+        <text x="156" y="668" text-anchor="middle" class="mono n-accent-ink" font-size="10">qwen-plus</text>
+        <text x="156" y="684" text-anchor="middle" class="mono n-soft" font-size="9.5">triage turns</text>
+        <rect x="234" y="626" width="140" height="66" rx="9" class="n-accent-tint" />
+        <text x="304" y="650" text-anchor="middle" class="chip-label n-accent-ink" font-size="12" font-weight="600">Qwen-VL</text>
+        <text x="304" y="668" text-anchor="middle" class="mono n-accent-ink" font-size="10">qwen-vl-plus</text>
+        <text x="304" y="684" text-anchor="middle" class="mono n-soft" font-size="9.5">labs + Rx</text>
+
+        <rect x="560" y="588" width="270" height="118" rx="14" class="n-surface n-line" stroke-width="1.4" />
+        <text x="695" y="614" text-anchor="middle" class="box-label n-ink" font-size="13.5">SQLite vault · SQLAlchemy</text>
+        <text x="695" y="640" text-anchor="middle" class="mono n-soft" font-size="10.5">accounts · profiles · medicines</text>
+        <text x="695" y="658" text-anchor="middle" class="mono n-soft" font-size="10.5">timeline_entries · triage_sessions</text>
+        <text x="695" y="682" text-anchor="middle" class="mono n-mute" font-size="10">DATABASE_URL → swap to Postgres</text>
+
+        <!-- secrets footer -->
+        <rect x="70" y="726" width="760" height="66" rx="12" class="n-panel n-line" stroke-width="1" />
+        <text x="90" y="752" class="chip-label n-ink" font-size="12.5" font-weight="600">🔒 Server-only secrets</text>
+        <text x="90" y="772" class="mono n-soft" font-size="11">DASHSCOPE_API_KEY · JWT_SECRET · uploads/ — loaded via python-dotenv, never sent to the browser</text>
+      </svg>
+      <figcaption>
+        <b>One JSON boundary.</b> The SPA holds a JWT but no model credentials; every Qwen call and
+        the entire patient vault sit behind FastAPI. Remove the dashed line and the security story
+        is the whole point — the browser can never reach DashScope directly.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ FIGURE 2: STATE MACHINE ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2>Conversational triage — the state machine</h2>
+    </div>
+    <p class="sec-sub">
+      Nabz does not jump from a symptom to a verdict. It asks the single highest-value question at a
+      time, builds a live analysis, and only concludes when confident — <b>unless</b> a red flag
+      appears, which short-circuits straight to EMERGENCY with zero further questions.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 900 470" role="img"
+        aria-label="Triage state machine: a symptom enters and is checked for emergency red flags on every turn. A red flag returns EMERGENCY immediately with zero questions. Otherwise the engine asks one question, takes an answer, updates the running analysis, and checks whether it is confident or has asked five questions; if not it loops back to ask another question, if so it returns a HOME_CARE or DOCTOR_24H result.">
+        <defs>
+          <marker id="ar2" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto">
+            <path d="M1,1 L8,5 L1,9" fill="none" stroke="var(--ink-mute)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          </marker>
+          <marker id="ar-red" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto">
+            <path d="M1,1 L8,5 L1,9" fill="none" stroke="var(--red)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </marker>
+        </defs>
+
+        <!-- start -->
+        <rect x="24" y="150" width="150" height="60" rx="12" class="n-accent-tint n-accent-stroke" stroke-width="1.4" />
+        <text x="99" y="176" text-anchor="middle" class="box-label n-accent-ink" font-size="13">Symptom in</text>
+        <text x="99" y="196" text-anchor="middle" class="mono n-soft" font-size="10">voice / text / chip</text>
+
+        <line x1="174" y1="180" x2="214" y2="180" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
+
+        <!-- red-flag diamond -->
+        <polygon points="300,130 372,180 300,230 228,180" class="n-surface red-stroke" stroke-width="1.6" />
+        <text x="300" y="176" text-anchor="middle" class="chip-label n-ink" font-size="11.5" font-weight="600">Red-flag?</text>
+        <text x="300" y="192" text-anchor="middle" class="mono n-mute" font-size="9">every turn</text>
+
+        <!-- red flag -> EMERGENCY (up) -->
+        <line x1="300" y1="130" x2="300" y2="70" class="red-stroke" stroke-width="1.8" marker-end="url(#ar-red)" />
+        <text x="312" y="104" class="mono red-fill" font-size="10.5" font-weight="600">yes</text>
+        <rect x="196" y="24" width="208" height="46" rx="12" class="red-tint red-stroke" stroke-width="1.6" />
+        <text x="300" y="45" text-anchor="middle" class="box-label red-fill" font-size="13">▲ EMERGENCY</text>
+        <text x="300" y="61" text-anchor="middle" class="mono red-fill" font-size="10">0 questions · go now</text>
+
+        <!-- no -> ask -->
+        <line x1="372" y1="180" x2="418" y2="180" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
+        <text x="384" y="172" class="mono n-soft" font-size="10.5">no</text>
+
+        <!-- ask ONE -->
+        <rect x="420" y="146" width="150" height="68" rx="12" class="n-surface n-accent-stroke" stroke-width="1.4" />
+        <text x="495" y="170" text-anchor="middle" class="box-label n-ink" font-size="12.5">Ask ONE</text>
+        <text x="495" y="188" text-anchor="middle" class="chip-label n-soft" font-size="10.5">best question</text>
+        <text x="495" y="204" text-anchor="middle" class="mono n-mute" font-size="9.5">addressed by name</text>
+
+        <line x1="570" y1="180" x2="612" y2="180" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
+
+        <!-- update analysis -->
+        <rect x="614" y="146" width="160" height="68" rx="12" class="n-panel n-line" stroke-width="1.2" />
+        <text x="694" y="170" text-anchor="middle" class="box-label n-ink" font-size="12.5">Update analysis</text>
+        <text x="694" y="188" text-anchor="middle" class="chip-label n-soft" font-size="10.5">collected + confidence</text>
+        <text x="694" y="204" text-anchor="middle" class="mono n-mute" font-size="9.5">answer via voice / chip</text>
+
+        <!-- decision down -->
+        <line x1="694" y1="214" x2="694" y2="262" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
+        <polygon points="694,262 770,312 694,362 618,312" class="n-surface n-line" stroke-width="1.6" />
+        <text x="694" y="308" text-anchor="middle" class="chip-label n-ink" font-size="11" font-weight="600">Confident</text>
+        <text x="694" y="323" text-anchor="middle" class="chip-label n-ink" font-size="11" font-weight="600">or 5 asked?</text>
+
+        <!-- loop back (no) -->
+        <path d="M618,312 L495,312 L495,214" fill="none" class="n-flow" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ar2)" />
+        <text x="520" y="304" class="mono n-soft" font-size="10.5">no — loop</text>
+
+        <!-- yes -> results -->
+        <line x1="694" y1="362" x2="694" y2="398" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
+        <text x="706" y="384" class="mono n-soft" font-size="10.5">yes</text>
+
+        <rect x="470" y="400" width="210" height="52" rx="12" class="green-tint green-stroke" stroke-width="1.5" />
+        <text x="575" y="422" text-anchor="middle" class="box-label green-fill" font-size="12.5">🏠 HOME_CARE</text>
+        <text x="575" y="440" text-anchor="middle" class="mono green-fill" font-size="9.5">rest &amp; monitor</text>
+
+        <rect x="700" y="400" width="176" height="52" rx="12" class="amber-tint amber-stroke" stroke-width="1.5" />
+        <text x="788" y="422" text-anchor="middle" class="box-label amber-fill" font-size="12">🩺 DOCTOR_24H</text>
+        <text x="788" y="440" text-anchor="middle" class="mono amber-fill" font-size="9.5">see a clinician</text>
+
+        <!-- persistence note -->
+        <rect x="24" y="290" width="330" height="120" rx="12" class="n-panel n-line" stroke-width="1" />
+        <text x="44" y="316" class="chip-label n-ink" font-size="12.5" font-weight="600">Persisted per turn</text>
+        <text x="44" y="338" class="mono n-soft" font-size="10.5">triage_sessions.turns[]  (full history)</text>
+        <text x="44" y="356" class="mono n-soft" font-size="10.5">triage_sessions.analysis  (running)</text>
+        <text x="44" y="374" class="mono n-soft" font-size="10.5">→ survives reloads</text>
+        <text x="44" y="396" class="mono n-mute" font-size="10">on RESULT → timeline_entries (dated)</text>
+      </svg>
+      <figcaption>
+        <b>The red-flag check runs on every turn, not just the first</b> — breathlessness reported on
+        question three still escalates instantly. Uncertainty after five questions resolves upward to
+        at least DOCTOR_24H, never down. The active profile's name, conditions and medicines are
+        injected into each turn.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ DATA MODEL ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2>Data model — the family vault</h2>
+    </div>
+    <p class="sec-sub">
+      One account owns many patient profiles; everything else hangs off a profile and is deleted with
+      it (cascade). Personalization always pulls from the <b>active profile alone</b> — never a shared pool.
+    </p>
+    <div class="grid">
+      <div class="card">
+        <h3>accounts</h3>
+        <div class="rel">1 ──▶ ∞ profiles</div>
+        <ul>
+          <li><b>full_name</b>, <b>phone</b> (unique)</li>
+          <li>password_hash <span style="color:var(--ink-mute)">· bcrypt</span></li>
+          <li>created_at</li>
+        </ul>
+      </div>
+      <div class="card key">
+        <h3>profiles</h3>
+        <div class="rel">▶ medicines · timeline · sessions</div>
+        <ul>
+          <li><b>display_name</b>, relation, age, gender</li>
+          <li>blood_group, is_self</li>
+          <li>chronic_conditions[], allergies[]</li>
+          <li>notes</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>medicines</h3>
+        <div class="rel">∞ ◀── profile</div>
+        <ul>
+          <li><b>name</b>, strength, frequency</li>
+          <li>duration, with_food, notes</li>
+          <li>source <span style="color:var(--ink-mute)">manual | prescription</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>timeline_entries</h3>
+        <div class="rel">∞ ◀── profile</div>
+        <ul>
+          <li><b>kind</b> triage | lab | prescription</li>
+          <li>title, subtitle, level</li>
+          <li>payload <span style="color:var(--ink-mute)">JSON</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>triage_sessions</h3>
+        <div class="rel">∞ ◀── profile</div>
+        <ul>
+          <li><b>turns[]</b>, analysis <span style="color:var(--ink-mute)">JSON</span></li>
+          <li>status, result_level</li>
+          <li>initial_text, result_payload</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>uploads/</h3>
+        <div class="rel">filesystem, not DB</div>
+        <ul>
+          <li>original lab &amp; Rx images</li>
+          <li>referenced by timeline payload</li>
+          <li>view the source paper later</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MOCK vs REAL ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <h2>Mock mode vs. real mode</h2>
+    </div>
+    <p class="sec-sub">
+      The whole app is demoable with zero credentials. A single gate —
+      <code class="mono">is_mock_mode()</code> = <code class="mono">MOCK_MODE</code> truthy
+      <b>or</b> no API key — decides which backend answers. Every AI response carries
+      <code class="mono">"mock": true|false</code>.
+    </p>
+    <div class="compare">
+      <div class="lane">
+        <h3><span class="dot" style="background:var(--ink-mute)"></span> Mock backend</h3>
+        <div class="cond">when MOCK_MODE=true OR key is missing</div>
+        <ul>
+          <li>Deterministic keyword-based triage heuristic</li>
+          <li>Canned follow-up questions &amp; live analysis</li>
+          <li>Sample CBC lab (flagged Hb / Iron)</li>
+          <li>2-medicine Rx extraction, one low-confidence field</li>
+          <li>No network, no credentials — ideal for demos &amp; CI</li>
+        </ul>
+      </div>
+      <div class="lane real">
+        <h3><span class="dot" style="background:var(--accent)"></span> Real backend</h3>
+        <div class="cond">when DASHSCOPE_API_KEY set &amp; MOCK_MODE=false</div>
+        <ul>
+          <li>qwen-plus for conversational triage turns</li>
+          <li>qwen-vl-plus for lab reports &amp; prescriptions</li>
+          <li>OpenAI-compatible SDK → DashScope intl endpoint</li>
+          <li>Same guardrails still enforced outside the model</li>
+          <li>Bad / untrusted output → safe DOCTOR_24H fallback</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ API SURFACE ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">05</span>
+      <h2>API surface</h2>
+    </div>
+    <p class="sec-sub">All routes except auth, clinics and health require a bearer JWT.</p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Method</th><th>Endpoint</th><th>Purpose</th><th>Guard</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="verb">POST</span></td><td class="path">/api/auth/register · /login</td><td>Create account (+ self profile) · issue JWT</td><td class="gu">public</td></tr>
+          <tr><td><span class="verb">GET</span></td><td class="path">/api/auth/me</td><td>Current account</td><td class="gu">jwt</td></tr>
+          <tr><td><span class="verb">GET·POST</span></td><td class="path">/api/profiles</td><td>List / create family profiles</td><td class="gu">jwt</td></tr>
+          <tr><td><span class="verb">···</span></td><td class="path">/api/profiles/{id}</td><td>GET · PUT · DELETE (+ all its data)</td><td class="gu">jwt · owner</td></tr>
+          <tr><td><span class="verb">POST</span></td><td class="path">/api/triage/start · /answer</td><td>Conversational triage state machine</td><td class="gu">jwt</td></tr>
+          <tr><td><span class="verb">POST</span></td><td class="path">/api/labreport</td><td>Qwen-VL lab extraction + Urdu explain</td><td class="gu">jwt</td></tr>
+          <tr><td><span class="verb">POST</span></td><td class="path">/api/prescription · /confirm</td><td>Extract → user reviews → save to profile</td><td class="gu">jwt</td></tr>
+          <tr><td><span class="verb">GET</span></td><td class="path">/api/summary/{id}</td><td>English doctor-handoff summary</td><td class="gu">jwt</td></tr>
+          <tr><td><span class="verb">GET</span></td><td class="path">/api/clinics · /health · /tts</td><td>8 KP facilities · status · spoken Urdu</td><td class="gu">public</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <b>Safety boundary.</b> Nabz triages urgency and reads documents — it never states a diagnosis,
+      never prescribes, and never delays an emergency to keep asking. Prescription scanning only
+      transcribes an existing clinician's paper and requires human confirmation before saving.
+    </div>
+  </section>
+
+  <footer>
+    <span>Nabz · Alibaba Cloud AI Hackathon Pakistan 2026</span>
+    <span class="ur">یہ ڈاکٹر کا متبادل نہیں ہے — This is not a substitute for a doctor.</span>
+  </footer>
+</div>
