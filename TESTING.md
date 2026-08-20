@@ -24,7 +24,7 @@ cd server
 `conftest.py` forces `MOCK_MODE=true` and points the app at a throwaway SQLite
 file, so tests never touch your real `nabz.db`.
 
-Expected: **16 passed**. Covered:
+Expected: **22 passed**. Covered:
 
 - **Auth** — register issues a token and auto-creates the account holder's
   `self` profile; duplicate phone → 409; login success + wrong password → 401.
@@ -35,8 +35,12 @@ Expected: **16 passed**. Covered:
 - **Conversational triage** — `start` returns a `question` turn (with
   2–4 quick replies + a running `analysis`); `answer` eventually returns a
   `result` with a valid level.
+- **Complaint relevance** — Roman Urdu skin-mark input retains its body
+  location and receives skin-specific questions rather than an unrelated
+  breathing sequence.
 - **Emergency short-circuit** — an emergency in the first turn returns
-  `EMERGENCY` with `questions_asked == 0`; suicidal input → `EMERGENCY`.
+  `EMERGENCY` with `questions_asked == 0`; suicidal input → `EMERGENCY`; a
+  plain `ہاں` after a breathing-difficulty question escalates immediately.
 - **Personalization** — the active profile's name is echoed in `patient_name`.
 - **Lab report** — mock CBC returns structured values with flagged
   Haemoglobin/Iron and a bilingual explanation.

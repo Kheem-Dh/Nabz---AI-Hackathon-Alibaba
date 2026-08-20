@@ -1,0 +1,10 @@
+venv/
+.venv/
+__pycache__/
+.pytest_cache/
+tests/
+.env
+nabz.db
+nabz.db-journal
+uploads/
+*.pyc

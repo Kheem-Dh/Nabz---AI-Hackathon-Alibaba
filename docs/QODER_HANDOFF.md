@@ -65,8 +65,11 @@ server/                     FastAPI + SQLAlchemy + Qwen
   summary.py                /api/summary/{profile_id} doctor handoff
 
 docs/architecture.pdf       one-page architecture visual
+docs/ALIBABA_CLOUD_DEPLOY.md ECS deployment, costs, TLS, backup, rollback
 docs/QODER_HANDOFF.md       (this file)
 README.md, TESTING.md, PRIVACY.md, eval.py, Makefile
+.env.production.example     production env names only (no secrets)
+compose.prod.yaml           FastAPI + Nginx production stack with volumes
 .env.example                template — copy to server/.env
 ```
 
@@ -133,6 +136,12 @@ audio (Nabz currently uses browser STT/TTS with a server gTTS fallback).
 Deterministic emergency guardrails run **on every turn**, before the LLM.
 Uncertainty after five questions resolves upward to at least `DOCTOR_24H`.
 
+Mock-mode follow-ups are complaint-specific (skin, fever, respiratory,
+stomach, pain, or general) and recognize common Urdu/Roman-Urdu lay phrases.
+Real-model instructions likewise forbid generic or repeated questions. Browser
+speech capture uses continuous recognition, waits through short pauses, and
+submits after three seconds of silence or an explicit Done tap.
+
 The response's `analysis.confidence` and `analysis.completeness` carry the
 same value; the UI labels it **"Assessment completeness"** — never diagnostic
 probability (winning plan §4.5).
@@ -190,9 +199,11 @@ not deploy demo day if this fails.
 1. **Real-model rehearsal.** Set a real `DASHSCOPE_API_KEY`, flip
    `NABZ_TEXT_MODEL=qwen3.7-plus`, run through the 60-second demo path.
    Log latency; if a text turn exceeds ~6 s, revisit `qwen-plus`.
-2. **Cloud deploy.** FastAPI on Alibaba Cloud (Function Compute or an ECS
-   instance behind Nginx), React static build on OSS + CDN. Set the demo URL
-   in DNS at least 24 h before presentation.
+2. **Cloud launch.** The repo now ships a validated ECS Docker Compose stack:
+   non-root FastAPI, Nginx + React, health checks, and persistent SQLite/upload
+   volumes. Claim/provision the Alibaba Cloud ECS instance, configure the
+   production env on-host, and add domain + HTTPS. See
+   `docs/ALIBABA_CLOUD_DEPLOY.md`. Set DNS at least 24 h before presentation.
 3. **Live facility provider.** Add a `MAPS_PROVIDER` env (e.g. Google Places
    or Baidu / Amap for CN-hosted). Wire it as an additional layer in
    `facilities.py` above the curated dataset. Keep the same response schema.

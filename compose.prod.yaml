@@ -1,0 +1,58 @@
+name: nabz
+
+services:
+  api:
+    build:
+      context: ./server
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: sqlite:////data/nabz.db
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.production}
+      MOCK_MODE: ${MOCK_MODE:-true}
+      NABZ_TEXT_MODEL: ${NABZ_TEXT_MODEL:-qwen3.7-plus}
+      NABZ_VL_MODEL: ${NABZ_VL_MODEL:-qwen3.7-plus}
+      NABZ_VL_OCR_FALLBACK: ${NABZ_VL_OCR_FALLBACK:-qwen-vl-ocr}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      NABZ_DISABLE_NOMINATIM: ${NABZ_DISABLE_NOMINATIM:-1}
+    expose:
+      - "8000"
+    volumes:
+      - nabz-data:/data
+      - nabz-uploads:/app/uploads
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+
+  web:
+    build:
+      context: ./client
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  nabz-data:
+  nabz-uploads:

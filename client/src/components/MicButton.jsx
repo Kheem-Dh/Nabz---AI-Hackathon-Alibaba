@@ -6,12 +6,12 @@ export default function MicButton({ listening, disabled, onClick }) {
       className={`mic-button ${listening ? 'listening' : ''}`}
       onClick={onClick}
       disabled={disabled}
-      aria-label={listening ? 'Stop listening' : 'Start speaking'}
+      aria-label={listening ? 'Finish speaking' : 'Start speaking'}
     >
       <span className="mic-icon" aria-hidden="true">
         {listening ? '⏹' : '🎤'}
       </span>
-      <span className="mic-label">{listening ? 'سن رہے ہیں…' : 'بولیں'}</span>
+      <span className="mic-label">{listening ? 'مکمل · Done' : 'بولیں'}</span>
     </button>
   )
 }

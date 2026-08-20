@@ -18,6 +18,7 @@ build/
 # Environment + local data (NEVER commit)
 .env
 .env.local
+.env.production
 server/.env
 server/nabz.db
 server/nabz.db-journal

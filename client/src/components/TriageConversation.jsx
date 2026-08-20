@@ -81,7 +81,6 @@ export default function TriageConversation({ profile, onExit }) {
     if (!speech.supported) return
     tts.prime()
     submittedRef.current = false
-    speech.reset()
     speech.start()
     setPhase('listening')
   }
@@ -90,7 +89,6 @@ export default function TriageConversation({ profile, onExit }) {
     if (!speech.supported) return
     tts.cancel()
     submittedRef.current = false
-    speech.reset()
     speech.start()
     setPhase('answering-voice')
   }
@@ -165,11 +163,15 @@ export default function TriageConversation({ profile, onExit }) {
       <div className="q-card">
         <MicButton listening onClick={() => speech.stop()} />
         <p className="hero-hint-ur urdu" style={{ marginTop: 12 }}>
-          اب اپنی تکلیف بتائیں…
+          آرام سے پوری بات بتائیں — نبض آپ کے رکنے کا انتظار کرے گا…
         </p>
+        <p className="hero-hint-en">Speak naturally — Nabz waits through short pauses</p>
         <div className="live-transcript urdu" dir="auto" style={{ marginTop: 12 }}>
           {speech.transcript || <span className="placeholder">…</span>}
         </div>
+        <p className="hero-hint-en" style={{ marginTop: 8 }}>
+          Tap the stop button when finished, or pause for 3 seconds.
+        </p>
         <button className="btn btn-outline mt-8" onClick={reset}>
           منسوخ · Cancel
         </button>

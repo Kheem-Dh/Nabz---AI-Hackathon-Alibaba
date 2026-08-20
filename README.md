@@ -18,6 +18,25 @@ Nabz also includes a **family Medical Vault**, **lab-report explanation**, **pre
 
 ---
 
+## What's new — 2026-08-21 (lay-language triage + complete voice capture)
+
+- Mock triage now routes follow-up questions by the complaint already given
+  instead of using one fixed sequence. Skin marks/redness, fever, respiratory,
+  stomach, and pain complaints each have relevant one-question-at-a-time paths.
+- Roman Urdu such as `mere right arm pe surkh nishan hai` is recognized as a
+  skin complaint, retains the body location, and asks about the mark rather
+  than unrelated breathing symptoms.
+- Real-model instructions now prohibit generic or repeated questions and make
+  breathing questions conditional on a relevant complaint.
+- Browser speech recognition continues through short pauses, safely restarts
+  if the browser ends a continuous session, and finalizes after three seconds
+  of silence or an explicit **Done** tap.
+- A plain `ہاں / Yes` answer to a breathing-difficulty question now triggers
+  the deterministic emergency short-circuit without relying on the LLM.
+- Backend suite: **22/22 green**; safety evaluation: **16/16 green**.
+
+---
+
 ## What's new — 2026-08-20 (winning-plan pivot)
 
 This drop lands the [winning-plan](docs/QODER_HANDOFF.md) pivot around location, mobile, and safety polish. Everything below is shipped in `main` and covered by `pytest` (20/20 green) and a manual end-to-end mock demo.
@@ -47,6 +66,17 @@ This drop lands the [winning-plan](docs/QODER_HANDOFF.md) pivot around location,
 - Installable PWA: `manifest.webmanifest`, SVG icons (`any` + `maskable`), theme-coloured splash, offline app-shell service worker. **The SW never caches `/api/*`** (auth + PHI) — it is API-first and shell-only.
 - Capacitor scaffolding: `capacitor.config.json` (`pk.nabz.app`) plus `npm run cap:install / cap:add:android / mobile:android` scripts. A real APK is one `npm run mobile:android` + Android Studio away.
 
+**Cloud deployment foundation**
+
+- Production Docker images for non-root FastAPI and React + Nginx, joined by a
+  same-origin `/api` proxy so no AI credential enters the frontend image.
+- `compose.prod.yaml` adds health checks and persistent named volumes for the
+  SQLite Vault and confirmed prescription uploads.
+- [Alibaba Cloud deployment guide](docs/ALIBABA_CLOUD_DEPLOY.md) covers ECS
+  sizing, free-trial boundaries, secret setup, backups, HTTPS, and rollback.
+- Production frontend dependencies upgraded and audited with zero known npm
+  vulnerabilities.
+
 **Docs & handoff**
 
 - New [`docs/QODER_HANDOFF.md`](docs/QODER_HANDOFF.md) — full one-page brief for the Qoder assistant covering repo layout, run steps, mock/real gate, model routing table, location + facilities API contract, mobile build steps, credentials to collect, and a priority-ordered next-day roadmap.
@@ -57,7 +87,10 @@ This drop lands the [winning-plan](docs/QODER_HANDOFF.md) pivot around location,
 Priority order matches the roadmap block in `docs/QODER_HANDOFF.md`.
 
 1. **Real-model rehearsal.** Set a real `DASHSCOPE_API_KEY`, flip `NABZ_TEXT_MODEL=qwen3.7-plus`, measure end-to-end latency. Revisit `qwen-plus` if any text turn exceeds ~6 s.
-2. **Cloud deploy.** FastAPI on Alibaba Cloud (Function Compute or ECS + Nginx), React static build on OSS + CDN. Fixed demo URL wired in DNS ≥24 h before the presentation.
+2. **Cloud launch (infrastructure ready).** Claim/provision the ECS trial,
+   configure `.env.production` directly on the host, and connect a domain +
+   HTTPS using the validated `compose.prod.yaml` stack. Fixed demo URL wired in
+   DNS ≥24 h before the presentation.
 3. **Live facility provider layer.** Wire a `MAPS_PROVIDER` env (Google Places / Amap / Baidu) above the curated dataset in `facilities.py` — schema is already provider-agnostic.
 4. **Native Urdu audio via Qwen3.5-Omni.** Backend route that accepts recorded webm/wav → transcript + optional spoken reply. Fall back to browser STT/TTS on failure.
 5. **PWA install-prompt UI.** Capture `beforeinstallprompt` and show a soft "Install Nabz" CTA on Android.

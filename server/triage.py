@@ -147,6 +147,13 @@ STRICT RULES:
 - Always ADDRESS THE PATIENT BY NAME in Urdu. The name is given below.
 - Ask ONE question at a time — the single most useful question given what you
   already know. Keep it short and simple, in spoken Urdu.
+- Every question must be directly related to the chief complaint or the
+  patient's latest answer. Do not repeat information the patient already gave.
+- Do NOT default to a breathing question for unrelated complaints. Ask about
+  breathing only when the complaint makes it relevant (for example cough,
+  chest symptoms, fever with systemic illness, or a reported breathing change).
+- For a skin mark, rash, redness, or swelling, first clarify onset, pain/itch,
+  spreading, warmth/swelling, and fever using familiar lay words.
 - Provide 2–4 tappable quick replies for low-literacy users
   (e.g., ہاں / نہیں / پتہ نہیں), each with its English label too.
 - NEVER diagnose a disease. NEVER prescribe or name a medicine.
@@ -267,6 +274,21 @@ def _has_pain(text: str) -> bool:
     return any(w in lo for w in ["pain", "dard", "درد", "ache"])
 
 
+def _has_skin_change(text: str) -> bool:
+    """Recognize common lay descriptions of a visible skin change."""
+    lo = _lower(text)
+    return any(
+        w in lo
+        for w in [
+            "rash", "red mark", "red spot", "redness", "skin mark",
+            "itch", "itchy", "swelling", "spots", "spot",
+            "surkh nishan", "laal nishan", "lal nishan", "nishan",
+            "daane", "danay", "kharish", "soojan", "jild",
+            "سرخ نشان", "لال نشان", "نشان", "دانے", "خارش", "سوجن", "جلد",
+        ]
+    )
+
+
 def _has_mild_marker(text: str) -> bool:
     lo = _lower(text)
     return any(
@@ -287,6 +309,85 @@ def _first_symptom(turns: list[dict]) -> str:
         if t.get("role") == "user":
             return t.get("text", "")
     return ""
+
+
+def _has_known_duration(text: str) -> bool:
+    lo = _lower(text)
+    if re.search(r"\b\d+\s*(?:day|days|din|dinon|دن|week|weeks|hafta|ہفتہ)", lo):
+        return True
+    return any(
+        marker in lo
+        for marker in [
+            "today", "aaj", "آج", "yesterday", "kal se", "کل سے",
+            "week", "hafta", "ہفتہ", "month", "mahina", "مہینہ",
+            "aik din", "ek din", "do din", "teen din", "char din", "panch din",
+        ]
+    )
+
+
+def _complaint_kind(text: str) -> str:
+    if _has_skin_change(text):
+        return "skin"
+    if _has_fever(text):
+        return "fever"
+    if _has_cough(text) or _has_mild_marker(text):
+        return "respiratory"
+    if _has_vomiting(text) or _has_diarrhea(text):
+        return "stomach"
+    if _has_pain(text):
+        return "pain"
+    return "general"
+
+
+def _assistant_questions(turns: list[dict]) -> str:
+    return " \n".join(
+        t.get("text", "")
+        for t in turns
+        if t.get("role") == "assistant" and t.get("kind") == "question"
+    ).lower()
+
+
+def _latest_answer_affirms_breathing_problem(turns: list[dict]) -> bool:
+    """Treat a plain "yes" to a breathing question as a deterministic red flag."""
+    latest_user_index = next(
+        (i for i in range(len(turns) - 1, -1, -1) if turns[i].get("role") == "user"),
+        None,
+    )
+    if latest_user_index is None or latest_user_index == 0:
+        return False
+
+    answer = _lower(turns[latest_user_index].get("text", "")).strip(" .!?،")
+    if any(negative in answer for negative in ["no", "nahi", "nahin", "نہیں", "نہيں"]):
+        return False
+    affirmative = answer in {"yes", "haan", "han", "ha", "ہاں", "جی", "جی ہاں"}
+    if not affirmative:
+        return False
+
+    previous = turns[latest_user_index - 1]
+    if previous.get("role") != "assistant" or previous.get("kind") != "question":
+        return False
+    question = _lower(previous.get("text", ""))
+    return any(
+        marker in question
+        for marker in ["سانس", "breath", "دم گھٹ", "shortness of breath"]
+    )
+
+
+def _body_location(text: str) -> tuple[str, str] | None:
+    lo = _lower(text)
+    locations = [
+        (["right arm", "right bazu", "daya bazu", "dahna bazu", "دایاں بازو"], "دایاں بازو", "Right arm"),
+        (["left arm", "left bazu", "baya bazu", "بایاں بازو"], "بایاں بازو", "Left arm"),
+        (["right leg", "right tang", "dayi tang", "دایاں ٹانگ", "دائیں ٹانگ"], "دائیں ٹانگ", "Right leg"),
+        (["left leg", "left tang", "bayi tang", "بایاں ٹانگ", "بائیں ٹانگ"], "بائیں ٹانگ", "Left leg"),
+        (["face", "chehra", "چہر"], "چہرہ", "Face"),
+        (["hand", "haath", "ہاتھ"], "ہاتھ", "Hand"),
+        (["foot", "paon", "paaon", "پاؤں"], "پاؤں", "Foot"),
+    ]
+    for markers, urdu, english in locations:
+        if any(marker in lo for marker in markers):
+            return urdu, english
+    return None
 
 
 def _emergency_turn(profile: dict[str, Any], session_id: int, turns: list[dict], suicidal: bool) -> TriageTurn:
@@ -387,6 +488,23 @@ def _collect_from_turns(turns: list[dict]) -> list[CollectedFact]:
                 value_urdu="درد", value_english="Pain",
             )
         )
+    if _has_skin_change(text):
+        out.append(
+            CollectedFact(
+                label_urdu="علامت", label_english="Symptom",
+                value_urdu="جلد پر نشان یا سرخی", value_english="Skin mark or redness",
+            )
+        )
+
+    location = _body_location(text)
+    if location:
+        location_urdu, location_english = location
+        out.append(
+            CollectedFact(
+                label_urdu="جگہ", label_english="Location",
+                value_urdu=location_urdu, value_english=location_english,
+            )
+        )
 
     m = re.search(r"(\d+)\s*(?:day|din|dinon|days|دن)", lo)
     if m:
@@ -428,67 +546,219 @@ def _count_questions(turns: list[dict]) -> int:
 
 
 def _mock_question(profile: dict[str, Any], session_id: int, turns: list[dict]) -> TriageTurn:
-    """Pick the next best mock question given what we know so far."""
+    """Pick a complaint-specific next question from the conversation so far."""
     name = _name_ur(profile)
     asked = _count_questions(turns)
-    text_so_far = _joined_answers(turns) + " " + _first_symptom(turns)
-    lo = _lower(text_so_far)
+    initial = _first_symptom(turns)
+    text_so_far = _joined_answers(turns)
+    kind = _complaint_kind(initial)
+    asked_text = _assistant_questions(turns)
 
-    known_duration = bool(re.search(r"(\d+)\s*(day|din|days|دن)", lo)) or any(
-        w in lo for w in ["today", "aaj", "آج", "week", "hafta", "ہفتہ"]
-    )
-    asked_breathing = any(
-        "سانس" in (t.get("text") or "") or "breath" in (t.get("text", "")).lower()
-        for t in turns if t.get("role") == "assistant"
-    )
-    asked_vomit = any(
-        "الٹی" in (t.get("text") or "") or "vomit" in (t.get("text", "")).lower()
-        for t in turns if t.get("role") == "assistant"
-    )
-
-    # Choose the question.
-    if not known_duration:
-        q_ur = f"{name}، یہ تکلیف کتنے دن سے ہے؟"
-        q_en = f"{profile.get('display_name','You')}, how many days has this been going on?"
+    if not _has_known_duration(text_so_far) and not any(
+        marker in asked_text for marker in ["کب سے", "کتنے دن", "how long"]
+    ):
+        if kind == "skin":
+            q_ur = f"{name}، یہ سرخ نشان کب سے ہے؟"
+            q_en = f"{profile.get('display_name','You')}, how long has this red mark been there?"
+        else:
+            q_ur = f"{name}، یہ تکلیف کب سے ہے؟"
+            q_en = f"{profile.get('display_name','You')}, how long has this problem been present?"
         quick = _DURATION_REPLIES
         still_ur = "دورانیہ معلوم کر رہا ہوں۔"
-        still_en = "Establishing how long this has been going on."
-        conf = 0.15
-    elif not asked_breathing:
-        q_ur = f"{name}، کیا سانس لینے میں دشواری یا سینے میں بھاری پن ہے؟"
-        q_en = (
-            f"{profile.get('display_name','You')}, is there any difficulty "
-            "breathing or heaviness in the chest?"
-        )
-        quick = _YES_NO
-        still_ur = "خطرے کی علامات جانچ رہا ہوں۔"
-        still_en = "Checking for red-flag symptoms."
-        conf = 0.35
-    elif not asked_vomit:
-        q_ur = f"{name}، کیا الٹی، دست یا کچھ کھانے پینے میں دقت ہے؟"
-        q_en = (
-            f"{profile.get('display_name','You')}, is there vomiting, "
-            "diarrhoea, or trouble eating and drinking?"
-        )
-        quick = _YES_NO
-        still_ur = "پانی کی کمی کا خطرہ جانچ رہا ہوں۔"
-        still_en = "Checking dehydration risk."
-        conf = 0.5
+        still_en = "Establishing the duration of this complaint."
+        conf = 0.18
     else:
-        # Ask about worsening / associated pain as the last narrowing question.
-        q_ur = f"{name}، کیا تکلیف بڑھ رہی ہے یا وقت کے ساتھ کم ہو رہی ہے؟"
-        q_en = (
-            f"{profile.get('display_name','You')}, is this getting worse over "
-            "time or slowly getting better?"
-        )
-        quick = [
-            QuickReply(urdu="بڑھ رہی ہے", english="Getting worse"),
-            QuickReply(urdu="جیسی تھی ویسی ہے", english="About the same"),
-            QuickReply(urdu="کم ہو رہی ہے", english="Getting better"),
+        skin_replies = [
+            QuickReply(urdu="صرف نشان ہے", english="Just a mark"),
+            QuickReply(urdu="خارش ہے", english="Itchy"),
+            QuickReply(urdu="درد ہے", english="Painful"),
+            QuickReply(urdu="پھیل رہا ہے", english="Spreading"),
         ]
-        still_ur = "شدت کا اندازہ لگا رہا ہوں۔"
-        still_en = "Judging severity trend."
-        conf = 0.65
+        severity_replies = [
+            QuickReply(urdu="ہلکی", english="Mild"),
+            QuickReply(urdu="درمیانی", english="Moderate"),
+            QuickReply(urdu="شدید", english="Severe"),
+            QuickReply(urdu="پتہ نہیں", english="Don't know"),
+        ]
+        question_sets: dict[str, list[tuple[list[str], str, str, list[QuickReply], str, str]]] = {
+            "skin": [
+                (
+                    ["خارش", "itch", "پھیل", "spread"],
+                    f"{name}، کیا اس نشان میں خارش یا درد ہے، یا یہ پھیل رہا ہے؟",
+                    f"{profile.get('display_name','You')}, is the mark itchy, painful, or spreading?",
+                    skin_replies,
+                    "نشان کی تکلیف اور پھیلاؤ دیکھ رہا ہوں۔",
+                    "Checking discomfort and whether the mark is spreading.",
+                ),
+                (
+                    ["گرم", "warm", "سوج", "swollen"],
+                    f"{name}، کیا یہ جگہ گرم یا سوجی ہوئی ہے، یا ساتھ بخار ہے؟",
+                    f"{profile.get('display_name','You')}, is the area warm or swollen, or is there a fever?",
+                    [
+                        QuickReply(urdu="نہیں", english="No"),
+                        QuickReply(urdu="گرم ہے", english="Warm"),
+                        QuickReply(urdu="سوجن ہے", english="Swollen"),
+                        QuickReply(urdu="بخار بھی ہے", english="Also fever"),
+                    ],
+                    "سوجن، گرمی اور بخار دیکھ رہا ہوں۔",
+                    "Checking for swelling, warmth, and fever.",
+                ),
+                (
+                    ["چوٹ", "injury", "کیڑے", "insect"],
+                    f"{name}، کیا وہاں چوٹ لگی تھی یا کیڑے نے کاٹا تھا؟",
+                    f"{profile.get('display_name','You')}, was there an injury or an insect bite there?",
+                    _YES_NO,
+                    "نشان سے پہلے ہونے والی بات معلوم کر رہا ہوں۔",
+                    "Checking what happened before the mark appeared.",
+                ),
+            ],
+            "fever": [
+                (
+                    ["درجہ حرارت", "temperature"],
+                    f"{name}، کیا بخار ناپا ہے، اور کتنا تھا؟",
+                    f"{profile.get('display_name','You')}, was the temperature measured, and how high was it?",
+                    [
+                        QuickReply(urdu="نہیں ناپا", english="Not measured"),
+                        QuickReply(urdu="100°F سے کم", english="Below 100°F"),
+                        QuickReply(urdu="100–102°F", english="100–102°F"),
+                        QuickReply(urdu="102°F سے زیادہ", english="Above 102°F"),
+                    ],
+                    "بخار کی شدت معلوم کر رہا ہوں۔",
+                    "Checking how high the fever is.",
+                ),
+                (
+                    ["پانی", "water", "پیشاب", "urine"],
+                    f"{name}، کیا پانی پی رہے ہیں اور پیشاب معمول کے مطابق آ رہا ہے؟",
+                    f"{profile.get('display_name','You')}, are you drinking fluids and passing urine normally?",
+                    _YES_NO,
+                    "پانی کی کمی کی علامات دیکھ رہا ہوں۔",
+                    "Checking hydration.",
+                ),
+                (
+                    ["کھانسی", "cough", "دانے", "rash"],
+                    f"{name}، کیا بخار کے ساتھ کھانسی، درد یا جلد پر دانے بھی ہیں؟",
+                    f"{profile.get('display_name','You')}, is there also cough, pain, or a skin rash with the fever?",
+                    _YES_NO,
+                    "بخار کے ساتھ دوسری علامات دیکھ رہا ہوں۔",
+                    "Checking symptoms accompanying the fever.",
+                ),
+            ],
+            "respiratory": [
+                (
+                    ["سانس", "breath"],
+                    f"{name}، کیا کھانسی کے ساتھ سانس لینے میں دشواری ہے؟",
+                    f"{profile.get('display_name','You')}, is the cough accompanied by difficulty breathing?",
+                    _YES_NO,
+                    "سانس کی حالت دیکھ رہا ہوں۔",
+                    "Checking breathing because of the respiratory complaint.",
+                ),
+                (
+                    ["بخار", "fever", "بلغم", "phlegm"],
+                    f"{name}، کیا ساتھ بخار یا بلغم بھی ہے؟",
+                    f"{profile.get('display_name','You')}, is there also fever or phlegm?",
+                    _YES_NO,
+                    "کھانسی کے ساتھ دوسری علامات دیکھ رہا ہوں۔",
+                    "Checking symptoms accompanying the cough.",
+                ),
+                (
+                    ["بڑھ", "worse"],
+                    f"{name}، کیا کھانسی بڑھ رہی ہے یا کم ہو رہی ہے؟",
+                    f"{profile.get('display_name','You')}, is the cough getting worse or improving?",
+                    severity_replies,
+                    "کھانسی کی تبدیلی دیکھ رہا ہوں۔",
+                    "Checking how the cough is changing.",
+                ),
+            ],
+            "stomach": [
+                (
+                    ["پانی", "water", "پیشاب", "urine"],
+                    f"{name}، کیا پانی رک رہا ہے اور پیشاب معمول کے مطابق آ رہا ہے؟",
+                    f"{profile.get('display_name','You')}, can you keep fluids down and pass urine normally?",
+                    _YES_NO,
+                    "پانی کی کمی کی علامات دیکھ رہا ہوں۔",
+                    "Checking hydration.",
+                ),
+                (
+                    ["خون", "blood", "شدید درد", "severe pain"],
+                    f"{name}، کیا الٹی یا پاخانے میں خون، یا پیٹ میں شدید درد ہے؟",
+                    f"{profile.get('display_name','You')}, is there blood in vomit or stool, or severe stomach pain?",
+                    _YES_NO,
+                    "سنگین علامات دیکھ رہا ہوں۔",
+                    "Checking for serious associated symptoms.",
+                ),
+                (
+                    ["کتنی بار", "how many times"],
+                    f"{name}، آج الٹی یا دست کتنی بار ہوئے؟",
+                    f"{profile.get('display_name','You')}, how many times have vomiting or diarrhoea occurred today?",
+                    severity_replies,
+                    "علامات کی تعداد معلوم کر رہا ہوں۔",
+                    "Checking how frequent the symptoms are.",
+                ),
+            ],
+            "pain": [
+                (
+                    ["کتنا شدید", "how severe"],
+                    f"{name}، درد کتنا شدید ہے؟",
+                    f"{profile.get('display_name','You')}, how severe is the pain?",
+                    severity_replies,
+                    "درد کی شدت معلوم کر رہا ہوں۔",
+                    "Checking pain severity.",
+                ),
+                (
+                    ["حرکت", "movement", "سوج", "swelling"],
+                    f"{name}، کیا حرکت کرنے میں مشکل یا وہاں سوجن ہے؟",
+                    f"{profile.get('display_name','You')}, is movement difficult or is there swelling?",
+                    _YES_NO,
+                    "حرکت اور سوجن دیکھ رہا ہوں۔",
+                    "Checking movement and swelling.",
+                ),
+                (
+                    ["بڑھ", "worse"],
+                    f"{name}، کیا درد بڑھ رہا ہے یا کم ہو رہا ہے؟",
+                    f"{profile.get('display_name','You')}, is the pain getting worse or improving?",
+                    severity_replies,
+                    "درد کی تبدیلی دیکھ رہا ہوں۔",
+                    "Checking how the pain is changing.",
+                ),
+            ],
+            "general": [
+                (
+                    ["کتنی تکلیف", "how much"],
+                    f"{name}، اس سے کتنی تکلیف ہو رہی ہے یا روزمرہ کام میں کیا فرق پڑا ہے؟",
+                    f"{profile.get('display_name','You')}, how uncomfortable is it, or how is it affecting normal activity?",
+                    severity_replies,
+                    "تکلیف کی شدت معلوم کر رہا ہوں۔",
+                    "Checking severity and effect on normal activity.",
+                ),
+                (
+                    ["بڑھ", "worse"],
+                    f"{name}، کیا یہ بڑھ رہا ہے یا کم ہو رہا ہے؟",
+                    f"{profile.get('display_name','You')}, is it getting worse or improving?",
+                    severity_replies,
+                    "علامت کی تبدیلی دیکھ رہا ہوں۔",
+                    "Checking how the symptom is changing.",
+                ),
+                (
+                    ["ساتھ کوئی", "anything else"],
+                    f"{name}، کیا اس کے ساتھ کوئی اور تکلیف بھی ہے؟",
+                    f"{profile.get('display_name','You')}, is there any other symptom with it?",
+                    _YES_NO,
+                    "ساتھ کی علامات دیکھ رہا ہوں۔",
+                    "Checking for related symptoms.",
+                ),
+            ],
+        }
+
+        selected = next(
+            (
+                item
+                for item in question_sets[kind]
+                if not any(marker in asked_text for marker in item[0])
+            ),
+            question_sets["general"][1],
+        )
+        _markers, q_ur, q_en, quick, still_ur, still_en = selected
+        conf = min(0.32 + (asked * 0.18), 0.82)
 
     analysis = TriageAnalysis(
         collected=_collect_from_turns(turns),
@@ -518,6 +788,15 @@ def _mock_result(profile: dict[str, Any], session_id: int, turns: list[dict]) ->
     chronic = [c.lower() for c in profile.get("chronic_conditions", [])]
     is_diabetic = any("diabet" in c or "شوگر" in c for c in chronic)
     is_hypertensive = any("hyper" in c or "bp" in c or "بلڈ" in c for c in chronic)
+    has_skin_change = _has_skin_change(text)
+    skin_concerning = has_skin_change and any(
+        marker in lo
+        for marker in [
+            "pain", "dard", "درد", "spread", "phail", "پھیل",
+            "warm", "garam", "گرم", "swelling", "sooj", "سوج",
+            "fever", "bukhar", "بخار", "pus", "peep", "پیپ",
+        ]
+    )
 
     breathing_answered_yes = any(
         (
@@ -544,6 +823,13 @@ def _mock_result(profile: dict[str, Any], session_id: int, turns: list[dict]) ->
         level = TriageLevel.HOME_CARE
         reason = "Mild cold-type symptoms with no red flags — suitable for home care."
 
+    if skin_concerning:
+        level = TriageLevel.DOCTOR_24H
+        reason = (
+            "The skin change is painful, spreading, warm, swollen, or accompanied "
+            "by fever and should be reviewed by a clinician within 24 hours."
+        )
+
     if _looks_severe(text) and level == TriageLevel.HOME_CARE:
         level = TriageLevel.DOCTOR_24H
         reason = "Patient described symptoms as severe / worsening."
@@ -561,7 +847,19 @@ def _mock_result(profile: dict[str, Any], session_id: int, turns: list[dict]) ->
         level = TriageLevel.DOCTOR_24H
         reason = f"{profile.get('display_name','The patient')} reports symptoms are worsening."
 
-    if level == TriageLevel.HOME_CARE:
+    if level == TriageLevel.HOME_CARE and has_skin_change:
+        advice_ur = (
+            f"{name}، نشان کو صاف اور خشک رکھیں اور اسے نہ کھجائیں۔ اگر نشان "
+            "پھیلے، گرم یا سوجا ہوا ہو، بخار آئے، یا تکلیف بڑھے تو ڈاکٹر سے "
+            "ملیں۔ یاد رکھیں، یہ ڈاکٹر کا متبادل نہیں ہے۔"
+        )
+        advice_en = (
+            f"{profile.get('display_name','You')}, keep the area clean and dry "
+            "and avoid scratching it. If it spreads, becomes warm or swollen, "
+            "fever appears, or discomfort increases, see a doctor. This is not "
+            "a substitute for a doctor."
+        )
+    elif level == TriageLevel.HOME_CARE:
         advice_ur = (
             f"{name}، یہ ایک معمولی مسئلہ لگتا ہے۔ آرام کریں، زیادہ پانی پئیں اور "
             "ہلکی غذا کھائیں۔ اگر دو دن میں بہتر نہ ہو تو ڈاکٹر سے ملیں۔ یاد "
@@ -574,15 +872,28 @@ def _mock_result(profile: dict[str, Any], session_id: int, turns: list[dict]) ->
             "a substitute for a doctor."
         )
     elif level == TriageLevel.DOCTOR_24H:
-        advice_ur = (
-            f"{name}، کل صبح تک قریبی کلینک جائیں۔ زیادہ پانی پلائیں اور بخار "
-            "یا درد کی دوا وقت پر دیں۔ یاد رکھیں، یہ ڈاکٹر کا متبادل نہیں ہے۔"
-        )
-        advice_en = (
-            f"{profile.get('display_name','You')} — visit a nearby clinic by "
-            "tomorrow morning. Give plenty of water and fever medicine on "
-            "time. Remember, this is not a substitute for a doctor."
-        )
+        if has_skin_change:
+            advice_ur = (
+                f"{name}، اس نشان کو آج یا اگلے 24 گھنٹوں میں ڈاکٹر کو دکھائیں۔ "
+                "جگہ کو صاف رکھیں اور اگر سرخی یا سوجن تیزی سے بڑھے یا حالت "
+                "بگڑے تو فوراً ہسپتال جائیں۔ یہ ڈاکٹر کا متبادل نہیں ہے۔"
+            )
+            advice_en = (
+                f"{profile.get('display_name','You')}, show this mark to a "
+                "clinician today or within 24 hours. Keep the area clean, and "
+                "seek urgent care if redness or swelling spreads quickly or the "
+                "condition worsens. This is not a substitute for a doctor."
+            )
+        else:
+            advice_ur = (
+                f"{name}، کل صبح تک قریبی کلینک جائیں۔ پانی پیتے رہیں اور حالت "
+                "پر نظر رکھیں۔ یاد رکھیں، یہ ڈاکٹر کا متبادل نہیں ہے۔"
+            )
+            advice_en = (
+                f"{profile.get('display_name','You')} — visit a nearby clinic by "
+                "tomorrow morning. Keep drinking fluids and monitor the condition. "
+                "Remember, this is not a substitute for a doctor."
+            )
     else:  # EMERGENCY handled above; safety net:
         return _emergency_turn(profile, session_id, turns, suicidal=False)
 
@@ -647,6 +958,8 @@ def mock_next_turn(profile: dict[str, Any], session_id: int, turns: list[dict]) 
         return _emergency_turn(profile, session_id, turns, suicidal=True)
     if is_emergency_text(all_user):
         return _emergency_turn(profile, session_id, turns, suicidal=False)
+    if _latest_answer_affirms_breathing_problem(turns):
+        return _emergency_turn(profile, session_id, turns, suicidal=False)
 
     asked = _count_questions(turns)
 
@@ -674,8 +987,12 @@ def _has_any_health_keyword(text: str) -> bool:
         "breath", "dizzy", "rash", "bleed", "swell", "burn", "faint", "child",
         "baby", "pregnan", "wound", "injur",
         "bukhar", "dard", "khansi", "ulti", "dast", "chakkar", "beemar",
+        "rash", "red mark", "red spot", "redness", "skin", "itch", "swelling",
+        "surkh nishan", "laal nishan", "lal nishan", "nishan", "kharish",
+        "soojan", "daane", "danay", "jild",
         "بخار", "درد", "کھانسی", "الٹی", "دست", "چکر", "بیمار", "زخم",
-        "زکام", "cold", "zukam",
+        "زکام", "نشان", "سرخی", "خارش", "سوجن", "دانے", "جلد",
+        "cold", "zukam",
     ]
     return any(k in lo for k in keywords)
 
@@ -800,6 +1117,8 @@ def qwen_next_turn(profile: dict[str, Any], session_id: int, turns: list[dict]) 
     if is_suicidal_text(all_user):
         return _emergency_turn(profile, session_id, turns, suicidal=True)
     if is_emergency_text(all_user):
+        return _emergency_turn(profile, session_id, turns, suicidal=False)
+    if _latest_answer_affirms_breathing_problem(turns):
         return _emergency_turn(profile, session_id, turns, suicidal=False)
 
     asked = _count_questions(turns)

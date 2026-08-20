@@ -168,6 +168,62 @@ def test_triage_start_returns_question_then_result(client, auth):
     assert reached_result
 
 
+def test_skin_mark_gets_skin_specific_questions(client, auth):
+    headers, _account, self_id = auth
+    start = client.post(
+        "/api/triage/start",
+        headers=headers,
+        json={"profile_id": self_id, "text": "mere right arm pe surkh nishan hai"},
+    )
+    assert start.status_code == 200, start.text
+    first = start.json()
+    assert first["type"] == "question"
+    assert "نشان" in first["question_urdu"]
+    assert "سانس" not in first["question_urdu"]
+    assert "breath" not in (first["question_english"] or "").lower()
+    assert any(
+        fact["value_english"] == "Skin mark or redness"
+        for fact in first["analysis"]["collected"]
+    )
+    assert any(
+        fact["value_english"] == "Right arm"
+        for fact in first["analysis"]["collected"]
+    )
+
+    answer = client.post(
+        "/api/triage/answer",
+        headers=headers,
+        json={"session_id": first["session_id"], "text": "aaj se"},
+    )
+    assert answer.status_code == 200, answer.text
+    second = answer.json()
+    assert second["type"] == "question"
+    related = f"{second['question_urdu']} {second['question_english']}".lower()
+    assert any(word in related for word in ["خارش", "درد", "پھیل", "itch", "pain", "spread"])
+    assert "سانس" not in second["question_urdu"]
+    assert "breath" not in (second["question_english"] or "").lower()
+
+
+def test_yes_to_breathing_question_short_circuits(client, auth):
+    headers, _account, self_id = auth
+    start = client.post(
+        "/api/triage/start",
+        headers=headers,
+        json={"profile_id": self_id, "text": "teen din se khansi hai"},
+    ).json()
+    assert start["type"] == "question"
+    assert "سانس" in start["question_urdu"]
+
+    answer = client.post(
+        "/api/triage/answer",
+        headers=headers,
+        json={"session_id": start["session_id"], "text": "ہاں"},
+    ).json()
+    assert answer["type"] == "result"
+    assert answer["level"] == "EMERGENCY"
+    assert answer["analysis"]["questions_asked"] == 1
+
+
 def test_emergency_short_circuits_on_first_turn(client, auth):
     headers, _account, self_id = auth
     start = client.post(
