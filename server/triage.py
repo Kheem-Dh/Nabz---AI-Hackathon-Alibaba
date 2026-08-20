@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import re
+import time
 from typing import Any
 
 from schemas import (
@@ -825,6 +826,7 @@ def qwen_next_turn(profile: dict[str, Any], session_id: int, turns: list[dict]) 
         role = "assistant" if t.get("role") == "assistant" else "user"
         messages.append({"role": role, "content": t.get("text", "")})
 
+    call_started = time.perf_counter()
     try:
         from openai import OpenAI
 
@@ -832,24 +834,52 @@ def qwen_next_turn(profile: dict[str, Any], session_id: int, turns: list[dict]) 
             api_key=api_key,
             base_url=DASHSCOPE_BASE_URL,
             timeout=REQUEST_TIMEOUT_SECONDS,
+            # A triage turn must fail conservatively within the advertised
+            # timeout.  The SDK otherwise retries twice, turning a 20-second
+            # timeout into roughly a one-minute wait before our safe fallback.
+            max_retries=0,
         )
         completion = client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=0.2,
             response_format={"type": "json_object"},
+            # Qwen3.7 enables hybrid thinking by default.  Triage needs a
+            # short structured turn, not a long reasoning trace.
+            extra_body={"enable_thinking": False},
         )
         raw = completion.choices[0].message.content or ""
     except Exception as exc:  # noqa: BLE001
-        logger.error("Qwen call failed: %s", exc, exc_info=True)
+        call_latency = time.perf_counter() - call_started
+        logger.error(
+            "Qwen call failed (model=%s latency_seconds=%.3f): %s",
+            model,
+            call_latency,
+            exc,
+            exc_info=True,
+        )
         return _safe_fallback(profile, session_id, turns)
 
+    call_latency = time.perf_counter() - call_started
     try:
         data = json.loads(_strip_fences(raw))
         turn = _turn_from_qwen_json(data, profile, session_id, turns)
     except Exception as exc:  # noqa: BLE001
-        logger.error("Qwen parse failed (%s). Raw: %s", exc, raw)
+        logger.error(
+            "Qwen parse failed (model=%s latency_seconds=%.3f; %s). Raw: %s",
+            model,
+            call_latency,
+            exc,
+            raw,
+        )
         return _safe_fallback(profile, session_id, turns)
+
+    logger.info(
+        "Qwen turn completed (model=%s latency_seconds=%.3f type=%s)",
+        model,
+        call_latency,
+        turn.type,
+    )
 
     # Enforce the question ceiling on the server side even if the model missed.
     if force_result and turn.type == "question":
