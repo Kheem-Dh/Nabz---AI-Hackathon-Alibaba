@@ -14,6 +14,7 @@ from db import get_db
 from models_db import Account, Profile, TimelineEntry
 from schemas import LabReportOut, LabValue
 from security import get_current_account
+from storage import content_type_for_filename, store_upload
 from triage import is_mock_mode
 from vision import analyze_image
 
@@ -104,6 +105,12 @@ async def upload_labreport(
     payload = await file.read()
     if not payload:
         raise HTTPException(status_code=400, detail="empty_upload")
+    try:
+        image_ref = store_upload(
+            profile.id, payload, file.filename or "lab.jpg", prefix="lab"
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     if is_mock_mode():
         data = _mock_lab(profile.display_name)
@@ -139,7 +146,13 @@ async def upload_labreport(
         kind="lab",
         title=out.report_title,
         subtitle=out.lab_name,
-        payload=out.model_dump(mode="json"),
+        payload={
+            **out.model_dump(mode="json"),
+            "image_ref": image_ref,
+            "original_filename": file.filename or "lab.jpg",
+            "content_type": content_type_for_filename(file.filename or "lab.jpg"),
+            "size_bytes": len(payload),
+        },
     )
     db.add(entry)
     db.commit()

@@ -30,6 +30,8 @@ logging.basicConfig(
 from auth import router as auth_router  # noqa: E402
 from clinics import get_clinics  # noqa: E402
 from db import init_db  # noqa: E402
+from dashboard import router as dashboard_router  # noqa: E402
+from documents import router as documents_router  # noqa: E402
 from facilities import router as facilities_router  # noqa: E402
 from labreport import router as labreport_router  # noqa: E402
 from location import router as location_router  # noqa: E402
@@ -83,6 +85,8 @@ app.include_router(triage_router)
 app.include_router(labreport_router)
 app.include_router(prescription_router)
 app.include_router(summary_router)
+app.include_router(documents_router)
+app.include_router(dashboard_router)
 
 
 # --- Misc endpoints ----------------------------------------------------------

@@ -97,6 +97,46 @@ export const scanPrescription = (profileId, file) => uploadFile('/api/prescripti
 export const confirmPrescription = (data) =>
   jsonReq('/api/prescription/confirm', 'POST', data)
 
+export function attachConfirmedPrescription(profileId, confirmationEntryId, file) {
+  const form = new FormData()
+  form.append('profile_id', String(profileId))
+  form.append('confirmation_entry_id', String(confirmationEntryId))
+  form.append('file', file)
+  return fetch(`${API_BASE}/api/documents/prescription-source`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: form,
+  }).then(handle)
+}
+
+export function uploadVaultDocument(profileId, documentType, file, title = '', notes = '') {
+  const form = new FormData()
+  form.append('profile_id', String(profileId))
+  form.append('document_type', documentType)
+  form.append('title', title)
+  form.append('notes', notes)
+  form.append('file', file)
+  return fetch(`${API_BASE}/api/documents`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: form,
+  }).then(handle)
+}
+
+export const listDocuments = (profileId) =>
+  jsonReq(`/api/documents?profile_id=${encodeURIComponent(profileId)}`, 'GET')
+
+export async function openDocument(document) {
+  const resp = await fetch(`${API_BASE}${document.view_url}`, { headers: authHeaders() })
+  if (!resp.ok) await handle(resp)
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
+export const deleteDocument = (entryId) => jsonReq(`/api/documents/${entryId}`, 'DELETE')
+
 // --- Location + facilities ---------------------------------------------------
 
 export const resolveLocation = (latitude, longitude, accuracy_m) =>
@@ -117,6 +157,7 @@ export function getNearbyFacilities({ urgency = 'DOCTOR_24H', latitude, longitud
 // --- Summary + misc ----------------------------------------------------------
 
 export const getSummary = (profileId) => jsonReq(`/api/summary/${profileId}`, 'GET')
+export const getDashboard = (profileId) => jsonReq(`/api/dashboard/${profileId}`, 'GET')
 
 export async function getClinics(city, province) {
   const params = new URLSearchParams()

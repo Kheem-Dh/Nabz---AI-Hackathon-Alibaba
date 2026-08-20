@@ -15,6 +15,7 @@ import LabReportPage from './pages/LabReportPage'
 import PrescriptionPage from './pages/PrescriptionPage'
 import SummaryPage from './pages/SummaryPage'
 import PrivacyPage from './pages/PrivacyPage'
+import DocumentsPage from './pages/DocumentsPage'
 
 function Loading() {
   return (
@@ -67,6 +68,7 @@ export default function App() {
             <Route path="/profile/:id/edit" element={<ProfileEditPage mode="edit" />} />
             <Route path="/profile/:id/lab" element={<LabReportPage />} />
             <Route path="/profile/:id/prescription" element={<PrescriptionPage />} />
+            <Route path="/profile/:id/documents" element={<DocumentsPage />} />
             <Route path="/clinics" element={<ClinicsPage />} />
             <Route path="/summary/:id" element={<SummaryPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />

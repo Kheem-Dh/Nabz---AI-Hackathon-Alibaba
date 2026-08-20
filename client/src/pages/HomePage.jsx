@@ -3,6 +3,7 @@ import { useProfiles } from '../context/ProfileContext'
 import ActiveProfileBar from '../components/ActiveProfileBar'
 import ProfileSwitcher from '../components/ProfileSwitcher'
 import TriageConversation from '../components/TriageConversation'
+import PatientDashboard from '../components/PatientDashboard'
 
 export default function HomePage() {
   const { active, loading } = useProfiles()
@@ -38,6 +39,12 @@ export default function HomePage() {
       </div>
       <ProfileSwitcher />
 
+      <PatientDashboard
+        key={`dashboard-${active.id}`}
+        profile={active}
+        onOpenVault={() => navigate(`/profile/${active.id}/documents`)}
+      />
+
       {/* key forces a fresh conversation when the active profile changes */}
       <TriageConversation key={active.id} profile={active} />
 
@@ -56,7 +63,7 @@ export default function HomePage() {
           <span className="tile-ur urdu">نسخہ اسکین</span>
           <span className="tile-en">Scan a prescription</span>
         </button>
-        <button className="tile" onClick={() => navigate(`/profile/${active.id}`)}>
+        <button className="tile" onClick={() => navigate(`/profile/${active.id}/documents`)}>
           <span className="tile-icon">🗂️</span>
           <span className="tile-ur urdu">میڈیکل والٹ</span>
           <span className="tile-en">Open the vault</span>

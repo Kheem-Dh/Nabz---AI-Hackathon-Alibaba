@@ -18,6 +18,8 @@ os.environ["JWT_SECRET"] = "test-secret-nabz"
 
 _TMP_DB = Path(tempfile.gettempdir()) / f"nabz_test_{uuid.uuid4().hex}.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{_TMP_DB}"
+_TMP_UPLOADS = Path(tempfile.gettempdir()) / f"nabz_uploads_{uuid.uuid4().hex}"
+os.environ["NABZ_UPLOAD_DIR"] = str(_TMP_UPLOADS)
 
 # Make the server package importable when pytest runs from repo root or server/.
 SERVER_DIR = Path(__file__).resolve().parent.parent
@@ -38,6 +40,10 @@ def _create_schema():
         _TMP_DB.unlink()
     except OSError:
         pass
+    if _TMP_UPLOADS.exists():
+        for path in _TMP_UPLOADS.iterdir():
+            path.unlink()
+        _TMP_UPLOADS.rmdir()
 
 
 @pytest.fixture()

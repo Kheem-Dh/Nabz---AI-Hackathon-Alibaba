@@ -8,6 +8,7 @@ from db import get_db
 from models_db import Account, Medicine, Profile, TimelineEntry
 from schemas import MedicineOut, ProfileIn, ProfileOut, TimelineEntryOut
 from security import get_current_account
+from storage import delete_upload_ref
 
 router = APIRouter(prefix="/api/profiles", tags=["profiles"])
 
@@ -116,6 +117,14 @@ def delete_profile(
     profile = _load_owned(db, account, profile_id)
     if profile.is_self:
         raise HTTPException(status_code=400, detail="cannot_delete_self_profile")
+    stored_refs = []
+    for entry in profile.timeline:
+        payload = entry.payload or {}
+        stored_ref = payload.get("stored_ref") or payload.get("image_ref")
+        if stored_ref:
+            stored_refs.append(str(stored_ref))
     db.delete(profile)
     db.commit()
+    for stored_ref in stored_refs:
+        delete_upload_ref(stored_ref)
     return Response(status_code=204)

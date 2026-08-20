@@ -301,6 +301,12 @@ def test_prescription_extract_and_confirm(client, auth):
     # One field is deliberately low-confidence.
     assert any(m["confidence"] < 0.6 for m in rx["medicines"])
     assert rx["mock"] is True
+    # Extraction is temporary: the paper and medicines enter the Vault only
+    # after the explicit confirmation request below.
+    before_confirm = client.get(
+        f"/api/documents?profile_id={self_id}", headers=headers
+    ).json()
+    assert not any(item["document_type"] == "prescription" for item in before_confirm)
 
     confirm = client.post(
         "/api/prescription/confirm",
@@ -316,11 +322,123 @@ def test_prescription_extract_and_confirm(client, auth):
     assert confirm.status_code == 200, confirm.text
     saved = confirm.json()
     assert len(saved) == 2
+    confirmation_entry_id = saved[0]["confirmation_entry_id"]
+
+    source = client.post(
+        "/api/documents/prescription-source",
+        headers=headers,
+        data={
+            "profile_id": str(self_id),
+            "confirmation_entry_id": str(confirmation_entry_id),
+        },
+        files={"file": ("rx.png", io.BytesIO(_png_bytes()), "image/png")},
+    )
+    assert source.status_code == 200, source.text
+    assert source.json()["document_type"] == "prescription"
+    assert source.json()["content_type"] == "image/png"
 
     # Confirmed medicines now live on the profile.
     profile = client.get(f"/api/profiles/{self_id}", headers=headers).json()
     assert len(profile["medicines"]) == 2
     assert all(m["source"] == "prescription" for m in profile["medicines"])
+
+
+def test_prescription_cannot_bypass_confirmation_in_generic_vault(client, auth):
+    headers, _account, self_id = auth
+    response = client.post(
+        "/api/documents",
+        headers=headers,
+        data={"profile_id": str(self_id), "document_type": "prescription"},
+        files={"file": ("rx.png", io.BytesIO(_png_bytes()), "image/png")},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "use_prescription_confirmation_flow"
+
+
+# --- Private document vault --------------------------------------------------
+
+def test_document_vault_upload_download_delete_and_isolation(client, auth):
+    headers_a, _account, self_id = auth
+    uploaded = client.post(
+        "/api/documents",
+        headers=headers_a,
+        data={
+            "profile_id": str(self_id),
+            "document_type": "xray",
+            "title": "Chest X-ray",
+            "notes": "Previous report",
+        },
+        files={"file": ("chest.png", io.BytesIO(_png_bytes()), "image/png")},
+    )
+    assert uploaded.status_code == 201, uploaded.text
+    document = uploaded.json()
+    assert document["profile_id"] == self_id
+    assert document["document_type"] == "xray"
+
+    listed = client.get(
+        f"/api/documents?profile_id={self_id}", headers=headers_a
+    ).json()
+    assert [item["id"] for item in listed] == [document["id"]]
+
+    downloaded = client.get(document["view_url"], headers=headers_a)
+    assert downloaded.status_code == 200
+    assert downloaded.content == _png_bytes()
+
+    other = client.post(
+        "/api/auth/register",
+        json={"full_name": "Other Vault", "phone": "03125554444", "password": "pass1234"},
+    ).json()
+    headers_b = {"Authorization": f"Bearer {other['token']}"}
+    assert client.get(document["view_url"], headers=headers_b).status_code == 404
+    assert client.delete(f"/api/documents/{document['id']}", headers=headers_b).status_code == 404
+
+    assert client.delete(f"/api/documents/{document['id']}", headers=headers_a).status_code == 204
+    assert client.get(document["view_url"], headers=headers_a).status_code == 404
+
+
+def test_dashboard_is_patient_specific(client, auth):
+    headers, _account, self_id = auth
+    self_profile = client.get(f"/api/profiles/{self_id}", headers=headers).json()
+    family = client.post(
+        "/api/profiles",
+        headers=headers,
+        json={
+            "display_name": "Hassan",
+            "relation": "Brother",
+            "age": 31,
+            "chronic_conditions": ["Asthma"],
+            "allergies": ["Penicillin"],
+            "notes": "Uses an inhaler during winter.",
+        },
+    ).json()
+    upload = client.post(
+        "/api/documents",
+        headers=headers,
+        data={"profile_id": str(family["id"]), "document_type": "mri"},
+        files={"file": ("scan.png", io.BytesIO(_png_bytes()), "image/png")},
+    )
+    assert upload.status_code == 201
+
+    dashboard = client.get(f"/api/dashboard/{family['id']}", headers=headers)
+    assert dashboard.status_code == 200, dashboard.text
+    body = dashboard.json()
+    assert body["patient_name"] == "Hassan"
+    assert body["document_counts"] == {"mri": 1}
+    assert body["chronic_conditions"] == ["Asthma"]
+    assert body["allergies"] == ["Penicillin"]
+    assert body["profile_notes"] == "Uses an inhaler during winter."
+    assert "Hassan" in body["summary_english"]
+
+    self_dashboard = client.get(f"/api/dashboard/{self_id}", headers=headers).json()
+    assert self_dashboard["patient_name"] == self_profile["display_name"]
+    assert self_dashboard["document_total"] == 0
+
+    other = client.post(
+        "/api/auth/register",
+        json={"full_name": "No Access", "phone": "03126665555", "password": "pass1234"},
+    ).json()
+    other_headers = {"Authorization": f"Bearer {other['token']}"}
+    assert client.get(f"/api/dashboard/{family['id']}", headers=other_headers).status_code == 404
 
 
 # --- Summary -----------------------------------------------------------------

@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { confirmPrescription, getProfile, scanPrescription } from '../api'
+import {
+  attachConfirmedPrescription,
+  confirmPrescription,
+  getProfile,
+  scanPrescription,
+} from '../api'
 import ConsentCheckbox from '../components/ConsentCheckbox'
 
 // Scan -> review/edit each medicine (nothing is saved until confirmed) -> save.
@@ -16,6 +21,7 @@ export default function PrescriptionPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
+  const [confirmationEntryId, setConfirmationEntryId] = useState(null)
 
   useEffect(() => {
     getProfile(id).then(setProfile).catch((e) => setError(e.message))
@@ -63,13 +69,21 @@ export default function PrescriptionPage() {
     setBusy(true)
     setError('')
     try {
-      await confirmPrescription({
-        profile_id: Number(id),
-        date: rx.date || null,
-        doctor_name: rx.doctor_name || null,
-        clinic: rx.clinic || null,
-        medicines,
-      })
+      let entryId = confirmationEntryId
+      if (!entryId) {
+        const saved = await confirmPrescription({
+          profile_id: Number(id),
+          date: rx.date || null,
+          doctor_name: rx.doctor_name || null,
+          clinic: rx.clinic || null,
+          medicines,
+        })
+        entryId = saved[0]?.confirmation_entry_id
+        setConfirmationEntryId(entryId)
+      }
+      if (file && entryId) {
+        await attachConfirmedPrescription(Number(id), entryId, file)
+      }
       setDone(true)
     } catch (e) {
       setError(e.message || 'Could not save.')
@@ -221,7 +235,7 @@ export default function PrescriptionPage() {
           </button>
 
           <div className="btn-row">
-            <button className="btn btn-outline" onClick={() => setRx(null)}>
+            <button className="btn btn-outline" onClick={() => { setRx(null); setConfirmationEntryId(null) }}>
               دوبارہ اسکین · Rescan
             </button>
             <button className="btn btn-primary" disabled={busy} onClick={save}>

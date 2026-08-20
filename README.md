@@ -33,7 +33,14 @@ Nabz also includes a **family Medical Vault**, **lab-report explanation**, **pre
   of silence or an explicit **Done** tap.
 - A plain `ہاں / Yes` answer to a breathing-difficulty question now triggers
   the deterministic emergency short-circuit without relying on the LLM.
-- Backend suite: **22/22 green**; safety evaluation: **16/16 green**.
+- The web Vault now accepts patient-scoped X-rays, MRI/scan files, skin photos,
+  lab reports, confirmed prescription papers, and other medical documents.
+  Every file view is authenticated and checked against account ownership.
+- Home now opens with a private summary for the active patient: demographics,
+  stored-document counts, confirmed medicines, conditions, and allergies.
+- Prescription extraction remains temporary until the user confirms it; only
+  then are the reviewed medicines and original paper attached to the Vault.
+- Backend suite: **25/25 green**; safety evaluation: **16/16 green**.
 
 ---
 
@@ -250,6 +257,7 @@ Each profile can contain:
 - past triage sessions;
 - uploaded lab reports;
 - scanned prescriptions;
+- X-rays, MRI/scan files, skin photos, and other medical documents;
 - longitudinal health timeline.
 
 The **active profile** is injected into every relevant AI interaction. Nabz therefore addresses the selected person by name and can use that profile's known conditions, allergies, medicines, and recent labs as context.
@@ -531,6 +539,11 @@ Final result response:
 | `GET`    | `/api/profiles/{id}` | Get profile detail                 |
 | `PUT`    | `/api/profiles/{id}` | Update profile                     |
 | `DELETE` | `/api/profiles/{id}` | Delete profile and associated data |
+| `GET`    | `/api/dashboard/{id}` | Active patient's private Home summary |
+| `GET`    | `/api/documents?profile_id={id}` | List that patient's documents |
+| `POST`   | `/api/documents` | Store a lab, image/scan, or other document |
+| `GET`    | `/api/documents/{entry_id}/file` | Authenticated original-file view |
+| `DELETE` | `/api/documents/{entry_id}` | Delete a directly uploaded document |
 
 ### Document intelligence
 
@@ -539,6 +552,7 @@ Final result response:
 | `POST` | `/api/labreport`            | Extract + explain lab report for a profile       |
 | `POST` | `/api/prescription`         | Extract a prescription for user confirmation     |
 | `POST` | `/api/prescription/confirm` | Save the user-reviewed medicines to the profile  |
+| `POST` | `/api/documents/prescription-source` | Attach paper after prescription confirmation |
 
 ### Clinician handoff
 

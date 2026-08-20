@@ -107,6 +107,11 @@ export default function ProfilePage() {
       </div>
 
       <div className="tile-grid">
+        <button className="tile" onClick={() => navigate(`/profile/${id}/documents`)}>
+          <span className="tile-icon">🗂️</span>
+          <span className="tile-ur urdu">دستاویزات</span>
+          <span className="tile-en">All medical documents</span>
+        </button>
         <button className="tile" onClick={() => navigate(`/profile/${id}/lab`)}>
           <span className="tile-icon">🧪</span>
           <span className="tile-ur urdu">لیب رپورٹ</span>

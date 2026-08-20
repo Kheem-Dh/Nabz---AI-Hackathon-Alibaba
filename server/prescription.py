@@ -11,8 +11,6 @@ Flow:
 """
 from __future__ import annotations
 
-import uuid
-from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -30,10 +28,6 @@ from triage import is_mock_mode
 from vision import analyze_image
 
 router = APIRouter(prefix="/api", tags=["prescription"])
-
-SERVER_DIR = Path(__file__).resolve().parent
-UPLOAD_DIR = SERVER_DIR / "uploads"
-
 
 _RX_SYSTEM_PROMPT = """\
 You are a medical vision assistant reading a doctor's prescription for a
@@ -107,19 +101,6 @@ def _mock_prescription() -> dict[str, Any]:
     }
 
 
-def _store_upload(profile_id: int, payload: bytes, filename: str) -> str:
-    """Persist the original prescription image and return a stored reference.
-
-    Keeping the source paper lets the user view the original later — important
-    because we never trust extraction blindly.
-    """
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    suffix = Path(filename or "rx.jpg").suffix or ".jpg"
-    stored_name = f"rx_{profile_id}_{uuid.uuid4().hex}{suffix}"
-    (UPLOAD_DIR / stored_name).write_bytes(payload)
-    return f"uploads/{stored_name}"
-
-
 def _to_out(profile_id: int, data: dict[str, Any], mock: bool) -> PrescriptionOut:
     meds: list[ExtractedMedicine] = []
     for m in data.get("medicines", []) or []:
@@ -180,8 +161,6 @@ async def extract_prescription(
     if not payload:
         raise HTTPException(status_code=400, detail="empty_upload")
 
-    image_ref = _store_upload(profile.id, payload, file.filename or "rx.jpg")
-
     if is_mock_mode():
         data = _mock_prescription()
         out = _to_out(profile.id, data, mock=True)
@@ -203,18 +182,6 @@ async def extract_prescription(
                 "raw_text": "",
             }
         out = _to_out(profile.id, data, mock=False)
-
-    # Record that a prescription image was captured (source of truth for the
-    # "view original paper" feature). Confirmed medicines are added on /confirm.
-    entry = TimelineEntry(
-        profile_id=profile.id,
-        kind="prescription",
-        title="Prescription scanned",
-        subtitle=out.clinic or out.doctor_name,
-        payload={"extracted": out.model_dump(mode="json"), "image_ref": image_ref},
-    )
-    db.add(entry)
-    db.commit()
 
     return out
 
@@ -262,6 +229,8 @@ def confirm_prescription(
         },
     )
     db.add(entry)
+    db.flush()
+    confirmation_entry_id = entry.id
     db.commit()
     for med in saved:
         db.refresh(med)
@@ -276,6 +245,7 @@ def confirm_prescription(
             "notes": med.notes,
             "source": med.source,
             "prescription_date": med.prescription_date,
+            "confirmation_entry_id": confirmation_entry_id,
         }
         for med in saved
     ]

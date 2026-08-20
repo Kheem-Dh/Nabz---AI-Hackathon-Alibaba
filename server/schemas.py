@@ -79,6 +79,41 @@ class TimelineEntryOut(BaseModel):
     created_at: datetime
 
 
+class VaultDocumentOut(BaseModel):
+    id: int
+    profile_id: int
+    document_type: str
+    title: str
+    original_filename: str
+    content_type: str
+    size_bytes: int
+    notes: Optional[str] = None
+    created_at: datetime
+    view_url: str
+    deletable: bool = True
+
+
+class DashboardOut(BaseModel):
+    profile_id: int
+    patient_name: str
+    relation: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    blood_group: Optional[str] = None
+    profile_notes: Optional[str] = None
+    chronic_conditions: list[str] = Field(default_factory=list)
+    allergies: list[str] = Field(default_factory=list)
+    current_medicines: list[MedicineOut] = Field(default_factory=list)
+    document_counts: dict[str, int] = Field(default_factory=dict)
+    document_total: int = 0
+    latest_triage: Optional[dict[str, Any]] = None
+    latest_lab: Optional[dict[str, Any]] = None
+    recent_documents: list[VaultDocumentOut] = Field(default_factory=list)
+    recent_activity: list[TimelineEntryOut] = Field(default_factory=list)
+    summary_urdu: str
+    summary_english: str
+
+
 class ProfileOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
