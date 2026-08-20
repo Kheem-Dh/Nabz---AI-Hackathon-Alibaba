@@ -18,6 +18,57 @@ Nabz also includes a **family Medical Vault**, **lab-report explanation**, **pre
 
 ---
 
+## What's new — 2026-08-20 (winning-plan pivot)
+
+This drop lands the [winning-plan](docs/QODER_HANDOFF.md) pivot around location, mobile, and safety polish. Everything below is shipped in `main` and covered by `pytest` (20/20 green) and a manual end-to-end mock demo.
+
+### ✅ Shipped in this pass
+
+**Location-first onboarding & care navigation**
+
+- New first-run gate: registered users land on **screen 00 — "آپ کہاں ہیں؟ / Where are you now?"** and cannot proceed until a location is confirmed. Manual city-picker fallback if the browser denies geolocation.
+- `useGeolocation` hook (explicit-tap only, no auto-tracking).
+- Backend: `POST /api/location/resolve` (Nominatim + offline Pakistan-city fallback so it always answers on flaky Wi-Fi), `POST /api/location/confirm`, `GET /api/location/me`. New `LocationPreference` table with a 10-minute freshness window.
+- Persistent **location chip in the header** on every screen; taps back to the setup page for a quick change.
+- **`GET /api/facilities/nearby?urgency=…`** — severity-aware ranking (emergency-capable bonus + distance + verified-contact bonus), curated dataset of 20 Pakistan facilities with real coordinates spanning Karachi, Lahore, Islamabad/Rawalpindi, Peshawar / KP, and Quetta. Emergency results surface an emergency-hospital hero card with Directions before the ranked list.
+- New `NearbyCare` component renders under every triage result, filtered by the returned `facility_intent`.
+
+**Triage & AI polish**
+
+- Triage result now carries **`facility_intent`** (`emergency_hospital` | `clinic_or_bhu` | `optional`) so the UI can filter facilities without re-inferring urgency.
+- Analysis panel relabelled to **"Assessment completeness · Question n of ~5"** (winning plan §4.5 — never diagnostic probability). Backend exposes both `confidence` and `completeness` fields carrying the same value.
+- Winning UX detail: **"Talking about Rayan, age 6"** active-profile bar above the mic on Home, so the wrong family member is never silently the subject of the next conversation.
+- Env-driven **model routing** with legacy fallbacks: `NABZ_TEXT_MODEL` (→ `qwen3.7-plus`), `NABZ_VL_MODEL` (→ `qwen3.7-plus`), `NABZ_VL_OCR_FALLBACK` (→ `qwen-vl-ocr`), while continuing to honour `QWEN_MODEL` / `QWEN_VL_MODEL`.
+- **Prompt-injection defense** added to the lab-report and prescription VL system prompts (winning plan §15.3).
+- Extended `GET /api/health/detail` returns the currently-configured text/vision model IDs, location provider, and facilities layer for the pre-demo dev gesture.
+
+**Mobile shell (PWA + Capacitor)**
+
+- Installable PWA: `manifest.webmanifest`, SVG icons (`any` + `maskable`), theme-coloured splash, offline app-shell service worker. **The SW never caches `/api/*`** (auth + PHI) — it is API-first and shell-only.
+- Capacitor scaffolding: `capacitor.config.json` (`pk.nabz.app`) plus `npm run cap:install / cap:add:android / mobile:android` scripts. A real APK is one `npm run mobile:android` + Android Studio away.
+
+**Docs & handoff**
+
+- New [`docs/QODER_HANDOFF.md`](docs/QODER_HANDOFF.md) — full one-page brief for the Qoder assistant covering repo layout, run steps, mock/real gate, model routing table, location + facilities API contract, mobile build steps, credentials to collect, and a priority-ordered next-day roadmap.
+- Updated `.env.example` to document all new envs.
+
+### 🚧 Still to do (post-hackathon / Qoder session)
+
+Priority order matches the roadmap block in `docs/QODER_HANDOFF.md`.
+
+1. **Real-model rehearsal.** Set a real `DASHSCOPE_API_KEY`, flip `NABZ_TEXT_MODEL=qwen3.7-plus`, measure end-to-end latency. Revisit `qwen-plus` if any text turn exceeds ~6 s.
+2. **Cloud deploy.** FastAPI on Alibaba Cloud (Function Compute or ECS + Nginx), React static build on OSS + CDN. Fixed demo URL wired in DNS ≥24 h before the presentation.
+3. **Live facility provider layer.** Wire a `MAPS_PROVIDER` env (Google Places / Amap / Baidu) above the curated dataset in `facilities.py` — schema is already provider-agnostic.
+4. **Native Urdu audio via Qwen3.5-Omni.** Backend route that accepts recorded webm/wav → transcript + optional spoken reply. Fall back to browser STT/TTS on failure.
+5. **PWA install-prompt UI.** Capture `beforeinstallprompt` and show a soft "Install Nabz" CTA on Android.
+6. **Capacitor APK.** Run through `npm run cap:add:android` → build signed APK → upload to Play Console internal testing.
+7. **Cross-profile leakage tests.** Add pytest cases that start a triage for profile A under the same account as B and assert profile B's context never leaks into any prompt.
+8. **Consent + audit persistence.** Explicit `Consent` rows plus a light `AuditEvent` trail for delete / upload / summary events (winning plan §17).
+9. **Expanded safety eval.** Grow `eval.py` from the current curated set toward the plan's targets (40+ EMERGENCY, 30+ DOCTOR_24H, 25+ HOME_CARE, 20+ ambiguous, 10+ non-health / misuse) in Urdu script, Roman Urdu, and English.
+10. **P2 polish.** Confirmed-Rx medication reminders, QR-code doctor handoff, caregiver location share.
+
+---
+
 ## Why Nabz
 
 Many health applications assume that the user can comfortably read English, type a detailed history, understand medical terminology, and decide which symptoms matter. That assumption excludes many people in rural and underserved communities.

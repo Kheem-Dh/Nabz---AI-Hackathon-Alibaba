@@ -5,7 +5,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class TriageLevel(str, Enum):
@@ -137,8 +137,21 @@ class TriageAnalysis(BaseModel):
     collected: list[CollectedFact] = Field(default_factory=list)
     still_checking_urdu: str = ""
     still_checking_english: str = ""
+    # `confidence` is retained as a numeric progress value in [0,1]. The UI
+    # labels it "Assessment completeness" — never diagnostic probability.
+    # Alias `completeness` mirrors the same number for future callers.
     confidence: float = 0.0
+    completeness: float = 0.0
     questions_asked: int = 0
+
+    @model_validator(mode="after")
+    def _mirror_progress(self) -> "TriageAnalysis":
+        # Callers may set either field; keep them in sync so both are useful.
+        if self.completeness == 0.0 and self.confidence:
+            self.completeness = self.confidence
+        elif self.confidence == 0.0 and self.completeness:
+            self.confidence = self.completeness
+        return self
 
 
 class TriageTurn(BaseModel):
@@ -160,6 +173,10 @@ class TriageTurn(BaseModel):
     advice_urdu: Optional[str] = None
     advice_english: Optional[str] = None
     reason_english: Optional[str] = None
+
+    # Hints the frontend for facility filtering:
+    #   emergency_hospital | clinic_or_bhu | optional
+    facility_intent: Optional[str] = None
 
 
 # --- Labs / prescriptions ----------------------------------------------------
@@ -221,6 +238,73 @@ class Clinic(BaseModel):
     phone: Optional[str] = None
     maps_query: str
     hours: Optional[str] = None
+
+
+# --- Location & facilities ---------------------------------------------------
+
+class LocationResolveRequest(BaseModel):
+    latitude: float = Field(..., ge=-90, le=90)
+    longitude: float = Field(..., ge=-180, le=180)
+    accuracy_m: Optional[float] = Field(default=None, ge=0)
+
+
+class LocationLabel(BaseModel):
+    label: str
+    city: Optional[str] = None
+    district: Optional[str] = None
+    province: Optional[str] = None
+    country: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    accuracy_m: Optional[float] = None
+    source: str = "reverse-geocode"  # or "manual", "curated"
+
+
+class LocationConfirmRequest(BaseModel):
+    label: str = Field(..., min_length=1, max_length=200)
+    city: Optional[str] = Field(default=None, max_length=80)
+    district: Optional[str] = Field(default=None, max_length=80)
+    province: Optional[str] = Field(default=None, max_length=80)
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+    manual: bool = False
+
+
+class LocationPreferenceOut(BaseModel):
+    label: str
+    city: Optional[str] = None
+    district: Optional[str] = None
+    province: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    permission_state: str = "granted"
+    last_confirmed_at: datetime
+    fresh: bool = True
+
+
+class Facility(BaseModel):
+    id: str
+    name: str
+    type: str  # hospital | emergency | clinic | bhu | pharmacy
+    area: str
+    city: str
+    province: Optional[str] = None
+    phone: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    distance_km: Optional[float] = None
+    directions_url: str
+    reason: str = ""
+    source: str = "curated"  # live | curated | demo
+    emergency_capable: bool = False
+    hours: Optional[str] = None
+
+
+class NearbyFacilitiesResponse(BaseModel):
+    location: LocationLabel
+    urgency: TriageLevel
+    facilities: list[Facility]
+    fresh: bool = True
 
 
 class HealthResponse(BaseModel):

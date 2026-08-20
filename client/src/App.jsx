@@ -1,9 +1,12 @@
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
+import { useLocationPref } from './context/LocationContext'
 import BottomNav from './components/BottomNav'
 import Disclaimer from './components/Disclaimer'
+import LocationChip from './components/LocationChip'
 import AuthPage from './pages/AuthPage'
 import HomePage from './pages/HomePage'
+import LocationSetupPage from './pages/LocationSetupPage'
 import VaultPage from './pages/VaultPage'
 import ProfilePage from './pages/ProfilePage'
 import ProfileEditPage from './pages/ProfileEditPage'
@@ -24,13 +27,31 @@ function Loading() {
 
 export default function App() {
   const { account, loading } = useAuth()
+  const { preference, loading: locLoading } = useLocationPref()
   const location = useLocation()
 
   if (loading) return <Loading />
   if (!account) return <AuthPage />
+  if (locLoading) return <Loading />
 
-  // Chrome (topbar/nav) is hidden on the print-focused summary route.
+  // First-run gate (winning plan §3): location before anything else.
+  // The location screen itself is always accessible so users can update it.
   const isPrintRoute = location.pathname.startsWith('/summary')
+  const onLocationScreen = location.pathname.startsWith('/location')
+
+  if (!preference && !onLocationScreen) {
+    return (
+      <div className="app-shell">
+        <div className="app-container">
+          <TopBar minimal />
+          <main className="app-main">
+            <LocationSetupPage redirectTo="/" />
+          </main>
+          <Disclaimer />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="app-shell">
@@ -39,6 +60,7 @@ export default function App() {
         <main className="app-main">
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/location" element={<LocationSetupPage />} />
             <Route path="/vault" element={<VaultPage />} />
             <Route path="/profile/new" element={<ProfileEditPage mode="create" />} />
             <Route path="/profile/:id" element={<ProfilePage />} />
@@ -62,7 +84,7 @@ export default function App() {
   )
 }
 
-function TopBar() {
+function TopBar({ minimal = false }) {
   const { logout } = useAuth()
   const navigate = useNavigate()
   return (
@@ -76,6 +98,7 @@ function TopBar() {
           </div>
         </div>
         <div className="row">
+          {!minimal && <LocationChip compact />}
           <button
             className="icon-btn"
             title="Privacy"

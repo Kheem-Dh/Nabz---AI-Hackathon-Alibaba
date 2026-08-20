@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useProfiles } from '../context/ProfileContext'
+import ActiveProfileBar from '../components/ActiveProfileBar'
 import ProfileSwitcher from '../components/ProfileSwitcher'
 import TriageConversation from '../components/TriageConversation'
 
@@ -29,9 +30,11 @@ export default function HomePage() {
 
   return (
     <div className="page">
+      <ActiveProfileBar />
+
       <div className="section-title">
         <span className="ur urdu">کس کے لیے؟</span>
-        <span className="en">Who is this for?</span>
+        <span className="en">Change who this is for</span>
       </div>
       <ProfileSwitcher />
 

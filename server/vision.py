@@ -16,12 +16,27 @@ from typing import Any
 logger = logging.getLogger("nabz.vision")
 
 DASHSCOPE_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
-DEFAULT_VL_MODEL = "qwen-vl-plus"
+
+# Model routing (winning plan §6.1). Prefer NABZ_VL_MODEL (e.g. qwen3.7-plus
+# for structured extraction), fall back to legacy QWEN_VL_MODEL, then a safe
+# default. NABZ_VL_OCR_FALLBACK (e.g. qwen-vl-ocr) is documented for future
+# handwriting-heavy retries.
+_VL_MODEL_CHAIN = ("NABZ_VL_MODEL", "QWEN_VL_MODEL")
+_DEFAULT_VL_MODEL = "qwen-vl-plus"
 REQUEST_TIMEOUT_SECONDS = 60
 
 
 def get_vl_model() -> str:
-    return os.getenv("QWEN_VL_MODEL", DEFAULT_VL_MODEL)
+    for env_var in _VL_MODEL_CHAIN:
+        val = os.getenv(env_var, "").strip()
+        if val:
+            return val
+    return _DEFAULT_VL_MODEL
+
+
+def get_vl_ocr_fallback() -> str | None:
+    val = os.getenv("NABZ_VL_OCR_FALLBACK", "").strip()
+    return val or None
 
 
 def _strip_fences(raw: str) -> str:

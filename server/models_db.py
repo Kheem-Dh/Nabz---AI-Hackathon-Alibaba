@@ -7,6 +7,7 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -33,6 +34,38 @@ class Account(Base):
     profiles: Mapped[list["Profile"]] = relationship(
         back_populates="account", cascade="all, delete-orphan"
     )
+    location: Mapped["LocationPreference | None"] = relationship(
+        back_populates="account",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+
+class LocationPreference(Base):
+    """Where this account currently expects to receive care.
+
+    Precise coordinates are treated as short-lived operational data — kept
+    only long enough to rank nearby facilities. City/district persist so we
+    can still show meaningful results after the user closes the tab.
+    """
+
+    __tablename__ = "location_preferences"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), unique=True, index=True, nullable=False
+    )
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    city: Mapped[str | None] = mapped_column(String(80))
+    district: Mapped[str | None] = mapped_column(String(80))
+    province: Mapped[str | None] = mapped_column(String(80))
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
+    permission_state: Mapped[str] = mapped_column(String(24), default="granted", nullable=False)
+    last_confirmed_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    manual: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    account: Mapped[Account] = relationship(back_populates="location")
 
 
 class Profile(Base):

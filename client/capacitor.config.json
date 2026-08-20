@@ -1,0 +1,13 @@
+{
+  "appId": "pk.nabz.app",
+  "appName": "Nabz",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "backgroundColor": "#f4f7f7",
+  "android": {
+    "allowMixedContent": false
+  }
+}

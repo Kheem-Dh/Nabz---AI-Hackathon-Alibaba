@@ -30,13 +30,16 @@ logging.basicConfig(
 from auth import router as auth_router  # noqa: E402
 from clinics import get_clinics  # noqa: E402
 from db import init_db  # noqa: E402
+from facilities import router as facilities_router  # noqa: E402
 from labreport import router as labreport_router  # noqa: E402
+from location import router as location_router  # noqa: E402
 from prescription import router as prescription_router  # noqa: E402
 from profiles import router as profiles_router  # noqa: E402
 from schemas import Clinic, HealthResponse  # noqa: E402
 from sessions import router as triage_router  # noqa: E402
 from summary import router as summary_router  # noqa: E402
-from triage import is_mock_mode  # noqa: E402
+from triage import get_model_name, is_mock_mode  # noqa: E402
+from vision import get_vl_model  # noqa: E402
 
 logger = logging.getLogger("nabz")
 
@@ -74,6 +77,8 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(profiles_router)
+app.include_router(location_router)
+app.include_router(facilities_router)
 app.include_router(triage_router)
 app.include_router(labreport_router)
 app.include_router(prescription_router)
@@ -87,6 +92,23 @@ app.include_router(summary_router)
 def health() -> HealthResponse:
     """Quick demo-day sanity check."""
     return HealthResponse(status="ok", mock_mode=is_mock_mode())
+
+
+@app.get("/api/health/detail")
+def health_detail() -> dict:
+    """Extended health card for the pre-demo hidden dev gesture."""
+    return {
+        "status": "ok",
+        "mock_mode": is_mock_mode(),
+        "text_model": get_model_name(),
+        "vision_model": get_vl_model(),
+        "location_provider": (
+            "disabled"
+            if os.getenv("NABZ_DISABLE_NOMINATIM", "").lower() in {"1", "true", "yes"}
+            else "nominatim+offline-fallback"
+        ),
+        "facilities_layer": "curated",
+    }
 
 
 @app.get("/api/clinics", response_model=list[Clinic])

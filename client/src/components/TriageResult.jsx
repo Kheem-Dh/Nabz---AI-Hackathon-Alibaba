@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { levelConfig } from '../levels'
+import NearbyCare from './NearbyCare'
 
 // Color-coded triage result card (RED / AMBER / GREEN by status only).
 export default function TriageResult({ turn, onReplay, speaking, onNew, ttsSupported }) {
@@ -53,6 +54,8 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, ttsSuppo
           🚑 <span className="ur urdu">ریسکیو 1122 کو کال کریں</span>
         </a>
       )}
+
+      <NearbyCare urgency={turn.level || 'DOCTOR_24H'} />
 
       <div className="btn-row no-print">
         <button className="btn btn-outline" onClick={() => navigate('/clinics')}>

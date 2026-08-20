@@ -3,20 +3,27 @@
 // "still checking…" line, and a calm confidence-tied progress bar.
 export default function AnalysisPanel({ analysis }) {
   if (!analysis) return null
-  const pct = Math.round(Math.min(1, Math.max(0, analysis.confidence || 0)) * 100)
+  // Progress = "assessment completeness" (how much information we've gathered),
+  // NOT a diagnostic probability. Backend exposes both fields with the same
+  // value; we read completeness first per the winning plan §4.5.
+  const raw = analysis.completeness ?? analysis.confidence ?? 0
+  const pct = Math.round(Math.min(1, Math.max(0, raw)) * 100)
   const collected = analysis.collected || []
+  const asked = analysis.questions_asked || 0
 
   return (
     <div className="analysis" aria-live="polite">
       <div className="analysis-head">
         <div>
           <div className="a-title-ur urdu">نبض کا تجزیہ</div>
-          <div className="a-title-en">Live analysis · {analysis.questions_asked || 0} asked</div>
+          <div className="a-title-en">
+            Assessment completeness · Question {Math.min(asked, 5)} of ~5
+          </div>
         </div>
         <div style={{ fontWeight: 700, color: 'var(--teal-dark)', fontSize: 13 }}>{pct}%</div>
       </div>
 
-      <div className="progress" aria-label={`confidence ${pct}%`}>
+      <div className="progress" aria-label={`assessment completeness ${pct}%`}>
         <span style={{ width: `${pct}%` }} />
       </div>
 

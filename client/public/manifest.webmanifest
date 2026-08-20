@@ -1,0 +1,28 @@
+{
+  "name": "Nabz — نبض",
+  "short_name": "Nabz",
+  "description": "Voice-first, Urdu-first AI health companion for Pakistan.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f7f7",
+  "theme_color": "#0F9D8A",
+  "lang": "ur",
+  "dir": "auto",
+  "categories": ["health", "medical", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

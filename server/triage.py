@@ -36,13 +36,27 @@ from schemas import (
 logger = logging.getLogger("nabz.triage")
 
 DASHSCOPE_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
-DEFAULT_MODEL = "qwen-plus"
+
+# Model routing (winning plan §6). Env-configurable so we can flip between
+# current-flagship IDs (qwen3.7-plus / qwen3.5-omni-plus) and the legacy
+# defaults without editing code. If a specific env is unset, we fall back
+# through a chain instead of hard-failing.
+_TEXT_MODEL_CHAIN = (
+    "NABZ_TEXT_MODEL",
+    "QWEN_MODEL",  # kept for backwards compatibility with earlier .env files
+)
+_DEFAULT_TEXT_MODEL = "qwen-plus"
+
 REQUEST_TIMEOUT_SECONDS = 20
 MAX_QUESTIONS = 5
 
 
 def get_model_name() -> str:
-    return os.getenv("QWEN_MODEL", DEFAULT_MODEL)
+    for env_var in _TEXT_MODEL_CHAIN:
+        val = os.getenv(env_var, "").strip()
+        if val:
+            return val
+    return _DEFAULT_TEXT_MODEL
 
 
 def is_mock_mode() -> bool:
@@ -847,8 +861,24 @@ def qwen_next_turn(profile: dict[str, Any], session_id: int, turns: list[dict]) 
 
 # --- Public entry point ------------------------------------------------------
 
+_FACILITY_INTENT_BY_LEVEL = {
+    TriageLevel.EMERGENCY: "emergency_hospital",
+    TriageLevel.DOCTOR_24H: "clinic_or_bhu",
+    TriageLevel.HOME_CARE: "optional",
+}
+
+
+def _attach_facility_intent(turn: TriageTurn) -> TriageTurn:
+    if turn.type == "result" and turn.level and not turn.facility_intent:
+        turn.facility_intent = _FACILITY_INTENT_BY_LEVEL.get(turn.level, "optional")
+    return turn
+
+
 def next_turn(profile: dict[str, Any], session_id: int, turns: list[dict]) -> TriageTurn:
     """Route to the mock or real backend based on config."""
-    if is_mock_mode():
-        return mock_next_turn(profile, session_id, turns)
-    return qwen_next_turn(profile, session_id, turns)
+    turn = (
+        mock_next_turn(profile, session_id, turns)
+        if is_mock_mode()
+        else qwen_next_turn(profile, session_id, turns)
+    )
+    return _attach_facility_intent(turn)

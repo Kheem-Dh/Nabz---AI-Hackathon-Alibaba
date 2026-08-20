@@ -97,6 +97,23 @@ export const scanPrescription = (profileId, file) => uploadFile('/api/prescripti
 export const confirmPrescription = (data) =>
   jsonReq('/api/prescription/confirm', 'POST', data)
 
+// --- Location + facilities ---------------------------------------------------
+
+export const resolveLocation = (latitude, longitude, accuracy_m) =>
+  jsonReq('/api/location/resolve', 'POST', { latitude, longitude, accuracy_m })
+
+export const confirmLocation = (data) =>
+  jsonReq('/api/location/confirm', 'POST', data)
+
+export const getMyLocation = () => jsonReq('/api/location/me', 'GET')
+
+export function getNearbyFacilities({ urgency = 'DOCTOR_24H', latitude, longitude, limit = 6 } = {}) {
+  const params = new URLSearchParams({ urgency, limit: String(limit) })
+  if (latitude != null) params.set('latitude', String(latitude))
+  if (longitude != null) params.set('longitude', String(longitude))
+  return jsonReq(`/api/facilities/nearby?${params.toString()}`, 'GET')
+}
+
 // --- Summary + misc ----------------------------------------------------------
 
 export const getSummary = (profileId) => jsonReq(`/api/summary/${profileId}`, 'GET')
