@@ -347,6 +347,24 @@
     flex-wrap: wrap;
   }
   footer .ur { font-family: "Noto Nastaliq Urdu", serif; color: var(--ink-soft); }
+
+  /* --- Print / PDF --- */
+  @page { size: A4 portrait; margin: 14mm 12mm; }
+  @media print {
+    :root { --shadow: none; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background: var(--bg); }
+    .wrap { max-width: none; padding: 0; }
+    section { margin-top: 34px; break-inside: avoid; }
+    header { margin-bottom: 8px; }
+    figure { box-shadow: none; overflow: visible; break-inside: avoid; page-break-inside: avoid; }
+    figure svg { min-width: 0; }         /* let diagrams shrink to page width */
+    .table-scroll { overflow: visible; box-shadow: none; }
+    table { min-width: 0; }
+    .card, .lane { box-shadow: none; break-inside: avoid; }
+    .sec-head { break-after: avoid; }
+    footer { break-inside: avoid; }
+  }
 </style>
 
 <div class="wrap">
