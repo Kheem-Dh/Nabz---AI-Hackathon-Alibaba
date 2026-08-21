@@ -1,15 +1,27 @@
 # Testing — Nabz (نبض)
 
-Two layers of testing, both runnable with **zero credentials** (mock mode):
+Three layers of testing. Layers 1 and 2 need **zero credentials** (mock mode).
+Layer 3 is a live-Qwen probe that self-SKIPs when `DASHSCOPE_API_KEY` is unset.
 
 1. **pytest** (`server/tests/`) — end-to-end API behavior: auth, protected
    routes, profile CRUD, the conversational triage state machine, emergency
-   short-circuit, lab + prescription shapes, prescription confirm, and summary.
+   short-circuit, lab + prescription shapes, prescription confirm, summary,
+   location + facilities, **adaptive triage on the right-arm skin transcript,
+   evidence-resolver safety filters (ibuprofen allergy suppression, prescription-only
+   drug rejection, allowlisted evidence URLs, dose text stripping), Hassan
+   seed idempotence + PNG readability, cross-profile isolation, and prompt
+   injection defense.**
 2. **eval.py** (repo root) — the **safety eval**: 16 scripted triage
    conversations across all three levels + emergency short-circuits + a
    non-health input. It drives the real state machine directly (no server
    needed) and asserts emergencies are never under-triaged and never delayed by
    follow-up questions.
+3. **scripts/live_triage_eval.py** — the **adaptive-triage live probe**:
+   runs `mere right bazu pe surkh nishan hai` through the live Qwen path five
+   times and reports per-session whether the question was skin-specific,
+   avoided a breathing default, and avoided a turn-1 medication card. SKIPPED
+   automatically if `DASHSCOPE_API_KEY` is not set; hard-capped at 25 total
+   calls per run.
 
 ---
 
@@ -89,6 +101,43 @@ if an emergency short-circuit asks any follow-up questions.
 > case being escalated (safe direction) but flags any emergency under-triaged.
 
 ---
+
+## Running the live-Qwen adaptive-triage probe
+
+```bash
+# Backend does not need to be running; the script talks to Qwen directly.
+DASHSCOPE_API_KEY=…            server/venv/bin/python scripts/live_triage_eval.py
+# With no key it self-SKIPs:
+server/venv/bin/python scripts/live_triage_eval.py
+# → "SKIPPED — DASHSCOPE_API_KEY is not set. No live calls made."
+```
+
+Expected columns per session: TYPE · LEVEL · SKIN · NO-BREATH · NO-MED · QUESTION.
+The script hard-caps at 25 total live Qwen calls so a stuck loop cannot burn
+credits.
+
+## Hassan one-click demo
+
+```bash
+# Mock mode gate — real mode returns 404 for this route.
+TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"full_name":"Judge","phone":"03219000000","password":"secret123"}' \
+  | python3 -c 'import sys,json; print(json.load(sys.stdin)["token"])')
+
+# Confirm any location so the location-first gate is satisfied.
+curl -s -X POST http://localhost:8000/api/location/confirm \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"label":"Karachi","city":"Karachi","manual":true}' >/dev/null
+
+# One-click seed.
+curl -s -X POST http://localhost:8000/api/demo/hassan \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# The Hassan profile now carries the four watermarked PNG fixtures, one
+# clinician-confirmed Cetirizine, a mildly-low Hb CBC, seasonal asthma + migraine,
+# an ibuprofen allergy, and a prior HOME_CARE cough triage.
+```
 
 ## Manual demo smoke test (curl)
 

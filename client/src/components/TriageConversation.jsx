@@ -15,10 +15,14 @@ export default function TriageConversation({ profile, onExit }) {
   const [typed, setTyped] = useState('')
   const [error, setError] = useState('')
 
-  const speech = useSpeechRecognition({ lang: 'ur-PK' })
+  // Winning plan §7: initial-complaint silence window is generous so a slow
+  // Urdu narration is not cut off; follow-up answers can be shorter.
+  const speech = useSpeechRecognition({ lang: 'ur-PK', silenceMs: 8000 })
   const tts = useTextToSpeech()
   const spokenRef = useRef(null)
   const submittedRef = useRef(false)
+  const [reviewText, setReviewText] = useState('')
+  const [reviewOrigin, setReviewOrigin] = useState(null) // 'start' | 'answer'
 
   // Auto-speak each new assistant turn once.
   useEffect(() => {
@@ -31,7 +35,8 @@ export default function TriageConversation({ profile, onExit }) {
     }
   }, [turn, tts])
 
-  // When listening stops with a transcript, auto-submit it.
+  // When listening stops with a transcript, move the user into a REVIEW state
+  // so they can edit / confirm / retry before we send anything.
   useEffect(() => {
     if (
       (phase === 'listening' || phase === 'answering-voice') &&
@@ -40,9 +45,9 @@ export default function TriageConversation({ profile, onExit }) {
       !submittedRef.current
     ) {
       submittedRef.current = true
-      const text = speech.transcript.trim()
-      if (phase === 'listening') doStart(text)
-      else doAnswer(text)
+      setReviewText(speech.transcript.trim())
+      setReviewOrigin(phase === 'listening' ? 'start' : 'answer')
+      setPhase('reviewing')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speech.listening, speech.transcript, phase])
@@ -79,6 +84,9 @@ export default function TriageConversation({ profile, onExit }) {
 
   function startVoice() {
     if (!speech.supported) return
+    // Stop any spoken assistant reply before capturing — otherwise the mic
+    // hears Nabz talking to itself.
+    tts.cancel()
     tts.prime()
     submittedRef.current = false
     speech.start()
@@ -91,6 +99,21 @@ export default function TriageConversation({ profile, onExit }) {
     submittedRef.current = false
     speech.start()
     setPhase('answering-voice')
+  }
+
+  function retryVoice() {
+    submittedRef.current = false
+    setReviewText('')
+    speech.reset()
+    speech.start()
+    setPhase(reviewOrigin === 'answer' ? 'answering-voice' : 'listening')
+  }
+
+  function confirmReview() {
+    const text = reviewText.trim()
+    if (!text) return
+    if (reviewOrigin === 'answer') doAnswer(text)
+    else doStart(text)
   }
 
   function reset() {
@@ -158,23 +181,66 @@ export default function TriageConversation({ profile, onExit }) {
   }
 
   // --- Listening (initial symptom) ---------------------------------------
-  if (phase === 'listening') {
+  if (phase === 'listening' || phase === 'answering-voice') {
     return (
       <div className="q-card">
         <MicButton listening onClick={() => speech.stop()} />
         <p className="hero-hint-ur urdu" style={{ marginTop: 12 }}>
-          آرام سے پوری بات بتائیں — نبض آپ کے رکنے کا انتظار کرے گا…
+          آرام سے پوری بات بتائیں — نبض آپ کے رکنے کا انتظار کرے گا۔
         </p>
-        <p className="hero-hint-en">Speak naturally — Nabz waits through short pauses</p>
+        <p className="hero-hint-en">
+          Speak naturally — Nabz waits through short pauses.
+          Tap <strong>Done speaking</strong> when finished.
+        </p>
         <div className="live-transcript urdu" dir="auto" style={{ marginTop: 12 }}>
           {speech.transcript || <span className="placeholder">…</span>}
         </div>
+        <div className="btn-row" style={{ marginTop: 12 }}>
+          <button className="btn btn-primary" onClick={() => speech.stop()}>
+            Done speaking · مکمل
+          </button>
+          <button className="btn btn-outline" onClick={reset}>
+            منسوخ · Cancel
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // --- Reviewing (transcript confirmation) -------------------------------
+  if (phase === 'reviewing') {
+    return (
+      <div className="q-card">
+        <div className="section-title">
+          <span className="ur urdu">اپنی بات دیکھیں</span>
+          <span className="en">Review before sending</span>
+        </div>
+        <textarea
+          className="input urdu"
+          dir="auto"
+          value={reviewText}
+          onChange={(e) => setReviewText(e.target.value)}
+          rows={3}
+          style={{ marginTop: 8 }}
+        />
+        <div className="btn-row" style={{ marginTop: 10 }}>
+          <button
+            className="btn btn-primary"
+            onClick={confirmReview}
+            disabled={!reviewText.trim()}
+          >
+            Send · بھیجیں
+          </button>
+          <button className="btn btn-outline" onClick={retryVoice}>
+            Retry · دوبارہ بولیں
+          </button>
+          <button className="btn btn-ghost" onClick={reset}>
+            منسوخ · Cancel
+          </button>
+        </div>
         <p className="hero-hint-en" style={{ marginTop: 8 }}>
-          Tap the stop button when finished, or pause for 3 seconds.
+          Nabz will not send anything until you confirm this transcript.
         </p>
-        <button className="btn btn-outline mt-8" onClick={reset}>
-          منسوخ · Cancel
-        </button>
       </div>
     )
   }

@@ -69,10 +69,18 @@ def _load_profile(db: Session, account: Account, profile_id: int) -> Profile:
 
 
 def _record_result(db: Session, session: TriageSession, profile: Profile, turn: TriageTurn) -> None:
-    """Persist the final triage result and add a timeline entry."""
+    """Persist the final triage result and add a timeline entry.
+
+    The full conversation transcript is attached to the timeline payload so
+    the doctor dashboard can render the encounter without a second lookup.
+    """
     session.status = "closed"
     session.result_level = turn.level.value if turn.level else None
     session.result_payload = turn.model_dump(mode="json")
+
+    payload = turn.model_dump(mode="json")
+    payload["encounter_transcript"] = list(session.turns or [])
+    payload["session_id"] = session.id
 
     entry = TimelineEntry(
         profile_id=profile.id,
@@ -80,7 +88,7 @@ def _record_result(db: Session, session: TriageSession, profile: Profile, turn: 
         title=(turn.advice_english or "")[:180] or f"Triage: {session.result_level}",
         subtitle=turn.reason_english,
         level=session.result_level,
-        payload=turn.model_dump(mode="json"),
+        payload=payload,
     )
     db.add(entry)
 

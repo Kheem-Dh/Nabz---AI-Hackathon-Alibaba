@@ -59,11 +59,30 @@ def summary(
     if latest_triage:
         payload = latest_triage.payload or {}
         chief_complaint = payload.get("advice_english") or latest_triage.title
+        # Prefer the raw complaint if we captured a transcript.
+        transcript = payload.get("encounter_transcript") or []
+        first_user = next((t for t in transcript if t.get("role") == "user"), None)
+        if first_user and first_user.get("text"):
+            chief_complaint = first_user["text"]
         recent_triage = {
             "level": latest_triage.level,
             "reason": payload.get("reason_english"),
             "advice_english": payload.get("advice_english"),
             "date": latest_triage.created_at.isoformat(),
+            "patient_facing_impression_english": payload.get("patient_facing_impression_english"),
+            "doctor_differential": payload.get("doctor_differential", []) or [],
+            "supporting_findings": payload.get("supporting_findings", []) or [],
+            "findings_against": payload.get("findings_against", []) or [],
+            "unresolved_questions": payload.get("unresolved_questions", []) or [],
+            "red_flags_present": payload.get("red_flags_present", []) or [],
+            "red_flags_denied": payload.get("red_flags_denied", []) or [],
+            "escalation_signs": payload.get("escalation_signs", []) or [],
+            "medication_options": payload.get("medication_options", []) or [],
+            "vault_context_used": payload.get("vault_context_used", []) or [],
+            "clinical_state": payload.get("clinical_state"),
+            "encounter_transcript": transcript,
+            "doctor_handoff_english": payload.get("doctor_handoff_english"),
+            "mock": bool(payload.get("mock")),
         }
 
     # History = brief narrative from chronic conditions + notes.

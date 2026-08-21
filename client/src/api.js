@@ -169,3 +169,6 @@ export async function getClinics(city, province) {
 }
 
 export const getHealth = () => jsonReq('/api/health', 'GET')
+export const getHealthDetail = () => jsonReq('/api/health/detail', 'GET')
+
+export const loadHassanDemo = () => jsonReq('/api/demo/hassan', 'POST')

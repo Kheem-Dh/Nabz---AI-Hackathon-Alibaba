@@ -1,25 +1,381 @@
-"""WHO reference cards for clinician-confirmed Vault medicines only.
+"""Curated medication-evidence catalog + Nabz safety-validated resolver.
 
-This module never selects a drug for a symptom. It annotates an existing
-clinician-prescribed medicine with source context from the current WHO Model
-List of Essential Medicines.
+Two responsibilities, kept in one module because they share the catalog:
+
+1) `evidence_for_medicine(medicine)` — annotate a CLINICIAN-CONFIRMED Vault
+   medicine with WHO population-level context. Used by the patient dashboard.
+
+2) `resolve_medication_candidates(candidates, ...)` — accept short-list
+   candidate medication names/purposes proposed by the triage layer (in mock
+   mode) or by the Qwen model (in real mode) and return only those that pass
+   every safety and evidence check as `MedicationOption` objects. The model
+   NEVER writes evidence URLs, doses, or safety text; every field comes from
+   the curated catalog below.
+
+Model-generated URLs, doses, and safety text are ALWAYS stripped. The catalog
+is intentionally small and high-quality: better empty than fabricated.
 """
 from __future__ import annotations
 
 import re
+from typing import Iterable, Optional
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from db import get_db
 from models_db import Account, Medicine, Profile
-from schemas import MedicineEvidenceOut
+from schemas import MedicationOption, MedicineEvidenceOut
 from security import get_current_account
 
 router = APIRouter(prefix="/api/medicine-evidence", tags=["medicine-evidence"])
 
 WHO_2025_EML_TITLE = "WHO Model List of Essential Medicines — 24th list (2025)"
 WHO_2025_EML_URL = "https://www.who.int/publications/i/item/B09474"
+
+# Allowlisted evidence domains (winning plan §6.1 CORE CHANGE 4).
+# Anything else is DROPPED — the resolver never trusts a model-generated URL.
+_ALLOWED_EVIDENCE_DOMAINS = {
+    "www.who.int",
+    "list.essentialmeds.org",
+    "www.nice.org.uk",
+    "cks.nice.org.uk",
+    "www.cdc.gov",
+    "dailymed.nlm.nih.gov",
+    "www.dra.gov.pk",
+    "medlineplus.gov",
+}
+
+# Never a self-treatment recommendation. Antibiotics, systemic steroids,
+# opioids, sedatives, controlled/regulated substances.
+_ALWAYS_PRESCRIPTION_ONLY = {
+    "amoxicillin", "azithromycin", "ciprofloxacin", "cephalexin",
+    "clarithromycin", "clindamycin", "co-amoxiclav", "doxycycline",
+    "erythromycin", "flucloxacillin", "levofloxacin", "metronidazole",
+    "prednisolone", "prednisone", "dexamethasone", "hydrocortisone",
+    "morphine", "codeine", "tramadol", "diazepam", "alprazolam",
+    "clonazepam", "insulin",
+}
+
+
+# --- Curated evidence catalog -----------------------------------------------
+#
+# Keyed by (condition_key, generic_name). condition_key is a coarse label
+# such as "skin_mild_itch", "allergic_rhinitis", "mild_fever_adult", etc.
+# Every entry is human-reviewed; add new rows only after verifying:
+#   - the drug is safe for the stated indication in adults, and
+#   - the evidence URL is on _ALLOWED_EVIDENCE_DOMAINS.
+#
+# `dose_guidance` is the ONLY place a dose may appear; the resolver strips
+# any dose text a model produces. Leave it None to force "confirm dose with
+# pharmacist/clinician".
+
+_CATALOG: dict[tuple[str, str], dict] = {
+    ("mild_fever_adult", "paracetamol"): {
+        "purpose": "Short-term relief of mild fever or mild pain in an adult with no contraindications.",
+        "recommendation_type": "OTC_INFORMATION",
+        "why_it_may_help": "Paracetamol lowers fever and eases mild pain in adults when used as labelled.",
+        "eligibility_requirements": [
+            "Adult (≥16 years) — pediatric use should be dosed by weight with a clinician or pharmacist.",
+            "No known allergy to paracetamol.",
+            "No advanced liver disease or heavy alcohol use.",
+        ],
+        "avoid_if": [
+            "Known paracetamol allergy.",
+            "Severe liver disease.",
+            "Already taking another paracetamol-containing product (avoid double dosing).",
+        ],
+        "interactions_checked": [
+            "Do not combine with other paracetamol-containing cold/flu products.",
+        ],
+        "prescription_required": False,
+        "dose_guidance": (
+            "Adult labelled dose is typically 500–1000 mg every 4–6 hours as needed, "
+            "maximum 4 g in 24 hours. Confirm with a pharmacist for children, pregnancy, "
+            "or if liver disease is present."
+        ),
+        "evidence_source_title": "MedlinePlus — Acetaminophen (Paracetamol) drug information",
+        "evidence_source_url": "https://medlineplus.gov/druginfo/meds/a681004.html",
+        "evidence_summary": (
+            "Authoritative patient labelling for paracetamol/acetaminophen from the U.S. "
+            "National Library of Medicine, describing indications, warnings, and safe adult dosing."
+        ),
+        "evidence_last_reviewed": "2025",
+        "safety_note": (
+            "Nabz does not prescribe. This card is information about a common over-the-counter "
+            "option; confirm suitability with a pharmacist or clinician if in doubt."
+        ),
+    },
+    ("mild_dehydration_adult", "ors"): {
+        "purpose": "Oral rehydration for mild dehydration from vomiting, diarrhoea, or fever.",
+        "recommendation_type": "OTC_INFORMATION",
+        "why_it_may_help": "WHO-formula oral rehydration salts replace water and electrolytes lost through gastrointestinal illness.",
+        "eligibility_requirements": [
+            "Able to drink fluids and keep small sips down.",
+            "No red flags (blood in vomit or stool, severe pain, fainting, very little urine).",
+        ],
+        "avoid_if": [
+            "Persistent vomiting that cannot keep any fluids down — go for urgent care.",
+            "Suspected bowel obstruction or severe kidney disease without clinician review.",
+        ],
+        "interactions_checked": [
+            "No significant interactions with common medicines when used as directed.",
+        ],
+        "prescription_required": False,
+        "dose_guidance": (
+            "Prepare each sachet with the exact volume of clean drinking water shown on the pack. "
+            "Take small frequent sips after each loose stool or vomit until fluids are tolerated."
+        ),
+        "evidence_source_title": "WHO — Oral Rehydration Salts",
+        "evidence_source_url": "https://www.who.int/publications/i/item/9789241593175",
+        "evidence_summary": (
+            "WHO reference on the composition and clinical use of oral rehydration salts for the "
+            "management of dehydration due to acute diarrhoeal disease."
+        ),
+        "evidence_last_reviewed": "2025",
+        "safety_note": (
+            "Nabz does not prescribe. Seek urgent care if dehydration signs worsen, urine output "
+            "is very low, or fluids cannot be kept down."
+        ),
+    },
+    ("allergic_rhinitis_adult", "cetirizine"): {
+        "purpose": "Relief of allergic-type itch or hay-fever symptoms in adults.",
+        "recommendation_type": "OTC_INFORMATION",
+        "why_it_may_help": (
+            "Cetirizine is a second-generation antihistamine widely used for allergic rhinitis "
+            "and mild allergic itch."
+        ),
+        "eligibility_requirements": [
+            "Adult (≥12 years) with typical allergic symptoms — itch, sneezing, watery eyes, mild hives.",
+            "No known cetirizine allergy.",
+        ],
+        "avoid_if": [
+            "Known cetirizine or hydroxyzine allergy.",
+            "Severe kidney impairment without clinician review.",
+        ],
+        "interactions_checked": [
+            "Additive drowsiness with sedatives or alcohol.",
+        ],
+        "prescription_required": False,
+        "dose_guidance": (
+            "Adults commonly take 10 mg once daily. Confirm dose with a pharmacist if kidney "
+            "impairment is present or the patient is pregnant/breastfeeding."
+        ),
+        "evidence_source_title": "MedlinePlus — Cetirizine drug information",
+        "evidence_source_url": "https://medlineplus.gov/druginfo/meds/a698026.html",
+        "evidence_summary": (
+            "Patient-facing labelling for cetirizine from the U.S. National Library of Medicine, "
+            "covering indications, precautions, and adult dosing."
+        ),
+        "evidence_last_reviewed": "2025",
+        "safety_note": (
+            "Nabz does not prescribe. A new mark that is spreading, warm, painful, or accompanied "
+            "by fever needs clinician review — do not treat with an antihistamine alone."
+        ),
+    },
+    ("mild_skin_care_adult", "petroleum_jelly"): {
+        "purpose": "Barrier moisturisation and simple protection of intact, non-infected skin.",
+        "recommendation_type": "OTC_INFORMATION",
+        "why_it_may_help": (
+            "Plain white petroleum jelly is a widely used, inert skin barrier for dryness and minor "
+            "irritation on intact skin."
+        ),
+        "eligibility_requirements": [
+            "Skin is intact — no broken skin, open wound, pus, or spreading redness.",
+            "No signs of infection (warmth, swelling, fever).",
+        ],
+        "avoid_if": [
+            "Broken skin, open wound, or suspected infection — see a clinician instead.",
+            "Deep burns or bites — see a clinician.",
+        ],
+        "interactions_checked": [
+            "No systemic drug interactions.",
+        ],
+        "prescription_required": False,
+        "dose_guidance": None,  # simple topical, no dose to publish
+        "evidence_source_title": "MedlinePlus — Skin care basics",
+        "evidence_source_url": "https://medlineplus.gov/skinconditions.html",
+        "evidence_summary": (
+            "MedlinePlus overview page linking to general skin-care guidance for intact skin, "
+            "used here only as background context — not treatment of an active skin infection."
+        ),
+        "evidence_last_reviewed": "2025",
+        "safety_note": (
+            "Do not apply anything new to a spreading, warm, painful, or fevered skin change — "
+            "arrange clinician review instead."
+        ),
+    },
+}
+
+# Quick lookup by generic name → list of catalog rows.
+_BY_GENERIC: dict[str, list[tuple[tuple[str, str], dict]]] = {}
+for _key, _row in _CATALOG.items():
+    _BY_GENERIC.setdefault(_key[1], []).append((_key, _row))
+
+
+# --- Helpers ----------------------------------------------------------------
+
+def _normalized(name: str) -> str:
+    return re.sub(r"[^a-z]", "", (name or "").lower())
+
+
+def _has_allergy_conflict(generic: str, allergies: Iterable[str]) -> Optional[str]:
+    """Return the offending allergy string if the candidate must be suppressed."""
+    gnorm = _normalized(generic)
+    aliases = {
+        "ibuprofen": {"ibuprofen", "nsaid", "brufen"},
+        "aspirin": {"aspirin", "acetylsalicylic", "asa", "nsaid"},
+        "paracetamol": {"paracetamol", "acetaminophen", "panadol", "tylenol"},
+        "cetirizine": {"cetirizine", "zyrtec"},
+        "amoxicillin": {"amoxicillin", "penicillin", "penicillins"},
+        "azithromycin": {"azithromycin", "macrolide"},
+    }
+    key_names = aliases.get(gnorm, {gnorm})
+    for allergy in allergies or []:
+        a_norm = _normalized(allergy)
+        if any(k and k in a_norm for k in key_names):
+            return allergy
+    return None
+
+
+def _url_is_allowlisted(url: str) -> bool:
+    try:
+        parsed = urlparse(url or "")
+    except Exception:  # noqa: BLE001
+        return False
+    return parsed.scheme == "https" and parsed.netloc in _ALLOWED_EVIDENCE_DOMAINS
+
+
+def _current_medicine_names(current_medicines: Iterable) -> list[str]:
+    names: list[str] = []
+    for medicine in current_medicines or []:
+        if isinstance(medicine, dict):
+            names.append(str(medicine.get("name", "")))
+        else:
+            names.append(str(medicine))
+    return [n for n in names if n]
+
+
+# --- Public resolver --------------------------------------------------------
+
+def resolve_medication_candidates(
+    candidates: Iterable[dict],
+    *,
+    profile: dict,
+    urgency: Optional[str] = None,
+    condition_hints: Optional[Iterable[str]] = None,
+) -> list[MedicationOption]:
+    """Turn short-list candidate names into safety-validated MedicationOption cards.
+
+    A candidate may look like ``{"generic_name": "paracetamol", "purpose": "…",
+    "why_it_may_help": "…", "condition_key": "mild_fever_adult"}``. Fields
+    other than ``generic_name`` and (optionally) ``condition_key`` /
+    ``purpose_hint`` are IGNORED — evidence, dose, and safety text always come
+    from the catalog.
+
+    Never returns a card when:
+      * urgency is EMERGENCY,
+      * the generic is on the prescription-only blocklist,
+      * the generic conflicts with a recorded allergy,
+      * no allowlisted catalog entry can be matched, or
+      * the catalog entry's URL is not on the allowlist.
+    """
+
+    if urgency == "EMERGENCY":
+        return []
+
+    hints = {h.lower() for h in (condition_hints or [])}
+    allergies = profile.get("allergies") or []
+    current = _current_medicine_names(profile.get("current_medicines") or [])
+    seen_generics: set[str] = set()
+    out: list[MedicationOption] = []
+
+    for raw in candidates or []:
+        if not isinstance(raw, dict):
+            continue
+        generic = _normalized(raw.get("generic_name", ""))
+        if not generic or generic in seen_generics:
+            continue
+
+        if generic in _ALWAYS_PRESCRIPTION_ONLY:
+            # A model may only surface these in the DOCTOR-facing differential,
+            # never as a self-treatment card.
+            continue
+
+        # Allergy suppression — the most important gate.
+        if _has_allergy_conflict(generic, allergies):
+            continue
+
+        rows = _BY_GENERIC.get(generic) or []
+        if not rows:
+            continue
+
+        # Prefer a row whose condition_key is in the hint set.
+        chosen: Optional[tuple[tuple[str, str], dict]] = None
+        wanted = str(raw.get("condition_key", "")).lower()
+        if wanted:
+            for (key, row) in rows:
+                if key[0] == wanted:
+                    chosen = (key, row)
+                    break
+        if chosen is None:
+            for (key, row) in rows:
+                if key[0] in hints:
+                    chosen = (key, row)
+                    break
+        if chosen is None:
+            # Only fall through when there is no hint set at all AND the model
+            # explicitly named a purpose — otherwise refuse (better empty).
+            if not hints and not wanted:
+                chosen = rows[0]
+
+        if chosen is None:
+            continue
+
+        (_key, row) = chosen
+        if not _url_is_allowlisted(row["evidence_source_url"]):
+            # Catalog author error — never emit an unverifiable link.
+            continue
+
+        seen_generics.add(generic)
+
+        conflicts_checked: list[str] = []
+        for name in current:
+            if name and _normalized(name) != generic:
+                conflicts_checked.append(f"Not the same drug as current '{name}'.")
+        if not conflicts_checked:
+            conflicts_checked.append("No current Vault medicine conflicts with this option.")
+
+        option = MedicationOption(
+            generic_name=generic.title() if generic.islower() else generic,
+            purpose=row["purpose"],
+            recommendation_type=row["recommendation_type"],
+            why_it_may_help=row["why_it_may_help"],
+            why_it_is_relevant_to_this_patient=(
+                raw.get("why_it_is_relevant_to_this_patient")
+                or row.get("why_it_is_relevant_default")
+                or row["why_it_may_help"]
+            ),
+            eligibility_requirements=list(row.get("eligibility_requirements", [])),
+            avoid_if=list(row.get("avoid_if", [])),
+            interactions_checked=list(row.get("interactions_checked", [])),
+            vault_conflicts_checked=conflicts_checked,
+            # dose_guidance is NEVER read from the model — only the catalog.
+            dose_guidance=row.get("dose_guidance"),
+            prescription_required=bool(row.get("prescription_required", False)),
+            evidence_source_title=row["evidence_source_title"],
+            evidence_source_url=row["evidence_source_url"],
+            evidence_summary=row["evidence_summary"],
+            evidence_last_reviewed=row["evidence_last_reviewed"],
+            safety_note=row["safety_note"],
+        )
+        out.append(option)
+
+    return out
+
+
+# --- Vault-medicine evidence card (existing behaviour, extended) ------------
 
 _WHO_REFERENCES = {
     "cetirizine": {
@@ -32,11 +388,16 @@ _WHO_REFERENCES = {
         ),
         "url": "https://list.essentialmeds.org/medicines/633",
     },
+    "paracetamol": {
+        "status": "WHO 2025 EML core medicine",
+        "summary": (
+            "Paracetamol appears on the WHO 2025 Model List of Essential Medicines "
+            "as a core analgesic and antipyretic. This is population-level essential-medicine "
+            "context, not a Nabz recommendation for a specific symptom."
+        ),
+        "url": "https://list.essentialmeds.org/medicines/145",
+    },
 }
-
-
-def _normalized(name: str) -> str:
-    return re.sub(r"[^a-z]", "", name.lower())
 
 
 def evidence_for_medicine(medicine: Medicine) -> MedicineEvidenceOut:

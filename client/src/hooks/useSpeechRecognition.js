@@ -20,7 +20,7 @@ function getRecognitionCtor() {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null
 }
 
-export function useSpeechRecognition({ lang = 'ur-PK', silenceMs = 3000 } = {}) {
+export function useSpeechRecognition({ lang = 'ur-PK', silenceMs = 6000 } = {}) {
   const Ctor = getRecognitionCtor()
   const supported = !!Ctor
 

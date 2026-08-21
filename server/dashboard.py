@@ -38,10 +38,29 @@ def get_dashboard(
 
     latest_triage = None
     if triage:
+        p = triage.payload or {}
         latest_triage = {
             "level": triage.level,
             "title": triage.title,
+            "subtitle": triage.subtitle,
             "date": triage.created_at.isoformat(),
+            # Doctor-facing details (winning-plan CORE CHANGE 8).
+            "patient_facing_impression_english": p.get("patient_facing_impression_english"),
+            "doctor_differential": p.get("doctor_differential", []) or [],
+            "supporting_findings": p.get("supporting_findings", []) or [],
+            "findings_against": p.get("findings_against", []) or [],
+            "unresolved_questions": p.get("unresolved_questions", []) or [],
+            "red_flags_present": p.get("red_flags_present", []) or [],
+            "red_flags_denied": p.get("red_flags_denied", []) or [],
+            "escalation_signs": p.get("escalation_signs", []) or [],
+            "medication_options": p.get("medication_options", []) or [],
+            "vault_context_used": p.get("vault_context_used", []) or [],
+            "clinical_state": p.get("clinical_state"),
+            "encounter_transcript": p.get("encounter_transcript", []) or [],
+            "reason_english": p.get("reason_english"),
+            "doctor_handoff_english": p.get("doctor_handoff_english"),
+            "advice_english": p.get("advice_english"),
+            "mock": bool(p.get("mock")),
         }
     latest_lab = None
     if lab:

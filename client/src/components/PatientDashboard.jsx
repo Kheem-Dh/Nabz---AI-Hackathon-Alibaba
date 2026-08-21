@@ -148,6 +148,54 @@ export default function PatientDashboard({ profile, onOpenVault, onOpenSummary }
         </div>
       )}
 
+      {dashboard.latest_triage?.doctor_differential?.length > 0 && (
+        <section className="pd-differential">
+          <div className="pd-evidence-head">
+            <span>Doctor-facing differential — latest encounter</span>
+            <small>
+              {dashboard.latest_triage?.date?.slice(0, 10)} ·
+              {dashboard.latest_triage?.level?.replace('_', ' ')}
+            </small>
+          </div>
+          {dashboard.latest_triage.patient_facing_impression_english && (
+            <p className="pd-impression">
+              {dashboard.latest_triage.patient_facing_impression_english}
+            </p>
+          )}
+          <ul>
+            {dashboard.latest_triage.doctor_differential.map((d) => (
+              <li key={d}>{d}</li>
+            ))}
+          </ul>
+          {dashboard.latest_triage.red_flags_present?.length > 0 && (
+            <div className="pd-redflags">
+              <strong>Red flags reported:</strong>{' '}
+              {dashboard.latest_triage.red_flags_present.join(' · ')}
+            </div>
+          )}
+          {dashboard.latest_triage.unresolved_questions?.length > 0 && (
+            <div className="pd-unresolved">
+              <strong>Unresolved for the clinician:</strong>
+              <ul>
+                {dashboard.latest_triage.unresolved_questions.map((q) => (
+                  <li key={q}>{q}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {dashboard.latest_triage.encounter_transcript?.length > 0 && (
+            <details className="pd-transcript">
+              <summary>Full encounter transcript</summary>
+              <ol>
+                {dashboard.latest_triage.encounter_transcript.map((t, i) => (
+                  <li key={i}><strong>{t.role}:</strong> {t.text}</li>
+                ))}
+              </ol>
+            </details>
+          )}
+        </section>
+      )}
+
       {dashboard.medicine_evidence?.length > 0 && (
         <div className="pd-evidence">
           <div className="pd-evidence-head">

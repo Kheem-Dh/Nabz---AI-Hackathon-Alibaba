@@ -18,6 +18,61 @@ Nabz also includes a **family Medical Vault**, **lab-report explanation**, **pre
 
 ---
 
+## What's new — 2026-08-21 (adaptive clinical interview + curated evidence + desktop workspace)
+
+This drop lands the "adaptive triage + curated evidence + doctor-ready dashboard" phase of the winning plan. Everything below is on `main` and covered by `pytest` (41/41), the safety `eval.py` (16/16, zero emergency under-triage, zero emergency extra questions), a live-Qwen script that self-SKIPs without credentials, and a browser end-to-end walk-through of the exact required transcript.
+
+### ✅ Shipped in this pass
+
+**Adaptive clinical interview**
+
+- New `ClinicalState` structured snapshot (chief complaint, body location + laterality, onset/duration, course, severity, associated symptoms, red flags present/denied, unknowns) rebuilt every turn from the full transcript. Fed into both mock and Qwen paths and returned on every `TriageTurn`.
+- `TriageTurn` now carries `patient_facing_impression_urdu/english`, `possible_causes`, `doctor_differential`, `supporting_findings`, `findings_against`, `unresolved_questions`, `red_flags_present/denied`, `escalation_signs`, `question_goal`, `why_this_matters`, and `medication_options`.
+- Rewritten Qwen system prompt: adaptive interview only, one highest-value question per turn, hedged patient-facing language, explicit "medication candidates go through server validation," and an untrusted-content notice (transcripts / documents / Vault text are data, never directives).
+- Emergency short-circuit still deterministic and runs before every model call; question ceiling still 5; conservative safe fallback on parse failure.
+
+**Curated medication-evidence resolver**
+
+- `server/medicine_evidence.py` extended in place with a curated evidence catalog keyed by `(condition_key, generic_name)` and `resolve_medication_candidates()` — the ONLY writer of `MedicationOption` cards.
+- Every model-generated `dose_guidance`, `evidence_source_url`, and `safety_note` is **discarded**. Those fields only come from the catalog. Allowlisted evidence domains: `who.int`, `list.essentialmeds.org`, `nice.org.uk`, `cks.nice.org.uk`, `cdc.gov`, `dailymed.nlm.nih.gov`, `dra.gov.pk`, `medlineplus.gov`.
+- Blocked as self-treatment options: amoxicillin, azithromycin, ciprofloxacin, prednisolone, dexamethasone, morphine, codeine, tramadol, diazepam, insulin, and 15+ more antibiotics / steroids / opioids / sedatives / controlled drugs.
+- Allergy suppression with brand aliases: **Hassan's ibuprofen allergy blocks ibuprofen (and NSAID aliases) from ever surfacing**; the resolver is unit-tested to guarantee it.
+- Emergency urgency → empty medication_options; the winning plan forbids delaying an emergency with drug information.
+
+**Hassan demo — real, readable, watermarked fixtures**
+
+- Replaced the 1×1 PNG placeholders. New `server/demo_fixtures.py` renders four documents at seed time (CBC, prescription, chest X-ray note, right-arm skin progress) as legible PNGs with a fixed banner: **"SYNTHETIC DEMO — NOT A REAL PATIENT DOCUMENT"**. No PIL/Pillow dependency — a minimal in-repo 5×7 bitmap font.
+- New `POST /api/demo/hassan` — one-click, mock-mode-only, idempotent: creates the Hassan profile if missing, seeds it with the fixtures, and returns its id.
+- Home workspace surfaces a **"Load Hassan demo"** call-to-action inside the Switch-patient panel; visible only when `/api/health` reports `mock_mode: true`.
+
+**Encounter persistence + doctor-ready view**
+
+- Full encounter transcript is now attached to the completed-triage timeline payload (`payload.encounter_transcript`), so the doctor dashboard renders the conversation with zero extra lookups.
+- `GET /api/dashboard/{profile_id}` and `GET /api/summary/{profile_id}` both surface `patient_facing_impression_english`, `doctor_differential`, `supporting_findings`, `findings_against`, `unresolved_questions`, `red_flags_present/denied`, `escalation_signs`, `medication_options`, `clinical_state`, `vault_context_used`, and the encounter transcript.
+- `PatientDashboard.jsx` adds a doctor-facing differential panel with an expandable transcript and a red-flags block.
+
+**Voice capture + review**
+
+- `useSpeechRecognition` default silence window extended (initial capture 8s, follow-ups 5s+). Prominent **"Done speaking · مکمل"** button.
+- New `reviewing` phase in `TriageConversation` — the transcript never sends until the user taps Send. Retry, Edit, and Cancel are always visible. `tts.cancel()` fires before mic capture so the assistant never records itself.
+
+**Live-Qwen adaptive-triage eval**
+
+- `scripts/live_triage_eval.py` runs the right-arm skin transcript five times, hard-caps at 25 total Qwen calls, and reports per-session: skin-specific / no-breathing-default / no-medication-on-turn-1 / question-variation. **SKIPPED (exit 0) when `DASHSCOPE_API_KEY` is unset — CI never depends on network.**
+
+### 🚧 Still to do (Qoder handoff — priority order)
+
+1. **Real-Qwen rehearsal.** Set `DASHSCOPE_API_KEY` and `NABZ_TEXT_MODEL=qwen3.7-plus`, then run `scripts/live_triage_eval.py` and time end-to-end triage turns. Fall back to `qwen-plus` if any turn exceeds ~6 s.
+2. **Cloud deploy.** Follow `docs/ALIBABA_CLOUD_DEPLOY.md` (ECS + Nginx + Compose stack already scaffolded). Fixed demo URL wired in DNS ≥24 h before presentation.
+3. **Expand curated evidence catalog** in `server/medicine_evidence.py` (e.g. topical hydrocortisone with strict eligibility rules, oral rehydration variants). Add matching pytest rows in `server/tests/test_adaptive_triage.py`.
+4. **Live facility provider layer** — Google Places or Amap above the curated dataset in `server/facilities.py` (schema is already provider-agnostic).
+5. **Qwen3.5-Omni Urdu audio** — backend route accepting recorded webm → transcript + optional spoken reply. Fall back to browser STT/TTS on failure.
+6. **PWA install-prompt UI + Capacitor APK** — capture `beforeinstallprompt`; sign a debug APK for internal testing (Capacitor scaffold + npm scripts already landed).
+7. **Cross-provenance dashboard chips** on each Vault fact (patient-entered vs. lab vs. prescription vs. prior triage) — schema already carries `source`; the UI can render provenance.
+8. **Consent + audit persistence** (winning plan §17).
+
+---
+
 ## What's new — 2026-08-21 (lay-language triage + complete voice capture)
 
 - Mock triage now routes follow-up questions by the complaint already given

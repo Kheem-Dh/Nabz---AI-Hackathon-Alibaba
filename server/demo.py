@@ -11,19 +11,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from db import get_db
+from demo_fixtures import build_hassan_fixtures
 from models_db import Account, Medicine, Profile, TimelineEntry
 from security import get_current_account
 from storage import store_upload
 from triage import is_mock_mode
 
 router = APIRouter(prefix="/api/demo", tags=["demo"])
-DEMO_VERSION = "hassan-v1"
-
-_PNG = bytes.fromhex(
-    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
-    "0000000a49444154789c6300010000050001a5f645400000000049454e44ae4260"
-    "82"
-)
+DEMO_VERSION = "hassan-v2-readable"
+HASSAN_PROFILE_NAME = "Hassan"
+HASSAN_RELATION = "Demo patient"
 
 
 def seed_profile(profile: Profile, db: Session) -> bool:
@@ -44,11 +41,21 @@ def seed_profile(profile: Profile, db: Session) -> bool:
         "redness settled without admission. No surgery recorded."
     )
 
+    fixtures = build_hassan_fixtures()
     now = datetime.now(timezone.utc)
-    lab_ref = store_upload(profile.id, _PNG, "hassan_cbc_demo.png", "demo_lab")
-    rx_ref = store_upload(profile.id, _PNG, "hassan_confirmed_rx_demo.png", "demo_rx")
-    xray_ref = store_upload(profile.id, _PNG, "hassan_chest_xray_demo.png", "demo_xray")
-    skin_ref = store_upload(profile.id, _PNG, "hassan_skin_progress_demo.png", "demo_skin")
+    lab_bytes = fixtures["hassan_cbc_demo.png"]
+    rx_bytes = fixtures["hassan_confirmed_rx_demo.png"]
+    xray_bytes = fixtures["hassan_chest_xray_demo.png"]
+    skin_bytes = fixtures["hassan_skin_progress_demo.png"]
+    lab_ref = store_upload(profile.id, lab_bytes, "hassan_cbc_demo.png", "demo_lab")
+    rx_ref = store_upload(profile.id, rx_bytes, "hassan_confirmed_rx_demo.png", "demo_rx")
+    xray_ref = store_upload(profile.id, xray_bytes, "hassan_chest_xray_demo.png", "demo_xray")
+    skin_ref = store_upload(profile.id, skin_bytes, "hassan_skin_progress_demo.png", "demo_skin")
+
+    lab_size = len(lab_bytes)
+    rx_size = len(rx_bytes)
+    xray_size = len(xray_bytes)
+    skin_size = len(skin_bytes)
 
     medicine = Medicine(
         profile_id=profile.id,
@@ -87,7 +94,7 @@ def seed_profile(profile: Profile, db: Session) -> bool:
                 "image_ref": lab_ref,
                 "original_filename": "hassan_cbc_demo.png",
                 "content_type": "image/png",
-                "size_bytes": len(_PNG),
+                "size_bytes": lab_size,
             },
         ),
         TimelineEntry(
@@ -112,7 +119,7 @@ def seed_profile(profile: Profile, db: Session) -> bool:
                 "image_ref": rx_ref,
                 "original_filename": "hassan_confirmed_rx_demo.png",
                 "content_type": "image/png",
-                "size_bytes": len(_PNG),
+                "size_bytes": rx_size,
             },
         ),
         TimelineEntry(
@@ -127,7 +134,7 @@ def seed_profile(profile: Profile, db: Session) -> bool:
                 "stored_ref": xray_ref,
                 "original_filename": "hassan_chest_xray_demo.png",
                 "content_type": "image/png",
-                "size_bytes": len(_PNG),
+                "size_bytes": xray_size,
                 "notes": "Synthetic demo record; no imaging interpretation by Nabz.",
             },
         ),
@@ -143,7 +150,7 @@ def seed_profile(profile: Profile, db: Session) -> bool:
                 "stored_ref": skin_ref,
                 "original_filename": "hassan_skin_progress_demo.png",
                 "content_type": "image/png",
-                "size_bytes": len(_PNG),
+                "size_bytes": skin_size,
                 "notes": "Patient-recorded progress photo; Nabz does not diagnose from this image.",
             },
         ),
@@ -175,3 +182,50 @@ def seed_demo_profile(
         raise HTTPException(status_code=404, detail="profile_not_found")
     seeded = seed_profile(profile, db)
     return {"profile_id": profile.id, "seeded": seeded, "demo_version": DEMO_VERSION}
+
+
+@router.post("/hassan")
+def load_hassan(
+    account: Account = Depends(get_current_account),
+    db: Session = Depends(get_db),
+) -> dict[str, object]:
+    """One-click: create the Hassan profile if missing, seed it, return the id.
+
+    Mock-mode only. Idempotent — safe to call repeatedly. Each account gets
+    its own Hassan profile; nothing crosses accounts.
+    """
+    if not is_mock_mode():
+        raise HTTPException(status_code=404, detail="not_found")
+
+    profile = (
+        db.query(Profile)
+        .filter(
+            Profile.account_id == account.id,
+            Profile.display_name == HASSAN_PROFILE_NAME,
+            Profile.relation == HASSAN_RELATION,
+        )
+        .first()
+    )
+    if profile is None:
+        profile = Profile(
+            account_id=account.id,
+            display_name=HASSAN_PROFILE_NAME,
+            relation=HASSAN_RELATION,
+            age=34,
+            gender="Male",
+            blood_group="B+",
+            chronic_conditions=[],
+            allergies=[],
+            is_self=False,
+        )
+        db.add(profile)
+        db.flush()
+
+    seeded = seed_profile(profile, db)
+    db.refresh(profile)
+    return {
+        "profile_id": profile.id,
+        "display_name": profile.display_name,
+        "seeded": seeded,
+        "demo_version": DEMO_VERSION,
+    }

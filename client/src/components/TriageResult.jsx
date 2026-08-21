@@ -54,6 +54,88 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, ttsSuppo
         {turn.mock && <span className="mock-badge">offline demo · adaptive rules, not live AI</span>}
       </div>
 
+      {(turn.patient_facing_impression_english || turn.possible_causes?.length > 0) && (
+        <section className="impression-card">
+          <div className="care-plan-head">
+            <span className="care-plan-icon">🧠</span>
+            <div>
+              <div className="urdu">ممکنہ وجوہات</div>
+              <small>Possible explanations — not a confirmed diagnosis</small>
+            </div>
+          </div>
+          {turn.patient_facing_impression_urdu && (
+            <p className="urdu impression-line" dir="rtl">
+              {turn.patient_facing_impression_urdu}
+            </p>
+          )}
+          {turn.patient_facing_impression_english && (
+            <p className="impression-line">{turn.patient_facing_impression_english}</p>
+          )}
+          {turn.possible_causes?.length > 0 && (
+            <ul className="chip-list">
+              {turn.possible_causes.map((c) => <li key={c}>{c}</li>)}
+            </ul>
+          )}
+          {turn.escalation_signs?.length > 0 && (
+            <div className="escalation-block">
+              <strong>Get urgent care if:</strong>
+              <ul>
+                {turn.escalation_signs.map((s) => <li key={s}>{s}</li>)}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
+
+      {turn.medication_options?.length > 0 && (
+        <section className="medication-card">
+          <div className="care-plan-head">
+            <span className="care-plan-icon">💊</span>
+            <div>
+              <div className="urdu">دوا کی معلومات</div>
+              <small>Options to discuss — Nabz does not prescribe</small>
+            </div>
+          </div>
+          {turn.medication_options.map((opt) => (
+            <div key={opt.generic_name} className="medication-option">
+              <div className="mo-title">
+                <strong>{opt.generic_name}</strong>
+                <span className="mo-type">{opt.recommendation_type.replace(/_/g, ' ')}</span>
+                {opt.prescription_required && <span className="mo-rx">Prescription only</span>}
+              </div>
+              <p className="mo-purpose">{opt.purpose}</p>
+              <p className="mo-why">{opt.why_it_may_help}</p>
+              {opt.why_it_is_relevant_to_this_patient && (
+                <p className="mo-relevance">Why it fits: {opt.why_it_is_relevant_to_this_patient}</p>
+              )}
+              {opt.eligibility_requirements?.length > 0 && (
+                <div className="mo-list">
+                  <em>Only if:</em>
+                  <ul>
+                    {opt.eligibility_requirements.map((e) => <li key={e}>{e}</li>)}
+                  </ul>
+                </div>
+              )}
+              {opt.avoid_if?.length > 0 && (
+                <div className="mo-list mo-avoid">
+                  <em>Avoid if:</em>
+                  <ul>
+                    {opt.avoid_if.map((e) => <li key={e}>{e}</li>)}
+                  </ul>
+                </div>
+              )}
+              {opt.dose_guidance && <p className="mo-dose">{opt.dose_guidance}</p>}
+              <div className="mo-evidence">
+                <a href={opt.evidence_source_url} target="_blank" rel="noreferrer">
+                  Evidence: {opt.evidence_source_title} ↗
+                </a>
+                <div className="mo-safety">{opt.safety_note}</div>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
       {(turn.suggestions_urdu?.length > 0 || turn.suggestions_english?.length > 0) && (
         <section className="care-plan-card">
           <div className="care-plan-head">

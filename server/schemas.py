@@ -180,6 +180,57 @@ class CollectedFact(BaseModel):
     value_english: str
 
 
+class ClinicalState(BaseModel):
+    """Structured, adaptive representation of what Nabz knows so far.
+
+    Kept as a flat, JSON-serialisable snapshot so it can be persisted on the
+    session, fed back into the next Qwen turn, and shown to the doctor.
+    """
+
+    chief_complaint: Optional[str] = None
+    body_location: Optional[str] = None
+    laterality: Optional[str] = None  # left | right | bilateral | midline
+    onset: Optional[str] = None
+    duration: Optional[str] = None
+    course: Optional[str] = None  # improving | stable | spreading | worsening
+    severity: Optional[str] = None
+    functional_impact: Optional[str] = None
+    appearance: Optional[str] = None
+    associated_symptoms: list[str] = Field(default_factory=list)
+    pertinent_negatives: list[str] = Field(default_factory=list)
+    exposures: list[str] = Field(default_factory=list)
+    red_flags_present: list[str] = Field(default_factory=list)
+    red_flags_denied: list[str] = Field(default_factory=list)
+    unknowns: list[str] = Field(default_factory=list)
+
+
+class MedicationOption(BaseModel):
+    """A Nabz-validated medication information card.
+
+    NEVER populated directly from a model response. The evidence resolver
+    (server/medicine_evidence.py) is the only writer — it drops model-invented
+    fields, strips model dose text, and enforces every safety check before
+    building an option.
+    """
+
+    generic_name: str
+    purpose: str
+    recommendation_type: str  # OTC_INFORMATION | DISCUSS_WITH_PHARMACIST | DISCUSS_WITH_DOCTOR | CURRENT_PRESCRIPTION_CONTEXT
+    why_it_may_help: str
+    why_it_is_relevant_to_this_patient: str
+    eligibility_requirements: list[str] = Field(default_factory=list)
+    avoid_if: list[str] = Field(default_factory=list)
+    interactions_checked: list[str] = Field(default_factory=list)
+    vault_conflicts_checked: list[str] = Field(default_factory=list)
+    dose_guidance: Optional[str] = None  # ONLY from curated catalog — never from a model
+    prescription_required: bool = False
+    evidence_source_title: str
+    evidence_source_url: str
+    evidence_summary: str
+    evidence_last_reviewed: str
+    safety_note: str
+
+
 class TriageAnalysis(BaseModel):
     collected: list[CollectedFact] = Field(default_factory=list)
     still_checking_urdu: str = ""
@@ -215,6 +266,10 @@ class TriageTurn(BaseModel):
     question_english: Optional[str] = None
     quick_replies: list[QuickReply] = Field(default_factory=list)
 
+    # question-turn hints (no chain-of-thought)
+    question_goal: Optional[str] = None
+    why_this_matters: Optional[str] = None
+
     # result fields
     level: Optional[TriageLevel] = None
     advice_urdu: Optional[str] = None
@@ -226,6 +281,26 @@ class TriageTurn(BaseModel):
     exercise_suggestions_english: list[str] = Field(default_factory=list)
     doctor_handoff_english: Optional[str] = None
     vault_context_used: list[str] = Field(default_factory=list)
+
+    # Clinical synthesis (winning-plan CORE CHANGE 3). Never presented as a
+    # confirmed diagnosis in the patient-facing UI.
+    patient_facing_impression_urdu: Optional[str] = None
+    patient_facing_impression_english: Optional[str] = None
+    possible_causes: list[str] = Field(default_factory=list)
+    doctor_differential: list[str] = Field(default_factory=list)
+    supporting_findings: list[str] = Field(default_factory=list)
+    findings_against: list[str] = Field(default_factory=list)
+    unresolved_questions: list[str] = Field(default_factory=list)
+    red_flags_present: list[str] = Field(default_factory=list)
+    red_flags_denied: list[str] = Field(default_factory=list)
+    escalation_signs: list[str] = Field(default_factory=list)
+
+    # Structured clinical state carried across turns.
+    clinical_state: Optional[ClinicalState] = None
+
+    # Nabz-validated medication information cards. Empty when nothing safe
+    # can be suggested. Populated only by the server-side evidence resolver.
+    medication_options: list[MedicationOption] = Field(default_factory=list)
 
     # Hints the frontend for facility filtering:
     #   emergency_hospital | clinic_or_bhu | optional

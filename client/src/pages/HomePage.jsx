@@ -4,6 +4,7 @@ import ActiveProfileBar from '../components/ActiveProfileBar'
 import ProfileSwitcher from '../components/ProfileSwitcher'
 import TriageConversation from '../components/TriageConversation'
 import PatientDashboard from '../components/PatientDashboard'
+import DemoLoader from '../components/DemoLoader'
 
 export default function HomePage() {
   const { active, loading } = useProfiles()
@@ -48,6 +49,7 @@ export default function HomePage() {
               <span className="en">Switch patient</span>
             </div>
             <ProfileSwitcher />
+            <DemoLoader />
           </div>
 
           <PatientDashboard
