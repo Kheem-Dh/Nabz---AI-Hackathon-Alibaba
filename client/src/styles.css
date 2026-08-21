@@ -2417,3 +2417,181 @@ textarea.input {
   margin-top: 8px;
 }
 .pd-transcript ol { margin: 6px 0 0 18px; font-size: 12px; }
+
+/* ============================================================
+   Clinical workspace polish (2026-08-21, evening)
+   Targeted refinements — not a rewrite. Keeps mobile responsive.
+   ============================================================ */
+
+/* Tighter card rhythm on desktop */
+@media (min-width: 900px) {
+  .conv, .stack { gap: 14px; }
+  .care-workspace-title { padding-bottom: 6px; }
+}
+
+/* Impression card — cleaner hierarchy, no giant emoji brain */
+.impression-card {
+  border-left: 4px solid var(--teal, #0f9d8a);
+}
+.impression-card .care-plan-icon,
+.medication-card .care-plan-icon {
+  width: 34px; height: 34px;
+  min-width: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  background: var(--teal-light, #e6f6f3);
+  color: var(--teal-dark, #0b7d6e);
+  font-size: 15px;
+}
+.impression-line { line-height: 1.55; }
+.impression-line.urdu { line-height: 2.1; font-size: 15px; }
+.impression-card .chip-list { margin-top: 10px; }
+.impression-card .chip-list li { font-weight: 500; }
+.escalation-block { font-size: 12.5px; }
+.escalation-block strong { color: var(--red, #e53935); }
+
+/* Medication card — pill-style clinical detail */
+.medication-card { border-left: 4px solid #1c8b6b; }
+.medication-option {
+  border: 1px solid rgba(15, 157, 138, 0.25);
+  border-radius: 12px;
+  padding: 14px 14px 12px;
+  margin-top: 10px;
+  background: #fdfdfc;
+}
+.medication-option + .medication-option { margin-top: 10px; }
+.mo-title { align-items: baseline; }
+.mo-title strong { font-size: 15px; letter-spacing: 0.01em; color: var(--text, #1f2d2b); }
+.mo-purpose { font-weight: 500; }
+.mo-why { line-height: 1.5; }
+.mo-list ul { padding-left: 0; margin-left: 18px; }
+.mo-list li { margin-bottom: 2px; line-height: 1.45; }
+.mo-avoid ul li::marker { color: #a13a00; }
+.mo-dose {
+  border-left: 3px solid var(--teal, #0f9d8a);
+  background: #f4faf8;
+  padding: 8px 12px;
+  font-family: 'Poppins', system-ui, sans-serif;
+}
+.mo-evidence {
+  border-top: 1px dashed rgba(15,157,138,0.25);
+  padding-top: 8px;
+  margin-top: 10px;
+}
+.mo-evidence a { font-weight: 600; }
+
+/* Doctor handoff — darker, more clinical, higher-contrast */
+.handoff-card {
+  background: #0f1f1c;
+  color: #e6f6f3;
+  border-radius: 14px;
+  padding: 16px;
+}
+.handoff-card .handoff-head { display: flex; align-items: flex-start; gap: 10px; }
+.handoff-card .handoff-head strong { color: #fff; letter-spacing: 0.02em; }
+.handoff-card .handoff-head span { color: rgba(230,246,243,0.65); font-size: 12px; display: block; margin-top: 2px; }
+.handoff-card p { margin: 10px 0 0; line-height: 1.55; }
+.handoff-card button {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.18);
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.handoff-card button:hover { background: rgba(255,255,255,0.18); }
+.handoff-vault {
+  margin-top: 10px;
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.handoff-vault span {
+  font-size: 11px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(230,246,243,0.85);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+/* Result card — result icon smaller so the level+advice lead */
+.result-card .result-icon { font-size: 34px; margin-bottom: 4px; }
+.result-card .result-level-ur { line-height: 1.9; }
+.result-card .advice-ur { line-height: 2.05; font-size: 16px; }
+.result-card .advice-en { line-height: 1.55; }
+
+/* Chip list under quick replies feels more like real UI chips */
+.chip {
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13.5px;
+  border: 1px solid var(--border, #e3ecea);
+  background: #fff;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+.chip:hover { background: var(--teal-light, #e6f6f3); transform: translateY(-1px); }
+.chip .chip-en { display: block; font-size: 10.5px; color: var(--muted, #6b7c79); }
+
+/* Question card — clearer bot avatar, tighter spacing */
+.q-card .q-bot {
+  width: 34px; height: 34px;
+  border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--teal-light, #e6f6f3);
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+.q-card .q-urdu { font-size: 20px; line-height: 2; }
+.q-card .q-en { color: var(--muted, #6b7c79); }
+
+/* Live analysis — flatter, more compact */
+.analysis {
+  padding: 12px 14px;
+}
+.analysis-head { display: flex; align-items: baseline; justify-content: space-between; }
+.progress { height: 6px; border-radius: 999px; background: var(--teal-light, #e6f6f3); overflow: hidden; margin: 8px 0 10px; }
+.progress > span { display: block; height: 100%; background: var(--teal, #0f9d8a); border-radius: 999px; transition: width 0.25s ease; }
+.collected { display: flex; flex-wrap: wrap; gap: 6px; }
+.fact-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border, #e3ecea);
+  background: #fff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+.fact-chip .f-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--muted, #6b7c79);
+  letter-spacing: 0.04em;
+}
+.fact-chip .f-value { font-weight: 600; color: var(--teal-dark, #0b7d6e); }
+
+/* Care-plan-card polish — remove excessive emoji chrome */
+.care-plan-card, .exercise-card {
+  border: 1px solid var(--border, #e3ecea);
+  border-radius: 14px;
+  padding: 14px;
+  background: #fff;
+}
+.care-plan-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.care-plan-head small { display: block; color: var(--muted, #6b7c79); font-size: 12px; }
+.care-plan-icon {
+  width: 34px; height: 34px;
+  border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--teal-light, #e6f6f3);
+  color: var(--teal-dark, #0b7d6e);
+  font-size: 15px;
+  font-weight: 700;
+}
+.care-plan-list { padding-left: 20px; margin: 0; }
+.care-plan-list li { margin-bottom: 8px; line-height: 1.55; }
+.care-plan-list li .urdu { display: block; line-height: 2; margin-bottom: 2px; font-size: 15px; color: var(--text); }
+
+/* Nearby-care facility polish */
+.facility-card { padding: 14px; }
+.facility-card .fc-title { font-size: 14.5px; }
+.facility-card .fc-meta { font-size: 12px; }
+.facility-card .fc-reason { font-style: normal; color: var(--muted, #6b7c79); font-size: 11.5px; }

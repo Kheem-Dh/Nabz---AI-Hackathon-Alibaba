@@ -85,6 +85,8 @@ _EMERGENCY_KEYWORDS = [
     "not moving", "will not wake up", "won't wake up",
     "severe dehydration", "no urine",
     "pregnant" "bleeding", "reduced fetal movement", "baby not moving",
+    "thunderclap", "worst headache", "worst pain of my life",
+    "stiff neck", "gardan akri", "گردن اکڑی", "گردن اکڑ",
     # Roman Urdu
     "seenay mein dard", "seene mein dard", "seenay", "seene",
     "saans nahi", "saans nai", "saans nahin", "dam ghut", "dam ghutt",
@@ -371,6 +373,20 @@ def _has_pain(text: str) -> bool:
     return any(w in lo for w in ["pain", "dard", "درد", "ache"])
 
 
+def _has_headache(text: str) -> bool:
+    """Recognize lay descriptions of a headache in Urdu / Roman Urdu / English."""
+    lo = _lower(text)
+    return any(
+        w in lo
+        for w in [
+            "headache", "head ache", "head pain", "migraine",
+            "sar dard", "sar mein dard", "sir mein dard", "sar m dard",
+            "sar dukh", "sir dukh",
+            "سر درد", "سر میں درد", "سر دُکھ", "سردرد", "سر دکھ", "درد سر",
+        ]
+    )
+
+
 def _has_skin_change(text: str) -> bool:
     """Recognize common lay descriptions of a visible skin change."""
     lo = _lower(text)
@@ -423,6 +439,10 @@ def _has_known_duration(text: str) -> bool:
 
 
 def _complaint_kind(text: str) -> str:
+    # Headache is checked BEFORE generic pain — it has its own clinical
+    # question set and red flags (thunderclap, worst-ever, meningitis).
+    if _has_headache(text):
+        return "headache"
     if _has_skin_change(text):
         return "skin"
     if _has_fever(text):
@@ -679,6 +699,18 @@ def _mock_question(profile: dict[str, Any], session_id: int, turns: list[dict]) 
         if kind == "skin":
             q_ur = f"{name}، یہ سرخ نشان کب سے ہے؟"
             q_en = f"{profile.get('display_name','You')}, how long has this red mark been there?"
+        elif kind == "headache":
+            q_ur = f"{name}، یہ سر درد کب سے ہے، اور کیا آج پہلی بار ہوا ہے؟"
+            q_en = (
+                f"{profile.get('display_name','You')}, how long has this headache been "
+                "going on, and did it start today for the first time?"
+            )
+        elif kind == "pain":
+            q_ur = f"{name}، درد کب سے ہے، اور کیا کوئی چوٹ یا مخصوص وجہ یاد ہے؟"
+            q_en = (
+                f"{profile.get('display_name','You')}, how long has this pain been "
+                "going on, and was there any injury or specific trigger you remember?"
+            )
         else:
             q_ur = f"{name}، یہ تکلیف کب سے ہے؟"
             q_en = f"{profile.get('display_name','You')}, how long has this problem been present?"
@@ -814,30 +846,106 @@ def _mock_question(profile: dict[str, Any], session_id: int, turns: list[dict]) 
                     "Checking how frequent the symptoms are.",
                 ),
             ],
+            "headache": [
+                (
+                    ["اچانک", "sudden", "thunderclap", "worst"],
+                    f"{name}، کیا یہ درد اچانک شروع ہوا اور آپ کی زندگی کا شدید ترین درد ہے؟",
+                    f"{profile.get('display_name','You')}, did this pain start suddenly, and is it the worst headache of your life?",
+                    [
+                        QuickReply(urdu="آہستہ آہستہ", english="Came on slowly"),
+                        QuickReply(urdu="اچانک شروع ہوا", english="Started suddenly"),
+                        QuickReply(urdu="زندگی کا شدید ترین", english="Worst of my life"),
+                        QuickReply(urdu="پتہ نہیں", english="Not sure"),
+                    ],
+                    "اچانک اور شدید ترین درد کی خطرے کی علامت جانچ رہا ہوں۔",
+                    "Checking for sudden-onset / thunderclap red flags.",
+                ),
+                (
+                    ["کہاں", "where", "location", "side", "half"],
+                    f"{name}، سر میں درد کہاں ہے — پیشانی، پیچھے، ایک طرف یا پورے سر میں؟",
+                    f"{profile.get('display_name','You')}, where in the head is the pain — front, back, one side, or all over?",
+                    [
+                        QuickReply(urdu="پیشانی میں", english="Front / forehead"),
+                        QuickReply(urdu="ایک طرف", english="One side"),
+                        QuickReply(urdu="پیچھے / گردن", english="Back / neck"),
+                        QuickReply(urdu="پورے سر میں", english="All over"),
+                    ],
+                    "درد کی جگہ اور ایک طرفہ ہونا دیکھ رہا ہوں۔",
+                    "Locating the pain and checking for one-sided pattern.",
+                ),
+                (
+                    ["متلی", "nausea", "روشنی", "light", "قے", "vomit"],
+                    f"{name}، کیا متلی، قے، یا تیز روشنی/آواز سے تکلیف ہے؟",
+                    f"{profile.get('display_name','You')}, is there nausea, vomiting, or discomfort from bright light or loud sound?",
+                    [
+                        QuickReply(urdu="نہیں", english="No"),
+                        QuickReply(urdu="متلی ہے", english="Nausea"),
+                        QuickReply(urdu="قے ہو رہی ہے", english="Vomiting"),
+                        QuickReply(urdu="روشنی سے تکلیف", english="Light hurts"),
+                    ],
+                    "مائیگرین اور خطرے کی علامات دیکھ رہا ہوں۔",
+                    "Checking migraine features and warning signs.",
+                ),
+                (
+                    ["بخار", "fever", "گردن", "neck stiff", "کمزوری", "vision", "بینائی", "confusion"],
+                    f"{name}، کیا بخار، گردن اکڑنا، بینائی میں تبدیلی، ایک طرف کی کمزوری یا الجھن ہے؟",
+                    f"{profile.get('display_name','You')}, is there fever, stiff neck, vision change, one-sided weakness, or confusion?",
+                    [
+                        QuickReply(urdu="کچھ نہیں", english="None"),
+                        QuickReply(urdu="بخار ہے", english="Fever"),
+                        QuickReply(urdu="گردن اکڑی ہے", english="Stiff neck"),
+                        QuickReply(urdu="بینائی/کمزوری", english="Vision / weakness"),
+                    ],
+                    "ہنگامی خطرے کی علامات جانچ رہا ہوں۔",
+                    "Checking emergency red flags — meningitis / stroke signs.",
+                ),
+            ],
             "pain": [
                 (
-                    ["کتنا شدید", "how severe"],
-                    f"{name}، درد کتنا شدید ہے؟",
-                    f"{profile.get('display_name','You')}, how severe is the pain?",
-                    severity_replies,
-                    "درد کی شدت معلوم کر رہا ہوں۔",
-                    "Checking pain severity.",
+                    ["کہاں", "where", "location"],
+                    f"{name}، درد جسم میں کہاں ہے، اور کیا وہ ایک ہی جگہ ہے یا کہیں اور پھیلتا ہے؟",
+                    f"{profile.get('display_name','You')}, where exactly is the pain, and does it stay in one place or spread anywhere?",
+                    [
+                        QuickReply(urdu="صرف ایک جگہ", english="One spot"),
+                        QuickReply(urdu="ایک طرف پھیلتا ہے", english="Radiates to one side"),
+                        QuickReply(urdu="کئی جگہ", english="Several places"),
+                        QuickReply(urdu="پورے جسم میں", english="All over"),
+                    ],
+                    "درد کی جگہ اور پھیلاؤ معلوم کر رہا ہوں۔",
+                    "Localising the pain and checking for radiation.",
+                ),
+                (
+                    ["کتنا شدید", "how severe", "10"],
+                    f"{name}، اگر 0 سے 10 میں درد ناپیں تو کتنا لگتا ہے؟",
+                    f"{profile.get('display_name','You')}, on a scale of 0 to 10, how severe is the pain?",
+                    [
+                        QuickReply(urdu="1–3 ہلکا", english="1–3 mild"),
+                        QuickReply(urdu="4–6 درمیانی", english="4–6 moderate"),
+                        QuickReply(urdu="7–8 شدید", english="7–8 severe"),
+                        QuickReply(urdu="9–10 ناقابلِ برداشت", english="9–10 worst ever"),
+                    ],
+                    "درد کی شدت اور کام پر اثر دیکھ رہا ہوں۔",
+                    "Checking severity and effect on activity.",
                 ),
                 (
                     ["حرکت", "movement", "سوج", "swelling"],
-                    f"{name}، کیا حرکت کرنے میں مشکل یا وہاں سوجن ہے؟",
-                    f"{profile.get('display_name','You')}, is movement difficult or is there swelling?",
+                    f"{name}، کیا حرکت کرنے میں مشکل، وہاں سوجن یا سن پن ہے؟",
+                    f"{profile.get('display_name','You')}, is movement difficult, or is there swelling or numbness there?",
                     _YES_NO,
-                    "حرکت اور سوجن دیکھ رہا ہوں۔",
-                    "Checking movement and swelling.",
+                    "حرکت، سوجن اور نیورو علامات دیکھ رہا ہوں۔",
+                    "Checking movement, swelling, and neurological signs.",
                 ),
                 (
-                    ["بڑھ", "worse"],
-                    f"{name}، کیا درد بڑھ رہا ہے یا کم ہو رہا ہے؟",
-                    f"{profile.get('display_name','You')}, is the pain getting worse or improving?",
-                    severity_replies,
+                    ["بڑھ", "worse", "improving"],
+                    f"{name}، کیا درد بڑھ رہا ہے، ویسا ہی ہے، یا کم ہو رہا ہے؟",
+                    f"{profile.get('display_name','You')}, is the pain getting worse, staying the same, or improving?",
+                    [
+                        QuickReply(urdu="بڑھ رہا ہے", english="Worsening"),
+                        QuickReply(urdu="ویسا ہی ہے", english="Stable"),
+                        QuickReply(urdu="کم ہو رہا ہے", english="Improving"),
+                    ],
                     "درد کی تبدیلی دیکھ رہا ہوں۔",
-                    "Checking how the pain is changing.",
+                    "Checking pain trajectory.",
                 ),
             ],
             "general": [
@@ -1709,6 +1817,83 @@ def _impression_for(kind: str, profile: dict[str, Any], level: TriageLevel) -> d
                 "Cough with blood",
             ],
         }
+    if kind == "headache":
+        return {
+            "patient_facing_impression_urdu": (
+                f"{name}، یہ اکثر تناؤ یا ادھ کپاری (مائیگرین) جیسا سر درد ہو سکتا ہے — "
+                "لیکن اگر یہ اچانک، شدید، یا خطرے کی علامتوں کے ساتھ ہو تو ڈاکٹر کا "
+                "فوری معائنہ ضروری ہے۔"
+            ),
+            "patient_facing_impression_english": (
+                "This may be consistent with a tension-type or migraine headache, but "
+                "sudden onset, worst-ever pain, or red-flag features need urgent examination."
+            ),
+            "possible_causes": [
+                "Tension-type headache (tight band around the head, worse with stress)",
+                "Migraine (often one-sided, with nausea or light sensitivity)",
+                "Sinus headache with pressure over forehead / cheeks",
+                "Dehydration, poor sleep, or caffeine change",
+            ],
+            "doctor_differential": [
+                "Primary headache: tension-type vs. migraine vs. cluster",
+                "Secondary — consider subarachnoid haemorrhage if sudden 'thunderclap' worst-ever",
+                "Meningitis if fever + neck stiffness + photophobia",
+                "Focal neurology → stroke / space-occupying lesion",
+                "Analgesic overuse pattern in chronic sufferers",
+            ],
+            "supporting_findings": ["Patient reports head pain."],
+            "findings_against": [],
+            "unresolved_questions": [
+                "Onset — sudden vs gradual",
+                "Location — one side vs global",
+                "Severity and worst-ever character",
+                "Nausea / photophobia / vision changes",
+                "Fever, neck stiffness, weakness, or confusion",
+            ],
+            "escalation_signs": [
+                "Sudden 'thunderclap' onset or worst headache of life",
+                "Fever with a stiff neck, or a rash that does not fade under pressure",
+                "One-sided weakness, slurred speech, facial droop, or vision loss",
+                "Confusion, drowsiness, or repeated vomiting",
+                "New headache after a head injury",
+            ],
+        }
+    if kind == "pain":
+        return {
+            "patient_facing_impression_urdu": (
+                f"{name}، یہ عام مسکولوسکیلیٹل یا وقتی درد ہو سکتا ہے، لیکن مکمل "
+                "تشخیص کے لیے ڈاکٹر کا معائنہ درکار ہے۔"
+            ),
+            "patient_facing_impression_english": (
+                "This may be consistent with a muscular / musculoskeletal strain or "
+                "self-limited pain, but examination is needed to be sure of the cause."
+            ),
+            "possible_causes": [
+                "Muscle strain or overuse",
+                "Joint or ligament irritation",
+                "Referred pain from a nearby structure",
+            ],
+            "doctor_differential": [
+                "Musculoskeletal strain vs. joint pathology",
+                "Referred visceral pain if location fits (e.g. abdomen ↔ back)",
+                "Neuropathic component if numbness or weakness reported",
+                "Consider red-flag structural cause with trauma, systemic symptoms, or focal neurology",
+            ],
+            "supporting_findings": ["Patient reports pain."],
+            "findings_against": [],
+            "unresolved_questions": [
+                "Exact location and radiation",
+                "Severity on a 0–10 scale",
+                "Movement / posture triggers",
+                "Numbness, weakness, or fever",
+            ],
+            "escalation_signs": [
+                "Severe or rapidly worsening pain",
+                "Fever, unexplained weight loss, or night sweats",
+                "New numbness, weakness, or loss of bladder/bowel control",
+                "Pain after significant trauma",
+            ],
+        }
     return {
         "patient_facing_impression_urdu": (
             f"{name}، ابھی حتمی رائے کے لیے ڈاکٹر کا معائنہ درکار ہے۔"
@@ -1740,6 +1925,17 @@ def _mock_medication_candidates(kind: str, level: TriageLevel, text: str) -> lis
     if kind == "fever":
         return [
             {"generic_name": "paracetamol", "condition_key": "mild_fever_adult"},
+        ]
+    if kind == "headache":
+        # Emergency headache red-flags are handled upstream; here we only
+        # surface simple analgesic INFORMATION for a plain adult headache.
+        # The resolver still enforces the allergy / prescription-only gates.
+        return [
+            {"generic_name": "paracetamol", "condition_key": "mild_headache_adult"},
+        ]
+    if kind == "pain":
+        return [
+            {"generic_name": "paracetamol", "condition_key": "mild_pain_adult"},
         ]
     if kind == "stomach" and any(w in lo for w in ["diarr", "dast", "دست", "vomit", "ulti", "الٹی"]):
         return [

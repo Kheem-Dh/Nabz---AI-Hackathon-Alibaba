@@ -283,6 +283,102 @@ def test_completed_triage_persists_transcript_on_profile_timeline(client, auth):
 
 # --- No mocked answer masquerades as live AI -----------------------------
 
+def test_headache_asks_headache_specific_questions_and_reaches_paracetamol_card(client, auth):
+    """The exact scenario the user flagged: 'mere sar m dard hai' must ask
+    headache-specific questions and eventually surface a paracetamol option."""
+    headers, _acc, pid = auth
+    started = client.post(
+        "/api/triage/start",
+        headers=headers,
+        json={"profile_id": pid, "text": "mere sar m dard hai"},
+    ).json()
+    assert started["type"] == "question"
+    q1 = (started.get("question_english") or "").lower()
+    # Duration question, but headache-specific (mentions the headache itself).
+    assert "headache" in q1 or "how long" in q1
+
+    session_id = started["session_id"]
+
+    def answer(text):
+        return client.post(
+            "/api/triage/answer",
+            headers=headers,
+            json={"session_id": session_id, "text": text},
+        ).json()
+
+    # Benign answers — no red flags.
+    t = answer("2 din se hai")
+    assert t["type"] == "question"
+    q2 = (t.get("question_english") or "").lower()
+    # Thunderclap / worst-ever check comes early.
+    assert "sudden" in q2 or "worst" in q2
+
+    t = answer("nahi, aahista aahista shuru hua")
+    assert t["type"] == "question"
+    q3 = (t.get("question_english") or "").lower()
+    # Location question next.
+    assert "where" in q3 or "front" in q3 or "side" in q3
+
+    t = answer("front / forehead")
+    # By now the mock has enough info to produce a result.
+    if t["type"] == "question":
+        t = answer("nahi")
+    assert t["type"] == "result"
+    assert t["level"] in {"DOCTOR_24H", "HOME_CARE"}
+
+    # Impression must actually mention headache/tension/migraine.
+    impression = (t.get("patient_facing_impression_english") or "").lower()
+    assert "headache" in impression or "migraine" in impression or "tension" in impression
+
+    # The whole point: paracetamol option must be present.
+    generics = {opt["generic_name"].lower() for opt in t.get("medication_options") or []}
+    assert "paracetamol" in generics
+
+
+def test_hassan_headache_surfaces_paracetamol_not_ibuprofen(client, auth):
+    """Hassan has an ibuprofen allergy. Even for a straightforward headache,
+    ibuprofen must never show up — paracetamol should."""
+    headers, _acc, _pid = auth
+    hassan = client.post("/api/demo/hassan", headers=headers).json()
+
+    started = client.post(
+        "/api/triage/start",
+        headers=headers,
+        json={"profile_id": hassan["profile_id"], "text": "mere sar m dard hai"},
+    ).json()
+    session_id = started["session_id"]
+
+    def answer(text):
+        return client.post(
+            "/api/triage/answer",
+            headers=headers,
+            json={"session_id": session_id, "text": text},
+        ).json()
+
+    t = answer("2 din")
+    t = answer("gradual")
+    t = answer("front")
+    if t["type"] == "question":
+        t = answer("nahi")
+    assert t["type"] == "result"
+    generics = {opt["generic_name"].lower() for opt in t.get("medication_options") or []}
+    assert "ibuprofen" not in generics
+    assert "paracetamol" in generics
+
+
+def test_worst_headache_short_circuits_to_emergency(client, auth):
+    """A 'worst headache of my life' phrase must trigger the deterministic emergency."""
+    headers, _acc, pid = auth
+    resp = client.post(
+        "/api/triage/start",
+        headers=headers,
+        json={"profile_id": pid, "text": "sudden thunderclap worst headache of my life"},
+    ).json()
+    assert resp["type"] == "result"
+    assert resp["level"] == "EMERGENCY"
+    assert resp["analysis"]["questions_asked"] == 0
+
+
 def test_mock_result_carries_mock_true(client, auth):
     headers, _acc, pid = auth
     resp = client.post(

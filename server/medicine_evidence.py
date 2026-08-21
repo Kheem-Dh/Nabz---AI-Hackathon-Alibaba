@@ -72,6 +72,90 @@ _ALWAYS_PRESCRIPTION_ONLY = {
 # pharmacist/clinician".
 
 _CATALOG: dict[tuple[str, str], dict] = {
+    ("mild_headache_adult", "paracetamol"): {
+        "purpose": "Short-term relief of a mild-to-moderate tension-type or migraine headache in an adult with no red flags.",
+        "recommendation_type": "OTC_INFORMATION",
+        "why_it_may_help": (
+            "Paracetamol is a first-line simple analgesic for mild-to-moderate headache "
+            "in adults with no contraindications and no warning features."
+        ),
+        "eligibility_requirements": [
+            "Adult (≥16 years).",
+            "No 'thunderclap' or worst-ever sudden onset headache.",
+            "No fever + stiff neck, no new focal neurology, no head injury.",
+            "No known paracetamol allergy.",
+            "No advanced liver disease or heavy alcohol use.",
+        ],
+        "avoid_if": [
+            "Sudden 'thunderclap' or worst-ever headache — this needs emergency assessment first.",
+            "Fever with stiff neck, one-sided weakness, slurred speech, confusion, or vision loss.",
+            "Headache after significant head injury.",
+            "Already taking another paracetamol-containing product (avoid double dosing).",
+            "Severe liver disease.",
+        ],
+        "interactions_checked": [
+            "Do not combine with other paracetamol-containing cold/flu products.",
+            "Chronic overuse of any analgesic can itself cause a medication-overuse headache.",
+        ],
+        "prescription_required": False,
+        "dose_guidance": (
+            "Adult labelled dose is typically 500–1000 mg every 4–6 hours as needed, "
+            "maximum 4 g in 24 hours. Confirm suitability with a pharmacist for pregnancy, "
+            "liver disease, or if the headache is frequent."
+        ),
+        "evidence_source_title": "MedlinePlus — Acetaminophen (Paracetamol) drug information",
+        "evidence_source_url": "https://medlineplus.gov/druginfo/meds/a681004.html",
+        "evidence_summary": (
+            "Authoritative patient labelling from the U.S. National Library of Medicine "
+            "covering indications, warnings, and safe adult dosing for acetaminophen / paracetamol."
+        ),
+        "evidence_last_reviewed": "2025",
+        "safety_note": (
+            "Nabz does not prescribe. If the headache is severe, sudden, worst-ever, "
+            "or accompanied by fever, weakness, or confusion, go for urgent care instead "
+            "of taking anything by mouth."
+        ),
+    },
+    ("mild_pain_adult", "paracetamol"): {
+        "purpose": "Short-term relief of mild-to-moderate pain in an adult with no contraindications.",
+        "recommendation_type": "OTC_INFORMATION",
+        "why_it_may_help": (
+            "Paracetamol is a widely used simple analgesic for mild-to-moderate pain in "
+            "adults when used as labelled."
+        ),
+        "eligibility_requirements": [
+            "Adult (≥16 years).",
+            "No known paracetamol allergy.",
+            "No advanced liver disease or heavy alcohol use.",
+            "Pain is mild-to-moderate with no red flags (numbness, weakness, fever, trauma).",
+        ],
+        "avoid_if": [
+            "Severe or rapidly worsening pain, or pain after significant trauma.",
+            "New numbness, weakness, or loss of bladder/bowel control.",
+            "Fever or unexplained weight loss with the pain.",
+            "Known paracetamol allergy.",
+            "Severe liver disease.",
+        ],
+        "interactions_checked": [
+            "Do not combine with other paracetamol-containing cold/flu products.",
+        ],
+        "prescription_required": False,
+        "dose_guidance": (
+            "Adult labelled dose is typically 500–1000 mg every 4–6 hours as needed, "
+            "maximum 4 g in 24 hours. Confirm with a pharmacist for pregnancy or liver disease."
+        ),
+        "evidence_source_title": "MedlinePlus — Acetaminophen (Paracetamol) drug information",
+        "evidence_source_url": "https://medlineplus.gov/druginfo/meds/a681004.html",
+        "evidence_summary": (
+            "Authoritative patient labelling from the U.S. National Library of Medicine "
+            "covering indications, warnings, and safe adult dosing for acetaminophen / paracetamol."
+        ),
+        "evidence_last_reviewed": "2025",
+        "safety_note": (
+            "Nabz does not prescribe. See a clinician if the pain is severe, follows an "
+            "injury, or is accompanied by numbness, weakness, or fever."
+        ),
+    },
     ("mild_fever_adult", "paracetamol"): {
         "purpose": "Short-term relief of mild fever or mild pain in an adult with no contraindications.",
         "recommendation_type": "OTC_INFORMATION",
