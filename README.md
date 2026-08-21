@@ -54,6 +54,8 @@ It then does one of two things:
 
 Questions can change between encounters because they are generated from the actual words, answers, known history, and remaining uncertainty. The server limits the interview to five follow-up questions so it cannot continue indefinitely.
 
+For a visible problem, the AI may request one optional photo when visual observations would materially improve the assessment. It does not request photos for every complaint, never requires one, and continues normally when the patient skips it. The photo is observed by Qwen-VL for that encounter and is not automatically added to the Medical Vault.
+
 ```mermaid
 flowchart TD
     A[Patient voice or text] --> B[Confirmed transcript]
@@ -170,6 +172,8 @@ The server:
 - discards model-written doses and URLs;
 - uses only reviewed catalog doses and allowlisted sources;
 - describes medicine cards as information to discuss, not a prescription.
+
+Possible causes are shown with qualitative labels such as **More likely**, **Possible**, and **Less likely**, followed by a simple explanation and what would help a clinician confirm the cause. Nabz does not display invented disease percentages from a chat or photo.
 
 ---
 
@@ -296,6 +300,7 @@ All personal health routes require a valid login token.
 | `GET` | `/api/auth/me` | Read the signed-in account |
 | `POST` | `/api/triage/start` | Start a live AI health conversation |
 | `POST` | `/api/triage/answer` | Send one answer and receive the next turn |
+| `POST` | `/api/triage/image` | Analyze one optional AI-requested clinical photo |
 | `POST` | `/api/triage/retry/{session_id}` | Retry a timed-out AI turn without losing the transcript |
 | `GET` | `/api/triage/history?profile_id={id}` | List titled and dated conversations |
 | `GET` | `/api/triage/history/{session_id}` | Open one result and full transcript |
@@ -323,7 +328,7 @@ MOCK_MODE=true venv/bin/python -m pytest tests/ -q
 Current expected result:
 
 ```text
-52 passed
+55 passed
 ```
 
 Build the web application:

@@ -77,6 +77,17 @@ export const triageStart = (profile_id, text) =>
 export const triageAnswer = (session_id, text) =>
   jsonReq('/api/triage/answer', 'POST', { session_id, text })
 
+export function triageImage(sessionId, file) {
+  const form = new FormData()
+  form.append('session_id', String(sessionId))
+  form.append('file', file)
+  return fetch(`${API_BASE}/api/triage/image`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: form,
+  }).then(handle)
+}
+
 export const retryTriageAssessment = (sessionId) =>
   jsonReq(`/api/triage/retry/${encodeURIComponent(sessionId)}`, 'POST')
 

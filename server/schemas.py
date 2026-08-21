@@ -173,6 +173,62 @@ class QuickReply(BaseModel):
     english: str
 
 
+class TriageImageRequest(BaseModel):
+    """An optional, model-requested clinical photo step."""
+
+    prompt_urdu: str
+    prompt_english: str
+    why_this_may_help: str
+    optional: bool = True
+
+
+class PossibleCause(BaseModel):
+    """One plain-language item in a non-diagnostic differential.
+
+    Likelihood is deliberately qualitative. A chat or photo cannot support a
+    calibrated disease percentage, and displaying one would create false
+    precision for the patient.
+    """
+
+    name_urdu: str = ""
+    name_english: str
+    likelihood: str = "POSSIBLE"  # MORE_LIKELY | POSSIBLE | LESS_LIKELY
+    what_it_is_urdu: str = ""
+    what_it_is_english: str = ""
+    common_reasons_urdu: str = ""
+    common_reasons_english: str = ""
+    why_it_may_fit: str = ""
+    what_would_help_confirm: str = ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _support_legacy_causes(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return {"name_english": value, "likelihood": "POSSIBLE"}
+        if isinstance(value, dict):
+            return {
+                **value,
+                "name_urdu": value.get("name_urdu") or value.get("label_urdu") or "",
+                "name_english": (
+                    value.get("name_english") or value.get("label_english") or value.get("name") or "Possible cause"
+                ),
+                "likelihood": value.get("likelihood") or value.get("probability_estimate") or "POSSIBLE",
+            }
+        return value
+
+    @field_validator("likelihood", mode="before")
+    @classmethod
+    def _qualitative_likelihood(cls, value: Any) -> str:
+        text = str(value or "POSSIBLE").strip().upper().replace(" ", "_")
+        aliases = {
+            "HIGH": "MORE_LIKELY", "LIKELY": "MORE_LIKELY", "MOST_LIKELY": "MORE_LIKELY",
+            "MODERATE": "POSSIBLE", "MEDIUM": "POSSIBLE",
+            "LOW": "LESS_LIKELY", "UNLIKELY": "LESS_LIKELY",
+        }
+        text = aliases.get(text, text)
+        return text if text in {"MORE_LIKELY", "POSSIBLE", "LESS_LIKELY"} else "POSSIBLE"
+
+
 class CollectedFact(BaseModel):
     label_urdu: str
     label_english: str
@@ -272,6 +328,7 @@ class TriageTurn(BaseModel):
     question_urdu: Optional[str] = None
     question_english: Optional[str] = None
     quick_replies: list[QuickReply] = Field(default_factory=list)
+    image_request: Optional[TriageImageRequest] = None
 
     # question-turn hints (no chain-of-thought)
     question_goal: Optional[str] = None
@@ -293,7 +350,7 @@ class TriageTurn(BaseModel):
     # confirmed diagnosis in the patient-facing UI.
     patient_facing_impression_urdu: Optional[str] = None
     patient_facing_impression_english: Optional[str] = None
-    possible_causes: list[str] = Field(default_factory=list)
+    possible_causes: list[PossibleCause] = Field(default_factory=list)
     doctor_differential: list[str] = Field(default_factory=list)
     supporting_findings: list[str] = Field(default_factory=list)
     findings_against: list[str] = Field(default_factory=list)

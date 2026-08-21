@@ -26,8 +26,10 @@ from medicine_evidence import resolve_medication_candidates
 from schemas import (
     ClinicalState,
     CollectedFact,
+    PossibleCause,
     QuickReply,
     TriageAnalysis,
+    TriageImageRequest,
     TriageLevel,
     TriageTurn,
 )
@@ -115,7 +117,8 @@ def _count_questions(turns: list[dict]) -> int:
     return sum(
         1
         for turn in turns
-        if turn.get("role") == "assistant" and turn.get("kind") == "question"
+        if turn.get("role") == "assistant"
+        and turn.get("kind") in {"question", "image_request"}
     )
 
 
@@ -123,7 +126,8 @@ def _asked_questions(turns: list[dict]) -> list[str]:
     return [
         _bounded_text(turn.get("text_english") or turn.get("text"), 500)
         for turn in turns
-        if turn.get("role") == "assistant" and turn.get("kind") == "question"
+        if turn.get("role") == "assistant"
+        and turn.get("kind") in {"question", "image_request"}
     ]
 
 
@@ -197,6 +201,8 @@ def _conversation_context(turns: list[dict]) -> list[dict[str, Any]]:
             item["kind"] = _bounded_text(turn.get("kind"), 40)
         if turn.get("clinical_state"):
             item["assistant_clinical_state_at_that_turn"] = turn.get("clinical_state")
+        if turn.get("image_analysis"):
+            item["clinical_image_observations"] = turn.get("image_analysis")
         context.append(item)
     return context
 
@@ -230,6 +236,22 @@ Interview behaviour:
   question. Never trade clinical safety for novelty.
 - Address the patient by name naturally, but not mechanically in every field.
 
+Adaptive clinical images:
+- You may request ONE optional photo only when the complaint has a visible
+  feature and objective visual observations would materially improve the
+  differential or urgency assessment. Examples are not rules: a changing skin
+  mark, visible swelling, a wound, or an eye-surface change may benefit; fever,
+  dizziness, headache, abdominal pain, or other non-visible problems usually do
+  not. Decide from this encounter, never from a complaint keyword list.
+- Never request an image during an emergency, after one was already requested
+  or supplied, or for an intimate body area. Never make a photo mandatory.
+- Ask the patient to use good light, show the affected area and some surrounding
+  skin, and avoid including the face or identifying details when unnecessary.
+- If the patient skips the photo or it is unusable, continue intelligently from
+  the history. Do not keep asking for it.
+- Image observations are evidence, not a diagnosis. Integrate only the supplied
+  Qwen-VL observations and keep uncertainty explicit.
+
 Clinical synthesis:
 - Never claim an unconfirmed diagnosis. Use "may be consistent with",
   "possible explanation", and "examination is needed to distinguish".
@@ -240,6 +262,13 @@ Clinical synthesis:
 - If any emergency red flag is present, return EMERGENCY immediately with no
   medication candidates and direct the patient to emergency services.
 - When uncertain between urgency levels, choose the safer higher level.
+- Return at most three useful possible causes. For each, use only qualitative
+  likelihood (MORE_LIKELY, POSSIBLE, or LESS_LIKELY), explain in simple Urdu
+  and English what it is and common reasons it happens, state why it may fit
+  this patient, and what examination or test would help confirm it.
+- Never output a numeric disease probability or diagnostic confidence. A chat,
+  photo, and Vault record do not provide calibrated percentages. Do not label
+  any cause as confirmed.
 
 Medication candidates:
 - You do not prescribe. You may nominate a generic-name candidate only after
@@ -274,6 +303,12 @@ QUESTION JSON:
   "question_urdu": "one short natural Urdu question",
   "question_english": "faithful English translation",
   "quick_replies": [{"urdu":"...","english":"..."}],
+  "image_request": null OR {
+    "prompt_urdu":"short optional photo instruction",
+    "prompt_english":"faithful English instruction",
+    "why_this_may_help":"one patient-safe sentence",
+    "optional":true
+  },
   "question_goal": "short clinical information goal",
   "why_this_matters": "one concise patient-safe sentence",
   "clinical_state": {
@@ -300,7 +335,14 @@ RESULT JSON:
   "reason_english": "one concise evidence-based urgency explanation",
   "patient_facing_impression_urdu": "careful non-diagnostic impression",
   "patient_facing_impression_english": "careful non-diagnostic impression",
-  "possible_causes": [], "doctor_differential": [],
+  "possible_causes": [{
+    "name_urdu":"...", "name_english":"...",
+    "likelihood":"MORE_LIKELY|POSSIBLE|LESS_LIKELY",
+    "what_it_is_urdu":"...", "what_it_is_english":"...",
+    "common_reasons_urdu":"...", "common_reasons_english":"...",
+    "why_it_may_fit":"...", "what_would_help_confirm":"..."
+  }],
+  "doctor_differential": [],
   "supporting_findings": [], "findings_against": [],
   "unresolved_questions": [], "red_flags_present": [],
   "red_flags_denied": [], "escalation_signs": [],
@@ -377,6 +419,34 @@ def _analysis_from_json(value: Any, turns: list[dict]) -> TriageAnalysis:
     )
 
 
+def _possible_causes_from_json(value: Any) -> list[PossibleCause]:
+    causes: list[PossibleCause] = []
+    for raw in value[:3] if isinstance(value, list) else []:
+        if isinstance(raw, str):
+            raw = {"name_english": raw}
+        if not isinstance(raw, dict):
+            continue
+        name_english = _bounded_text(
+            raw.get("name_english") or raw.get("label_english") or raw.get("name"), 160
+        )
+        if not name_english:
+            continue
+        causes.append(PossibleCause(
+            name_urdu=_bounded_text(raw.get("name_urdu") or raw.get("label_urdu"), 160),
+            name_english=name_english,
+            likelihood=_bounded_text(
+                raw.get("likelihood") or raw.get("probability_estimate") or "POSSIBLE", 40
+            ),
+            what_it_is_urdu=_bounded_text(raw.get("what_it_is_urdu"), 700),
+            what_it_is_english=_bounded_text(raw.get("what_it_is_english"), 700),
+            common_reasons_urdu=_bounded_text(raw.get("common_reasons_urdu"), 700),
+            common_reasons_english=_bounded_text(raw.get("common_reasons_english"), 700),
+            why_it_may_fit=_bounded_text(raw.get("why_it_may_fit"), 700),
+            what_would_help_confirm=_bounded_text(raw.get("what_would_help_confirm"), 700),
+        ))
+    return causes
+
+
 def _turn_from_qwen_json(
     data: dict[str, Any], profile: dict[str, Any], session_id: int, turns: list[dict],
 ) -> TriageTurn:
@@ -402,7 +472,25 @@ def _turn_from_qwen_json(
             english = _bounded_text(raw.get("english"), 120)
             if urdu and english:
                 quick_replies.append(QuickReply(urdu=urdu, english=english))
-        if len(quick_replies) < 2:
+        image_request = None
+        image_raw = data.get("image_request")
+        if isinstance(image_raw, dict):
+            if any(
+                turn.get("kind") in {"image_request", "image"}
+                for turn in turns
+            ):
+                raise ValueError("clinical_image_already_requested_or_supplied")
+            prompt_urdu = _bounded_text(image_raw.get("prompt_urdu"), 700)
+            prompt_english = _bounded_text(image_raw.get("prompt_english"), 700)
+            why_image = _bounded_text(image_raw.get("why_this_may_help"), 500)
+            if prompt_urdu and prompt_english and why_image:
+                image_request = TriageImageRequest(
+                    prompt_urdu=prompt_urdu,
+                    prompt_english=prompt_english,
+                    why_this_may_help=why_image,
+                    optional=True,
+                )
+        if len(quick_replies) < 2 and image_request is None:
             raise ValueError("insufficient_quick_replies")
         return TriageTurn(
             type="question", session_id=session_id,
@@ -410,6 +498,7 @@ def _turn_from_qwen_json(
             encounter_title=_bounded_text(data.get("encounter_title"), 100) or None,
             question_urdu=question_urdu, question_english=question_english,
             quick_replies=quick_replies,
+            image_request=image_request,
             question_goal=_bounded_text(data.get("question_goal"), 200) or None,
             why_this_matters=_bounded_text(data.get("why_this_matters"), 400) or None,
             clinical_state=clinical_state, analysis=analysis,
@@ -461,7 +550,7 @@ def _turn_from_qwen_json(
         vault_context_used=_short_string_list(data.get("vault_context_used"), 10),
         patient_facing_impression_urdu=_bounded_text(data.get("patient_facing_impression_urdu"), 1000) or None,
         patient_facing_impression_english=_bounded_text(data.get("patient_facing_impression_english"), 1000) or None,
-        possible_causes=_short_string_list(data.get("possible_causes"), 8),
+        possible_causes=_possible_causes_from_json(data.get("possible_causes")),
         doctor_differential=_short_string_list(data.get("doctor_differential"), 8),
         supporting_findings=_short_string_list(data.get("supporting_findings"), 10),
         findings_against=_short_string_list(data.get("findings_against"), 10),

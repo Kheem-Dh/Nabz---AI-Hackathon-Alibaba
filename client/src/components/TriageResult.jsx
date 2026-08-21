@@ -3,6 +3,28 @@ import { useNavigate } from 'react-router-dom'
 import { levelConfig } from '../levels'
 import NearbyCare from './NearbyCare'
 
+const LIKELIHOOD_LABELS = {
+  MORE_LIKELY: 'More likely',
+  POSSIBLE: 'Possible',
+  LESS_LIKELY: 'Less likely',
+}
+
+function normalizeCause(cause) {
+  if (typeof cause === 'string') return { name_english: cause, likelihood: 'POSSIBLE' }
+  const rawLikelihood = String(cause.likelihood || cause.probability_estimate || 'POSSIBLE')
+    .trim().toUpperCase().replaceAll(' ', '_')
+  const likelihoodAliases = {
+    HIGH: 'MORE_LIKELY', LIKELY: 'MORE_LIKELY', MOST_LIKELY: 'MORE_LIKELY',
+    MODERATE: 'POSSIBLE', MEDIUM: 'POSSIBLE', LOW: 'LESS_LIKELY', UNLIKELY: 'LESS_LIKELY',
+  }
+  return {
+    ...cause,
+    name_urdu: cause.name_urdu || cause.label_urdu || '',
+    name_english: cause.name_english || cause.label_english || cause.name || 'Possible explanation',
+    likelihood: likelihoodAliases[rawLikelihood] || rawLikelihood,
+  }
+}
+
 // Color-coded triage result card (RED / AMBER / GREEN by status only).
 export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry, ttsSupported }) {
   const cfg = levelConfig(turn.level)
@@ -88,9 +110,44 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
             <p className="impression-line">{turn.patient_facing_impression_english}</p>
           )}
           {turn.possible_causes?.length > 0 && (
-            <ul className="chip-list">
-              {turn.possible_causes.map((c) => <li key={c}>{c}</li>)}
-            </ul>
+            <div className="possible-cause-list">
+              <p className="likelihood-note">
+                Likelihood is a clinical ranking, not a diagnosis percentage. Examination may change it.
+              </p>
+              {turn.possible_causes.map((cause, index) => {
+                const item = normalizeCause(cause)
+                const likelihood = item.likelihood || 'POSSIBLE'
+                return (
+                  <article className="possible-cause" key={`${item.name_english}-${index}`}>
+                    <div className="possible-cause-head">
+                      <div>
+                        {item.name_urdu && <strong className="urdu" dir="rtl">{item.name_urdu}</strong>}
+                        <strong>{item.name_english}</strong>
+                      </div>
+                      <span className={`likelihood ${likelihood.toLowerCase()}`}>
+                        {LIKELIHOOD_LABELS[likelihood] || 'Possible'}
+                      </span>
+                    </div>
+                    {(item.what_it_is_english || item.what_it_is_urdu) && (
+                      <div className="cause-explanation">
+                        <em>What it is</em>
+                        {item.what_it_is_urdu && <p className="urdu" dir="rtl">{item.what_it_is_urdu}</p>}
+                        {item.what_it_is_english && <p>{item.what_it_is_english}</p>}
+                      </div>
+                    )}
+                    {(item.common_reasons_english || item.common_reasons_urdu) && (
+                      <div className="cause-explanation">
+                        <em>How it commonly happens</em>
+                        {item.common_reasons_urdu && <p className="urdu" dir="rtl">{item.common_reasons_urdu}</p>}
+                        {item.common_reasons_english && <p>{item.common_reasons_english}</p>}
+                      </div>
+                    )}
+                    {item.why_it_may_fit && <p className="cause-fit"><strong>Why it may fit:</strong> {item.why_it_may_fit}</p>}
+                    {item.what_would_help_confirm && <p className="cause-confirm"><strong>What helps distinguish it:</strong> {item.what_would_help_confirm}</p>}
+                  </article>
+                )
+              })}
+            </div>
           )}
           {turn.escalation_signs?.length > 0 && (
             <div className="escalation-block">

@@ -61,7 +61,7 @@ export default function EncounterSidebar({
       </div>
 
       <div className="history-heading">
-        <span>Health conversations</span>
+        <span>Your conversations</span>
         <span>{sessions.length}</span>
       </div>
 
@@ -82,6 +82,7 @@ export default function EncounterSidebar({
                 onClick={() => onSelect(session.id)}
               >
                 <span className="history-item-title">{session.title}</span>
+                {session.preview && <span className="history-item-preview">{session.preview}</span>}
                 <span className="history-item-meta">
                   {timeLabel(session.updated_at)}
                   {session.result_level && (

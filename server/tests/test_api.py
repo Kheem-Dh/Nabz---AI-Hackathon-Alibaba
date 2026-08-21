@@ -242,6 +242,71 @@ def test_ai_timeout_session_remains_retryable(client, auth, monkeypatch):
     assert retried.json()["type"] == "question"
 
 
+def test_ai_requested_image_is_observed_and_added_to_same_transcript(client, auth, monkeypatch):
+    import sessions
+    from fake_ai_provider import fake_ai_turn
+    from schemas import ClinicalState, TriageAnalysis, TriageImageRequest, TriageTurn
+
+    headers, _account, self_id = auth
+
+    def image_request_then_continue(profile, session_id, turns):
+        if not any(turn.get("kind") == "image" for turn in turns):
+            return TriageTurn(
+                type="question",
+                session_id=session_id,
+                patient_name=profile["display_name"],
+                question_urdu="اگر آسان ہو تو نشان کی تصویر بھیجیں۔",
+                question_english="If comfortable, share a photo of the mark.",
+                image_request=TriageImageRequest(
+                    prompt_urdu="اچھی روشنی میں نشان اور اردگرد کی جلد دکھائیں۔",
+                    prompt_english="Show the mark and surrounding skin in good light.",
+                    why_this_may_help="Visible features may refine the differential.",
+                ),
+                clinical_state=ClinicalState(chief_complaint="visible mark"),
+                analysis=TriageAnalysis(confidence=0.5),
+                response_source="test_model",
+            )
+        return fake_ai_turn(profile, session_id, turns)
+
+    monkeypatch.setattr(sessions, "next_turn", image_request_then_continue)
+    monkeypatch.setattr(sessions, "analyze_image", lambda *_args: ({
+        "quality_acceptable": True,
+        "quality_notes": "Well lit",
+        "objective_observations": ["Flat red area with a defined border"],
+        "concerning_visible_features": [],
+        "limitations": ["Tenderness cannot be assessed from an image"],
+        "summary_english": "A flat localized red area is visible.",
+        "summary_urdu": "ایک چپٹا مقامی سرخ نشان نظر آ رہا ہے۔",
+    }, "{}"))
+
+    started = client.post(
+        "/api/triage/start",
+        headers=headers,
+        json={"profile_id": self_id, "text": "mere bazu pe nishan hai"},
+    )
+    assert started.status_code == 200
+    assert started.json()["image_request"]["optional"] is True
+    session_id = started.json()["session_id"]
+
+    uploaded = client.post(
+        "/api/triage/image",
+        headers=headers,
+        data={"session_id": str(session_id)},
+        files={"file": ("mark.png", _png_bytes(), "image/png")},
+    )
+    assert uploaded.status_code == 200, uploaded.text
+
+    detail = client.get(f"/api/triage/history/{session_id}", headers=headers).json()
+    image_turn = next(turn for turn in detail["turns"] if turn.get("kind") == "image")
+    assert image_turn["image_analysis"]["quality_acceptable"] is True
+    assert "flat localized" in image_turn["text_english"].lower()
+
+    documents = client.get(
+        f"/api/documents?profile_id={self_id}", headers=headers,
+    ).json()
+    assert documents == []
+
+
 def test_skin_mark_gets_skin_specific_questions(client, auth):
     headers, _account, self_id = auth
     start = client.post(

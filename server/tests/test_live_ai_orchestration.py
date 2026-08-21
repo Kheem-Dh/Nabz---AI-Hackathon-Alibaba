@@ -68,6 +68,61 @@ def test_qwen_turn_uses_model_generated_clinical_state(monkeypatch):
     assert turn.clinical_state.body_location == "right arm"
 
 
+def test_model_can_request_one_optional_clinical_image():
+    import triage
+
+    data = _question_json("Would an optional photo be possible?")
+    data["quick_replies"] = []
+    data["image_request"] = {
+        "prompt_urdu": "اگر آسان ہو تو اچھی روشنی میں نشان کی تصویر بھیجیں۔",
+        "prompt_english": "If comfortable, share a well-lit photo of the mark.",
+        "why_this_may_help": "Visible colour, border, and swelling can refine the assessment.",
+        "optional": True,
+    }
+    turn = triage._turn_from_qwen_json(
+        data, _profile(), 771, [{"role": "user", "text": "a visible mark"}],
+    )
+    assert turn.image_request is not None
+    assert turn.image_request.optional is True
+    assert turn.quick_replies == []
+
+    prior_request = [{"role": "assistant", "kind": "image_request", "text": "photo?"}]
+    try:
+        triage._turn_from_qwen_json(data, _profile(), 772, prior_request)
+    except ValueError as exc:
+        assert "already_requested" in str(exc)
+    else:
+        raise AssertionError("A second image request must be rejected")
+
+
+def test_possible_causes_are_plain_language_and_qualitative():
+    import triage
+
+    data = {
+        "type": "result",
+        "level": "HOME_CARE",
+        "advice_urdu": "نگرانی کریں۔",
+        "advice_english": "Monitor the area.",
+        "reason_english": "No emergency feature was reported.",
+        "possible_causes": [{
+            "label_urdu": "چوٹ کا نشان",
+            "label_english": "Bruise",
+            "probability_estimate": "Moderate",
+            "what_it_is_english": "Small blood vessels under the skin have leaked after pressure or injury.",
+            "common_reasons_english": "A bump, pressure, or minor injury can cause it.",
+            "why_it_may_fit": "The area is flat and localized.",
+            "what_would_help_confirm": "A clinician can inspect colour change and tenderness.",
+        }],
+        "clinical_state": {},
+        "analysis": {"confidence": 0.8},
+    }
+    turn = triage._turn_from_qwen_json(data, _profile(), 773, [])
+    cause = turn.possible_causes[0]
+    assert cause.name_english == "Bruise"
+    assert cause.likelihood == "POSSIBLE"
+    assert "blood vessels" in cause.what_it_is_english
+
+
 def test_exact_repeated_model_question_gets_one_ai_repair(monkeypatch):
     import triage
 

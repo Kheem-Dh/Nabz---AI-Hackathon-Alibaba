@@ -4,7 +4,7 @@ import AnalysisPanel from './AnalysisPanel'
 import TriageResult from './TriageResult'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import { useTextToSpeech } from '../hooks/useTextToSpeech'
-import { triageStart, triageAnswer, retryTriageAssessment } from '../api'
+import { triageStart, triageAnswer, triageImage, retryTriageAssessment } from '../api'
 
 // Full conversational triage lifecycle for the active profile.
 // Phases: idle -> (starting) -> question <-> answering -> result | error
@@ -16,6 +16,9 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   const [sessionId, setSessionId] = useState(initialTurn?.session_id || null)
   const [typed, setTyped] = useState('')
   const [error, setError] = useState('')
+  const imageInputRef = useRef(null)
+  const [clinicalImage, setClinicalImage] = useState(null)
+  const [imagePreview, setImagePreview] = useState('')
 
   // Winning plan §7: initial-complaint silence window is generous so a slow
   // Urdu narration is not cut off; follow-up answers can be shorter.
@@ -101,6 +104,34 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     }
   }
 
+  function selectClinicalImage(file) {
+    if (imagePreview) URL.revokeObjectURL(imagePreview)
+    setClinicalImage(file || null)
+    setImagePreview(file ? URL.createObjectURL(file) : '')
+  }
+
+  async function submitClinicalImage() {
+    if (!sessionId || !clinicalImage) return
+    tts.cancel()
+    setPhase('analyzing-image')
+    setError('')
+    try {
+      const t = await triageImage(sessionId, clinicalImage)
+      selectClinicalImage(null)
+      setTurn(t)
+      setPhase(t.type === 'result' ? 'result' : 'question')
+      onSessionChanged?.(t)
+    } catch (e) {
+      setError(e.message || 'Could not analyze this image. You can skip it and continue.')
+      setPhase('question')
+    }
+  }
+
+  function skipClinicalImage() {
+    selectClinicalImage(null)
+    doAnswer('I prefer not to upload a photo. Please continue using the information already provided.')
+  }
+
   function startVoice() {
     if (!speech.supported) return
     // Stop any spoken assistant reply before capturing — otherwise the mic
@@ -142,6 +173,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     setTurn(null)
     setSessionId(null)
     setTyped('')
+    selectClinicalImage(null)
     setError('')
     setPhase('idle')
   }
@@ -265,12 +297,18 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   }
 
   // --- Starting / thinking spinners --------------------------------------
-  if (phase === 'starting' || phase === 'thinking') {
+  if (phase === 'starting' || phase === 'thinking' || phase === 'analyzing-image') {
     return (
       <div className="center-state">
         <div className="spinner" />
-        <p className="cs-ur urdu">نبض سوچ رہا ہے…</p>
-        <p className="cs-en">Nabz is thinking…</p>
+        <p className="cs-ur urdu">
+          {phase === 'analyzing-image' ? 'تصویر کا محتاط جائزہ لیا جا رہا ہے…' : 'نبض سوچ رہا ہے…'}
+        </p>
+        <p className="cs-en">
+          {phase === 'analyzing-image'
+            ? 'Observing the image and continuing your assessment…'
+            : 'Nabz is thinking…'}
+        </p>
       </div>
     )
   }
@@ -330,21 +368,72 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
         {turn.why_this_matters && (
           <div className="q-purpose">Why Nabz is asking: {turn.why_this_matters}</div>
         )}
+
+        {turn.image_request && (
+          <div className="clinical-image-request">
+            <div className="image-request-copy">
+              <span className="image-request-icon" aria-hidden="true">📷</span>
+              <div>
+                <strong className="urdu" dir="rtl">{turn.image_request.prompt_urdu}</strong>
+                <p>{turn.image_request.prompt_english}</p>
+                <small>{turn.image_request.why_this_may_help}</small>
+              </div>
+            </div>
+
+            {imagePreview && (
+              <div className="clinical-image-preview">
+                <img src={imagePreview} alt="Selected clinical preview" />
+                <span>{clinicalImage?.name}</span>
+              </div>
+            )}
+
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              capture="environment"
+              hidden
+              onChange={(event) => selectClinicalImage(event.target.files?.[0] || null)}
+            />
+            <div className="image-request-actions">
+              {!clinicalImage ? (
+                <button className="btn btn-primary" onClick={() => imageInputRef.current?.click()}>
+                  📷 Take or choose photo
+                </button>
+              ) : (
+                <>
+                  <button className="btn btn-primary" onClick={submitClinicalImage}>
+                    Analyze this photo · تصویر دیکھیں
+                  </button>
+                  <button className="btn btn-outline" onClick={() => imageInputRef.current?.click()}>
+                    Choose another
+                  </button>
+                </>
+              )}
+              <button className="btn btn-ghost" onClick={skipClinicalImage}>
+                Continue without photo · تصویر کے بغیر
+              </button>
+            </div>
+            <p className="image-privacy-note">
+              Optional. Used for this assessment and not added to your Vault. Avoid including your face or identifying details.
+            </p>
+          </div>
+        )}
         <button className="q-speak" onClick={() => tts.speak(turn.question_urdu)}>
           🔊 دوبارہ سنیں · Replay
         </button>
 
-        <div className="chips">
+        {!turn.image_request && <div className="chips">
           {(turn.quick_replies || []).map((qr, i) => (
             <button key={i} className="chip" onClick={() => doAnswer(qr.urdu)}>
               {qr.urdu}
               <span className="chip-en">{qr.english}</span>
             </button>
           ))}
-        </div>
+        </div>}
       </div>
 
-      <div className="answer-bar">
+      {!turn.image_request && <div className="answer-bar">
         <input
           className="input urdu"
           dir="auto"
@@ -374,7 +463,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
             ➤
           </button>
         )}
-      </div>
+      </div>}
 
       <AnalysisPanel analysis={turn.analysis} />
 
