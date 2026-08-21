@@ -1,6 +1,6 @@
 import TriageResult from './TriageResult'
 
-export default function PastEncounter({ encounter, loading, onNew }) {
+export default function PastEncounter({ encounter, loading, onNew, onRetry }) {
   if (loading) {
     return <div className="center-state"><div className="spinner" /><p>Opening conversation…</p></div>
   }
@@ -18,7 +18,12 @@ export default function PastEncounter({ encounter, loading, onNew }) {
       </div>
 
       {encounter.result ? (
-        <TriageResult turn={encounter.result} onNew={onNew} ttsSupported={false} />
+        <TriageResult
+          turn={encounter.result}
+          onNew={onNew}
+          onRetry={encounter.result.response_source === 'ai_unavailable' ? onRetry : undefined}
+          ttsSupported={false}
+        />
       ) : (
         <div className="notice notice-info">
           This conversation was not completed. Start a new assessment to continue safely.

@@ -111,6 +111,18 @@ def _record_result(db: Session, session: TriageSession, profile: Profile, turn: 
     payload["encounter_transcript"] = list(session.turns or [])
     payload["session_id"] = session.id
 
+    # A legacy version saved an AI-unavailable safety response as if it were a
+    # completed assessment. If that same session is retried successfully,
+    # remove the stale placeholder before adding the real result.
+    for existing in list(profile.timeline):
+        existing_payload = existing.payload or {}
+        if (
+            existing.kind == "triage"
+            and existing_payload.get("session_id") == session.id
+            and existing_payload.get("response_source") == "ai_unavailable"
+        ):
+            db.delete(existing)
+
     entry = TimelineEntry(
         profile_id=profile.id,
         kind="triage",
@@ -151,7 +163,15 @@ def _turn_from_session(db: Session, session: TriageSession, profile: Profile) ->
         session.analysis = turn.analysis.model_dump(mode="json")
     else:
         session.analysis = turn.analysis.model_dump(mode="json")
-        _record_result(db, session, profile, turn)
+        if turn.response_source == "ai_unavailable":
+            # Preserve the transcript as a retryable session. An outage is not
+            # a completed clinical assessment and must not become the latest
+            # result on the patient dashboard.
+            session.status = "open"
+            session.result_level = None
+            session.result_payload = turn.model_dump(mode="json")
+        else:
+            _record_result(db, session, profile, turn)
     db.add(session)
     db.commit()
     db.refresh(session)
@@ -206,6 +226,26 @@ def answer(
         {"role": "user", "text": payload.text.strip()}
     ]
 
+    return _turn_from_session(db, session, profile)
+
+
+@router.post("/retry/{session_id}", response_model=TriageTurn)
+def retry_ai_assessment(
+    session_id: int,
+    account: Account = Depends(get_current_account),
+    db: Session = Depends(get_db),
+) -> TriageTurn:
+    """Retry an AI-unavailable turn without losing the patient transcript."""
+    session = db.get(TriageSession, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="session_not_found")
+    profile = _load_profile(db, account, session.profile_id)
+    previous = session.result_payload or {}
+    if previous.get("response_source") != "ai_unavailable":
+        raise HTTPException(status_code=409, detail="session_not_retryable")
+
+    session.status = "open"
+    session.result_level = None
     return _turn_from_session(db, session, profile)
 
 

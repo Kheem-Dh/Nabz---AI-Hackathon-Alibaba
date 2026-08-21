@@ -36,7 +36,7 @@ logger = logging.getLogger("nabz.triage")
 
 DASHSCOPE_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 _DEFAULT_TEXT_MODEL = "qwen3.7-plus"
-REQUEST_TIMEOUT_SECONDS = 25
+DEFAULT_REQUEST_TIMEOUT_SECONDS = 60
 MAX_QUESTIONS = 5
 
 # Tests inject a fake model at this seam. Production never installs one.
@@ -57,6 +57,23 @@ def get_model_name() -> str:
         or os.getenv("QWEN_MODEL", "").strip()
         or _DEFAULT_TEXT_MODEL
     )
+
+
+def get_request_timeout_seconds() -> float:
+    """Return a bounded DashScope read timeout.
+
+    Final clinical synthesis is longer than a question turn. Qwen3.7-plus can
+    legitimately take more than 25 seconds for that response, especially in a
+    busy shared region, so the value is configurable without allowing an
+    accidental unbounded request.
+    """
+    try:
+        configured = float(
+            os.getenv("NABZ_TRIAGE_TIMEOUT_SECONDS", str(DEFAULT_REQUEST_TIMEOUT_SECONDS))
+        )
+    except ValueError:
+        configured = float(DEFAULT_REQUEST_TIMEOUT_SECONDS)
+    return min(max(configured, 30.0), 180.0)
 
 
 def has_ai_credentials() -> bool:
@@ -535,15 +552,26 @@ def _call_qwen(messages: list[dict[str, str]]) -> str:
     client = OpenAI(
         api_key=os.getenv("DASHSCOPE_API_KEY", "").strip(),
         base_url=DASHSCOPE_BASE_URL,
-        timeout=REQUEST_TIMEOUT_SECONDS,
+        timeout=get_request_timeout_seconds(),
         max_retries=0,
     )
-    completion = client.chat.completions.create(
+    stream = client.chat.completions.create(
         model=get_model_name(), messages=messages, temperature=temperature,
         response_format={"type": "json_object"},
         extra_body={"enable_thinking": False},
+        stream=True,
     )
-    return completion.choices[0].message.content or ""
+    parts: list[str] = []
+    try:
+        for chunk in stream:
+            if not chunk.choices:
+                continue
+            content = chunk.choices[0].delta.content
+            if content:
+                parts.append(content)
+    finally:
+        stream.close()
+    return "".join(parts)
 
 
 def qwen_next_turn(profile: dict[str, Any], session_id: int, turns: list[dict]) -> TriageTurn:
@@ -575,6 +603,11 @@ def qwen_next_turn(profile: dict[str, Any], session_id: int, turns: list[dict]) 
                 marker in last_error
                 for marker in ("AllocationQuota", "Error code: 401", "Error code: 403")
             )
+            # A repaired JSON instruction can fix validation errors. It cannot
+            # fix a network timeout, and repeating a long clinical call makes
+            # the patient wait twice while potentially charging twice.
+            if "timed out" in last_error.lower() or "timeout" in type(exc).__name__.lower():
+                non_retryable = True
             repair = (
                 f"{last_error}. Re-read the transcript, do not repeat a question, and return "
                 "exactly one valid JSON object matching the required schema."

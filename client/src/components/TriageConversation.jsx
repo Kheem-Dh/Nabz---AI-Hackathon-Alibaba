@@ -4,14 +4,16 @@ import AnalysisPanel from './AnalysisPanel'
 import TriageResult from './TriageResult'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import { useTextToSpeech } from '../hooks/useTextToSpeech'
-import { triageStart, triageAnswer } from '../api'
+import { triageStart, triageAnswer, retryTriageAssessment } from '../api'
 
 // Full conversational triage lifecycle for the active profile.
 // Phases: idle -> (starting) -> question <-> answering -> result | error
-export default function TriageConversation({ profile, onSessionChanged }) {
-  const [phase, setPhase] = useState('idle')
-  const [turn, setTurn] = useState(null)
-  const [sessionId, setSessionId] = useState(null)
+export default function TriageConversation({ profile, onSessionChanged, initialTurn = null }) {
+  const [phase, setPhase] = useState(
+    initialTurn ? (initialTurn.type === 'result' ? 'result' : 'question') : 'idle',
+  )
+  const [turn, setTurn] = useState(initialTurn)
+  const [sessionId, setSessionId] = useState(initialTurn?.session_id || null)
   const [typed, setTyped] = useState('')
   const [error, setError] = useState('')
 
@@ -80,6 +82,21 @@ export default function TriageConversation({ profile, onSessionChanged }) {
       onSessionChanged?.(t)
     } catch (e) {
       setError(e.message || 'Could not send your answer.')
+      setPhase('error')
+    }
+  }
+
+  async function retryAssessment() {
+    if (!sessionId) return
+    setPhase('thinking')
+    setError('')
+    try {
+      const t = await retryTriageAssessment(sessionId)
+      setTurn(t)
+      setPhase(t.type === 'result' ? 'result' : 'question')
+      onSessionChanged?.(t)
+    } catch (e) {
+      setError(e.message || 'Could not retry the live AI assessment.')
       setPhase('error')
     }
   }
@@ -284,6 +301,7 @@ export default function TriageConversation({ profile, onSessionChanged }) {
           speaking={tts.speaking}
           onNew={reset}
           ttsSupported={tts.supported}
+          onRetry={turn.response_source === 'ai_unavailable' ? retryAssessment : undefined}
         />
         {turn.analysis?.collected?.length > 0 && <AnalysisPanel analysis={turn.analysis} />}
       </div>

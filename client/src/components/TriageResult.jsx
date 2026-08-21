@@ -4,7 +4,7 @@ import { levelConfig } from '../levels'
 import NearbyCare from './NearbyCare'
 
 // Color-coded triage result card (RED / AMBER / GREEN by status only).
-export default function TriageResult({ turn, onReplay, speaking, onNew, ttsSupported }) {
+export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry, ttsSupported }) {
   const cfg = levelConfig(turn.level)
   const [showWhy, setShowWhy] = useState(false)
   const navigate = useNavigate()
@@ -21,6 +21,11 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, ttsSuppo
         <div className="notice notice-warn ai-unavailable-notice" role="alert">
           <strong>AI assessment unavailable</strong>
           <span>This safety response is not an AI interpretation of the transcript.</span>
+          {onRetry && (
+            <button className="btn btn-primary" onClick={onRetry}>
+              Retry AI assessment · دوبارہ کوشش کریں
+            </button>
+          )}
         </div>
       )}
       <div className={`result-card ${cfg.className}`} role="status">

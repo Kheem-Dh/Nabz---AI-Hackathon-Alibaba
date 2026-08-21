@@ -204,6 +204,44 @@ def test_triage_history_is_named_dated_and_account_scoped(client, auth):
     ).status_code == 404
 
 
+def test_ai_timeout_session_remains_retryable(client, auth, monkeypatch):
+    import sessions
+    from fake_ai_provider import fake_ai_turn
+    from triage import _ai_unavailable_turn
+
+    headers, _account, self_id = auth
+    calls = 0
+
+    def unavailable_then_ai(profile, session_id, turns):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return _ai_unavailable_turn(profile, session_id, turns, "Request timed out")
+        return fake_ai_turn(profile, session_id, turns)
+
+    monkeypatch.setattr(sessions, "next_turn", unavailable_then_ai)
+    first = client.post(
+        "/api/triage/start",
+        headers=headers,
+        json={"profile_id": self_id, "text": "mere right bazu pe surkh nishan hai"},
+    )
+    assert first.status_code == 200
+    assert first.json()["response_source"] == "ai_unavailable"
+    session_id = first.json()["session_id"]
+
+    history = client.get(
+        f"/api/triage/history?profile_id={self_id}", headers=headers,
+    ).json()
+    saved = next(item for item in history if item["id"] == session_id)
+    assert saved["status"] == "open"
+    assert saved["result_level"] is None
+
+    retried = client.post(f"/api/triage/retry/{session_id}", headers=headers)
+    assert retried.status_code == 200
+    assert retried.json()["response_source"] == "test_model"
+    assert retried.json()["type"] == "question"
+
+
 def test_skin_mark_gets_skin_specific_questions(client, auth):
     headers, _account, self_id = auth
     start = client.post(

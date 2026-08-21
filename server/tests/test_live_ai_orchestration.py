@@ -121,6 +121,17 @@ def test_no_key_never_activates_a_canned_clinical_answer(monkeypatch):
     assert "unavailable" in turn.advice_english.lower()
 
 
+def test_triage_timeout_is_configurable_and_bounded(monkeypatch):
+    import triage
+
+    monkeypatch.setenv("NABZ_TRIAGE_TIMEOUT_SECONDS", "75")
+    assert triage.get_request_timeout_seconds() == 75
+    monkeypatch.setenv("NABZ_TRIAGE_TIMEOUT_SECONDS", "999")
+    assert triage.get_request_timeout_seconds() == 180
+    monkeypatch.setenv("NABZ_TRIAGE_TIMEOUT_SECONDS", "invalid")
+    assert triage.get_request_timeout_seconds() == triage.DEFAULT_REQUEST_TIMEOUT_SECONDS
+
+
 def test_production_triage_module_contains_no_rule_engine_symbols():
     import triage
 

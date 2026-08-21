@@ -46,7 +46,13 @@ from profiles import router as profiles_router  # noqa: E402
 from schemas import Clinic, HealthResponse  # noqa: E402
 from sessions import router as triage_router  # noqa: E402
 from summary import router as summary_router  # noqa: E402
-from triage import get_model_name, has_ai_credentials, is_mock_mode, triage_engine_mode  # noqa: E402
+from triage import (  # noqa: E402
+    get_model_name,
+    get_request_timeout_seconds,
+    has_ai_credentials,
+    is_mock_mode,
+    triage_engine_mode,
+)
 from vision import get_vl_model  # noqa: E402
 
 logger = logging.getLogger("nabz")
@@ -119,6 +125,7 @@ def health_detail() -> dict:
         "triage_engine": triage_engine_mode(),
         "ai_configured": has_ai_credentials(),
         "text_model": get_model_name(),
+        "triage_timeout_seconds": get_request_timeout_seconds(),
         "vision_model": get_vl_model(),
         "location_provider": (
             "disabled"

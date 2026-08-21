@@ -77,6 +77,9 @@ export const triageStart = (profile_id, text) =>
 export const triageAnswer = (session_id, text) =>
   jsonReq('/api/triage/answer', 'POST', { session_id, text })
 
+export const retryTriageAssessment = (sessionId) =>
+  jsonReq(`/api/triage/retry/${encodeURIComponent(sessionId)}`, 'POST')
+
 export const listTriageHistory = (profileId) =>
   jsonReq(`/api/triage/history?profile_id=${encodeURIComponent(profileId)}`, 'GET')
 

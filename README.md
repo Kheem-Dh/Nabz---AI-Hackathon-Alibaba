@@ -113,6 +113,7 @@ flowchart LR
 - Nothing is sent until the patient confirms the transcript.
 - Typed input and quick replies remain available.
 - Nabz stops its own spoken reply before listening, so it does not record itself.
+- The top bar has a **Stop audio** control that stops the reader from any page.
 
 ---
 
@@ -236,6 +237,7 @@ Set at least:
 ```env
 DASHSCOPE_API_KEY=your-key
 NABZ_TEXT_MODEL=qwen3.7-plus
+NABZ_TRIAGE_TIMEOUT_SECONDS=60
 NABZ_VL_MODEL=qwen3.7-plus
 JWT_SECRET=replace-with-a-long-random-secret
 MOCK_MODE=false
@@ -294,6 +296,7 @@ All personal health routes require a valid login token.
 | `GET` | `/api/auth/me` | Read the signed-in account |
 | `POST` | `/api/triage/start` | Start a live AI health conversation |
 | `POST` | `/api/triage/answer` | Send one answer and receive the next turn |
+| `POST` | `/api/triage/retry/{session_id}` | Retry a timed-out AI turn without losing the transcript |
 | `GET` | `/api/triage/history?profile_id={id}` | List titled and dated conversations |
 | `GET` | `/api/triage/history/{session_id}` | Open one result and full transcript |
 | `GET` | `/api/dashboard/{profile_id}` | Load the Vault-based visual dashboard |
@@ -320,7 +323,7 @@ MOCK_MODE=true venv/bin/python -m pytest tests/ -q
 Current expected result:
 
 ```text
-50 passed
+52 passed
 ```
 
 Build the web application:

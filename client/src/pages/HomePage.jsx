@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getHealthDetail, getTriageHistory, listTriageHistory } from '../api'
+import {
+  getHealthDetail,
+  getTriageHistory,
+  listTriageHistory,
+  retryTriageAssessment,
+} from '../api'
 import { useProfiles } from '../context/ProfileContext'
 import TriageConversation from '../components/TriageConversation'
 import PatientDashboard from '../components/PatientDashboard'
@@ -18,6 +23,8 @@ export default function HomePage() {
   const [conversationKey, setConversationKey] = useState(0)
   const [dashboardKey, setDashboardKey] = useState(0)
   const [service, setService] = useState(null)
+  const [resumeTurn, setResumeTurn] = useState(null)
+  const [workspaceError, setWorkspaceError] = useState('')
 
   const loadHistory = useCallback(async () => {
     if (!active) return
@@ -37,6 +44,8 @@ export default function HomePage() {
   }, [loadHistory])
 
   async function selectEncounter(id) {
+    setResumeTurn(null)
+    setWorkspaceError('')
     setSelectedId(id)
     setDetailLoading(true)
     try {
@@ -51,12 +60,44 @@ export default function HomePage() {
   function newAssessment() {
     setSelectedId(null)
     setSelectedEncounter(null)
+    setResumeTurn(null)
+    setWorkspaceError('')
     setConversationKey((value) => value + 1)
   }
 
   function sessionChanged(turn) {
     loadHistory()
     if (turn.type === 'result') setDashboardKey((value) => value + 1)
+  }
+
+  async function retrySavedAssessment() {
+    if (!selectedId) return
+    setDetailLoading(true)
+    setWorkspaceError('')
+    try {
+      const turn = await retryTriageAssessment(selectedId)
+      await loadHistory()
+      if (turn.type === 'question') {
+        setResumeTurn(turn)
+        setSelectedId(null)
+        setSelectedEncounter(null)
+        setConversationKey((value) => value + 1)
+      } else {
+        setSelectedEncounter((current) => ({
+          ...current,
+          result: turn,
+          status: turn.response_source === 'ai_unavailable' ? 'open' : 'closed',
+          result_level: turn.level,
+        }))
+        if (turn.response_source !== 'ai_unavailable') {
+          setDashboardKey((value) => value + 1)
+        }
+      }
+    } catch (error) {
+      setWorkspaceError(error.message || 'Could not retry the live AI assessment.')
+    } finally {
+      setDetailLoading(false)
+    }
   }
 
   if (loading && !active) {
@@ -113,14 +154,21 @@ export default function HomePage() {
             Start the server on port 8000, then refresh this page to receive a live assessment.
           </div>
         )}
+        {workspaceError && <div className="form-error">{workspaceError}</div>}
 
         {selectedId ? (
-          <PastEncounter encounter={selectedEncounter} loading={detailLoading} onNew={newAssessment} />
+          <PastEncounter
+            encounter={selectedEncounter}
+            loading={detailLoading}
+            onNew={newAssessment}
+            onRetry={retrySavedAssessment}
+          />
         ) : (
           <TriageConversation
             key={`${active.id}-${conversationKey}`}
             profile={active}
             onSessionChanged={sessionChanged}
+            initialTurn={resumeTurn}
           />
         )}
       </main>

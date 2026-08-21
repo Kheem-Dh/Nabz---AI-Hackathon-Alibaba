@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import { useLocationPref } from './context/LocationContext'
@@ -16,6 +17,7 @@ import PrescriptionPage from './pages/PrescriptionPage'
 import SummaryPage from './pages/SummaryPage'
 import PrivacyPage from './pages/PrivacyPage'
 import DocumentsPage from './pages/DocumentsPage'
+import { stopAllSpeech } from './hooks/useTextToSpeech'
 
 function Loading() {
   return (
@@ -30,6 +32,12 @@ export default function App() {
   const { account, loading } = useAuth()
   const { preference, loading: locLoading } = useLocationPref()
   const location = useLocation()
+
+  // Audio belongs to the current screen. Navigating anywhere immediately
+  // stops it, while the header control can stop it without navigation.
+  useEffect(() => {
+    stopAllSpeech()
+  }, [location.pathname])
 
   if (loading) return <Loading />
   if (!account) return <AuthPage />
@@ -109,6 +117,15 @@ function TopBar({ minimal = false }) {
         <div className="row">
           {!minimal && <LocationChip compact />}
           <button
+            className="audio-stop-btn"
+            title="Stop all Nabz audio"
+            onClick={stopAllSpeech}
+            aria-label="Stop all audio"
+          >
+            <span aria-hidden="true">■</span>
+            <span className="audio-stop-label">Stop audio</span>
+          </button>
+          <button
             className="icon-btn"
             title="Privacy"
             onClick={() => navigate('/privacy')}
@@ -116,7 +133,12 @@ function TopBar({ minimal = false }) {
           >
             🔒
           </button>
-          <button className="icon-btn" title="Log out" onClick={logout} aria-label="Log out">
+          <button
+            className="icon-btn"
+            title="Log out"
+            onClick={() => { stopAllSpeech(); logout() }}
+            aria-label="Log out"
+          >
             ⏻
           </button>
         </div>
