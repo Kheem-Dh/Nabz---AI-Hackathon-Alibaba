@@ -168,6 +168,42 @@ def test_triage_start_returns_question_then_result(client, auth):
     assert reached_result
 
 
+def test_triage_history_is_named_dated_and_account_scoped(client, auth):
+    headers, _account, self_id = auth
+    started = client.post(
+        "/api/triage/start",
+        headers=headers,
+        json={"profile_id": self_id, "text": "right arm par surkh nishan hai"},
+    )
+    assert started.status_code == 200
+    session_id = started.json()["session_id"]
+
+    history = client.get(
+        f"/api/triage/history?profile_id={self_id}", headers=headers,
+    )
+    assert history.status_code == 200
+    item = next(row for row in history.json() if row["id"] == session_id)
+    assert item["title"]
+    assert item["preview"] == "right arm par surkh nishan hai"
+    assert item["created_at"] and item["updated_at"]
+
+    detail = client.get(f"/api/triage/history/{session_id}", headers=headers)
+    assert detail.status_code == 200
+    assert detail.json()["turns"][0]["role"] == "user"
+
+    other = client.post(
+        "/api/auth/register",
+        json={"full_name": "Other User", "phone": "03334445555", "password": "pass1234"},
+    ).json()
+    other_headers = {"Authorization": f"Bearer {other['token']}"}
+    assert client.get(
+        f"/api/triage/history/{session_id}", headers=other_headers,
+    ).status_code == 404
+    assert client.get(
+        f"/api/triage/history?profile_id={self_id}", headers=other_headers,
+    ).status_code == 404
+
+
 def test_skin_mark_gets_skin_specific_questions(client, auth):
     headers, _account, self_id = auth
     start = client.post(

@@ -263,6 +263,10 @@ class TriageTurn(BaseModel):
     # Explicit provenance prevents a safe outage response or test double from
     # masquerading as a live model-generated clinical assessment.
     response_source: str = "live_ai"  # live_ai | ai_unavailable | test_model
+    # Short model-written label used in the desktop encounter history. It is
+    # descriptive only (for example, "Right-arm redness") and is never used
+    # to make a clinical decision.
+    encounter_title: Optional[str] = None
 
     # question fields
     question_urdu: Optional[str] = None
@@ -308,6 +312,23 @@ class TriageTurn(BaseModel):
     # Hints the frontend for facility filtering:
     #   emergency_hospital | clinic_or_bhu | optional
     facility_intent: Optional[str] = None
+
+
+class TriageSessionListItem(BaseModel):
+    id: int
+    profile_id: int
+    title: str
+    preview: str
+    status: str
+    result_level: Optional[str] = None
+    turn_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class TriageSessionDetail(TriageSessionListItem):
+    turns: list[dict[str, Any]] = Field(default_factory=list)
+    result: Optional[TriageTurn] = None
 
 
 # --- Labs / prescriptions ----------------------------------------------------

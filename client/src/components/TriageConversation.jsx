@@ -8,7 +8,7 @@ import { triageStart, triageAnswer } from '../api'
 
 // Full conversational triage lifecycle for the active profile.
 // Phases: idle -> (starting) -> question <-> answering -> result | error
-export default function TriageConversation({ profile, onExit }) {
+export default function TriageConversation({ profile, onSessionChanged }) {
   const [phase, setPhase] = useState('idle')
   const [turn, setTurn] = useState(null)
   const [sessionId, setSessionId] = useState(null)
@@ -61,6 +61,7 @@ export default function TriageConversation({ profile, onExit }) {
       setSessionId(t.session_id)
       setTurn(t)
       setPhase(t.type === 'result' ? 'result' : 'question')
+      onSessionChanged?.(t)
     } catch (e) {
       setError(e.message || 'Could not reach the triage service.')
       setPhase('error')
@@ -76,6 +77,7 @@ export default function TriageConversation({ profile, onExit }) {
       setTurn(t)
       setPhase(t.type === 'result' ? 'result' : 'question')
       setTyped('')
+      onSessionChanged?.(t)
     } catch (e) {
       setError(e.message || 'Could not send your answer.')
       setPhase('error')

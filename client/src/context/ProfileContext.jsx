@@ -3,14 +3,10 @@ import { listProfiles } from '../api'
 import { useAuth } from './AuthContext'
 
 const ProfileContext = createContext(null)
-const ACTIVE_KEY = 'nabz_active_profile'
-
 export function ProfileProvider({ children }) {
   const { account } = useAuth()
   const [profiles, setProfiles] = useState([])
-  const [activeId, setActiveId] = useState(
-    () => Number(localStorage.getItem(ACTIVE_KEY)) || null,
-  )
+  const [activeId, setActiveId] = useState(null)
   const [loading, setLoading] = useState(false)
 
   const refresh = useCallback(async () => {
@@ -21,14 +17,14 @@ export function ProfileProvider({ children }) {
     setLoading(true)
     try {
       const list = await listProfiles()
-      setProfiles(list)
-      // Ensure an active profile is always selected once we have data.
-      setActiveId((cur) => {
-        if (cur && list.some((p) => p.id === cur)) return cur
-        const self = list.find((p) => p.is_self) || list[0]
-        return self ? self.id : null
-      })
-      return list
+      // Nabz is a private, single-patient workspace. Family/demo profiles may
+      // remain in older databases, but they are never exposed in the signed-in
+      // user's workspace or allowed to become the active patient.
+      const self = list.find((p) => p.is_self) || list[0]
+      const ownProfiles = self ? [self] : []
+      setProfiles(ownProfiles)
+      setActiveId(self?.id || null)
+      return ownProfiles
     } finally {
       setLoading(false)
     }
@@ -38,11 +34,10 @@ export function ProfileProvider({ children }) {
     refresh()
   }, [refresh])
 
-  useEffect(() => {
-    if (activeId) localStorage.setItem(ACTIVE_KEY, String(activeId))
-  }, [activeId])
-
-  const selectProfile = useCallback((id) => setActiveId(id), [])
+  const selectProfile = useCallback((id) => {
+    const self = profiles.find((p) => p.is_self) || profiles[0]
+    if (self && Number(id) === self.id) setActiveId(self.id)
+  }, [profiles])
 
   const active = profiles.find((p) => p.id === activeId) || null
 

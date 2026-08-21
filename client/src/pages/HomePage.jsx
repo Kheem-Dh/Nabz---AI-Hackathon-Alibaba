@@ -1,103 +1,146 @@
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getHealthDetail, getTriageHistory, listTriageHistory } from '../api'
 import { useProfiles } from '../context/ProfileContext'
-import ActiveProfileBar from '../components/ActiveProfileBar'
-import ProfileSwitcher from '../components/ProfileSwitcher'
 import TriageConversation from '../components/TriageConversation'
 import PatientDashboard from '../components/PatientDashboard'
-import DemoLoader from '../components/DemoLoader'
+import EncounterSidebar from '../components/EncounterSidebar'
+import PastEncounter from '../components/PastEncounter'
 
 export default function HomePage() {
   const { active, loading } = useProfiles()
   const navigate = useNavigate()
+  const [sessions, setSessions] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [selectedId, setSelectedId] = useState(null)
+  const [selectedEncounter, setSelectedEncounter] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [conversationKey, setConversationKey] = useState(0)
+  const [dashboardKey, setDashboardKey] = useState(0)
+  const [service, setService] = useState(null)
+
+  const loadHistory = useCallback(async () => {
+    if (!active) return
+    setHistoryLoading(true)
+    try {
+      setSessions(await listTriageHistory(active.id))
+    } catch {
+      setSessions([])
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [active])
+
+  useEffect(() => {
+    loadHistory()
+    getHealthDetail().then(setService).catch(() => setService({ unavailable: true }))
+  }, [loadHistory])
+
+  async function selectEncounter(id) {
+    setSelectedId(id)
+    setDetailLoading(true)
+    try {
+      setSelectedEncounter(await getTriageHistory(id))
+    } catch {
+      setSelectedEncounter(null)
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  function newAssessment() {
+    setSelectedId(null)
+    setSelectedEncounter(null)
+    setConversationKey((value) => value + 1)
+  }
+
+  function sessionChanged(turn) {
+    loadHistory()
+    if (turn.type === 'result') setDashboardKey((value) => value + 1)
+  }
 
   if (loading && !active) {
-    return (
-      <div className="center-state">
-        <div className="spinner" />
-        <p className="cs-ur urdu">لوڈ ہو رہا ہے…</p>
-      </div>
-    )
+    return <div className="center-state"><div className="spinner" /><p>Opening your workspace…</p></div>
   }
 
   if (!active) {
     return (
       <div className="center-state">
-        <p className="cs-ur urdu">کوئی پروفائل نہیں ملی۔</p>
-        <button className="btn btn-primary" onClick={() => navigate('/profile/new')}>
-          نیا فرد شامل کریں · Add a person
-        </button>
+        <p>We could not find the personal profile linked to this account.</p>
+        <button className="btn btn-primary" onClick={() => window.location.reload()}>Try again</button>
       </div>
     )
   }
 
   return (
-    <div className="page home-page">
-      <div className="home-heading">
-        <div>
-          <span className="home-kicker">PATIENT WORKSPACE</span>
-          <h1>{active.display_name}&apos;s health dashboard</h1>
-          <p>One private record for triage, documents, medicines, and doctor handoff.</p>
-        </div>
-        <ActiveProfileBar />
-      </div>
+    <div className="page home-page desktop-health-workspace">
+      <EncounterSidebar
+        patient={active}
+        sessions={sessions}
+        selectedId={selectedId}
+        loading={historyLoading}
+        service={service}
+        onSelect={selectEncounter}
+        onNew={newAssessment}
+      />
 
-      <div className="home-web-grid">
-        <aside className="home-patient-column">
-          <div className="home-panel">
-            <div className="section-title">
-              <span className="ur urdu">کس کے لیے؟</span>
-              <span className="en">Switch patient</span>
-            </div>
-            <ProfileSwitcher />
-            <DemoLoader />
+      <main className="assessment-workspace">
+        <header className="workspace-header">
+          <div>
+            <span className="home-kicker">NABZ AI HEALTH ASSISTANT</span>
+            <h1>{selectedEncounter ? selectedEncounter.title : 'What’s happening today?'}</h1>
+            <p>
+              {selectedEncounter
+                ? 'A saved conversation from your private health record.'
+                : `Talk naturally. Nabz considers your full transcript and ${active.display_name}’s Vault.`}
+            </p>
           </div>
+          <div className="workspace-actions">
+            <button onClick={() => navigate(`/profile/${active.id}/documents`)}>Upload record</button>
+            <button onClick={() => navigate(`/summary/${active.id}`)}>Doctor handoff</button>
+          </div>
+        </header>
 
-          <PatientDashboard
-            key={`dashboard-${active.id}`}
+        {!service?.unavailable && service?.ai_configured === false && (
+          <div className="notice notice-warn service-warning">
+            <strong>Live AI needs configuration.</strong>
+            Add the DashScope key to <code>server/.env</code>, then restart the backend.
+          </div>
+        )}
+        {service?.unavailable && (
+          <div className="notice notice-warn service-warning">
+            <strong>Nabz backend is offline.</strong>
+            Start the server on port 8000, then refresh this page to receive a live assessment.
+          </div>
+        )}
+
+        {selectedId ? (
+          <PastEncounter encounter={selectedEncounter} loading={detailLoading} onNew={newAssessment} />
+        ) : (
+          <TriageConversation
+            key={`${active.id}-${conversationKey}`}
             profile={active}
-            onOpenVault={() => navigate(`/profile/${active.id}/documents`)}
-            onOpenSummary={() => navigate(`/summary/${active.id}`)}
+            onSessionChanged={sessionChanged}
           />
+        )}
+      </main>
 
-          <div className="home-panel quick-panel">
-            <div className="section-title" style={{ marginTop: 0 }}>
-              <span className="ur urdu">فوری کام</span>
-              <span className="en">Quick actions</span>
-            </div>
-            <div className="tile-grid">
-              <button className="tile" onClick={() => navigate(`/profile/${active.id}/lab`)}>
-                <span className="tile-icon">🧪</span>
-                <span className="tile-ur urdu">لیب رپورٹ</span>
-                <span className="tile-en">Explain a lab report</span>
-              </button>
-              <button className="tile" onClick={() => navigate(`/profile/${active.id}/prescription`)}>
-                <span className="tile-icon">📝</span>
-                <span className="tile-ur urdu">نسخہ اسکین</span>
-                <span className="tile-en">Confirm a prescription</span>
-              </button>
-              <button className="tile" onClick={() => navigate(`/profile/${active.id}/documents`)}>
-                <span className="tile-icon">🗂️</span>
-                <span className="tile-ur urdu">میڈیکل والٹ</span>
-                <span className="tile-en">Open patient documents</span>
-              </button>
-              <button className="tile" onClick={() => navigate(`/summary/${active.id}`)}>
-                <span className="tile-icon">🩺</span>
-                <span className="tile-ur urdu">ڈاکٹر خلاصہ</span>
-                <span className="tile-en">Doctor handoff summary</span>
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        <section className="home-care-column">
-          <div className="care-workspace-title">
-            <div><span>ADAPTIVE TRIAGE</span><h2>Describe what is happening now</h2></div>
-            <small>Live Qwen · full transcript + private patient Vault</small>
-          </div>
-          {/* key forces a fresh conversation when the active profile changes */}
-          <TriageConversation key={active.id} profile={active} />
-        </section>
-      </div>
+      <aside className="health-insights-column">
+        <div className="insights-title">
+          <div><span>YOUR HEALTH RECORD</span><h2>Vault overview</h2></div>
+          <button onClick={() => navigate(`/profile/${active.id}/documents`)}>View all</button>
+        </div>
+        <PatientDashboard
+          key={`dashboard-${active.id}-${dashboardKey}`}
+          profile={active}
+          onOpenVault={() => navigate(`/profile/${active.id}/documents`)}
+          onOpenSummary={() => navigate(`/summary/${active.id}`)}
+        />
+        <div className="web-quick-actions">
+          <button onClick={() => navigate(`/profile/${active.id}/lab`)}><span>🧪</span> Explain lab</button>
+          <button onClick={() => navigate(`/profile/${active.id}/prescription`)}><span>📝</span> Add prescription</button>
+        </div>
+      </aside>
     </div>
   )
 }

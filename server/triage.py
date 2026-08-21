@@ -253,6 +253,7 @@ or chain-of-thought.
 QUESTION JSON:
 {
   "type": "question",
+  "encounter_title": "concise 3-7 word descriptive title, not a diagnosis",
   "question_urdu": "one short natural Urdu question",
   "question_english": "faithful English translation",
   "quick_replies": [{"urdu":"...","english":"..."}],
@@ -275,6 +276,7 @@ QUESTION JSON:
 RESULT JSON:
 {
   "type": "result",
+  "encounter_title": "concise 3-7 word descriptive title, not a diagnosis",
   "level": "EMERGENCY" | "DOCTOR_24H" | "HOME_CARE",
   "advice_urdu": "specific operational Urdu guidance",
   "advice_english": "faithful English translation",
@@ -388,6 +390,7 @@ def _turn_from_qwen_json(
         return TriageTurn(
             type="question", session_id=session_id,
             patient_name=_bounded_text(profile.get("display_name"), 80),
+            encounter_title=_bounded_text(data.get("encounter_title"), 100) or None,
             question_urdu=question_urdu, question_english=question_english,
             quick_replies=quick_replies,
             question_goal=_bounded_text(data.get("question_goal"), 200) or None,
@@ -430,6 +433,7 @@ def _turn_from_qwen_json(
     return TriageTurn(
         type="result", session_id=session_id,
         patient_name=_bounded_text(profile.get("display_name"), 80), level=level,
+        encounter_title=_bounded_text(data.get("encounter_title"), 100) or None,
         advice_urdu=advice_urdu, advice_english=advice_english,
         reason_english=reason_english,
         suggestions_urdu=_short_string_list(data.get("suggestions_urdu"), 5),

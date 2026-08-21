@@ -6,31 +6,28 @@ function initials(name) {
 }
 
 export default function VaultPage() {
-  const { profiles, loading, selectProfile } = useProfiles()
+  const { active, loading } = useProfiles()
   const navigate = useNavigate()
 
   return (
     <div className="page">
       <div className="section-title">
         <span className="ur urdu">میڈیکل والٹ</span>
-        <span className="en">Family medical vault — {profiles.length} people</span>
+        <span className="en">Your private medical vault</span>
       </div>
 
-      {loading && profiles.length === 0 && (
+      {loading && !active && (
         <div className="center-state">
           <div className="spinner" />
         </div>
       )}
 
-      <div className="stack">
-        {profiles.map((p) => (
+      {active && <div className="stack">
+        {[active].map((p) => (
           <button
             key={p.id}
             className="profile-row"
-            onClick={() => {
-              selectProfile(p.id)
-              navigate(`/profile/${p.id}`)
-            }}
+            onClick={() => navigate(`/profile/${p.id}`)}
           >
             <span className="avatar-lg">{initials(p.display_name)}</span>
             <span>
@@ -47,11 +44,7 @@ export default function VaultPage() {
             <span className="chev">›</span>
           </button>
         ))}
-      </div>
-
-      <button className="btn btn-primary" onClick={() => navigate('/profile/new')}>
-        ＋ نیا فرد شامل کریں · Add a family member
-      </button>
+      </div>}
 
       <button className="back-link no-print" onClick={() => navigate('/privacy')}>
         🔒 پرائیویسی · Privacy & consent

@@ -13,11 +13,40 @@ from schemas import (
     TriageAnswerRequest,
     TriageStartRequest,
     TriageTurn,
+    TriageSessionDetail,
+    TriageSessionListItem,
 )
 from security import get_current_account
 from triage import next_turn
 
 router = APIRouter(prefix="/api/triage", tags=["triage"])
+
+
+def _session_title(session: TriageSession) -> str:
+    """Prefer the AI's descriptive label; gracefully title legacy sessions."""
+    payload = session.result_payload or {}
+    if payload.get("encounter_title"):
+        return str(payload["encounter_title"])[:100]
+    for turn in reversed(list(session.turns or [])):
+        if turn.get("encounter_title"):
+            return str(turn["encounter_title"])[:100]
+    initial = " ".join((session.initial_text or "Health assessment").split())
+    return (initial[:52] + ("…" if len(initial) > 52 else "")) or "Health assessment"
+
+
+def _session_item(session: TriageSession) -> TriageSessionListItem:
+    turns = list(session.turns or [])
+    return TriageSessionListItem(
+        id=session.id,
+        profile_id=session.profile_id,
+        title=_session_title(session),
+        preview=" ".join((session.initial_text or "").split())[:140],
+        status=session.status,
+        result_level=session.result_level,
+        turn_count=len(turns),
+        created_at=session.created_at,
+        updated_at=session.updated_at,
+    )
 
 
 def _profile_payload(profile: Profile) -> dict[str, Any]:
@@ -85,7 +114,8 @@ def _record_result(db: Session, session: TriageSession, profile: Profile, turn: 
     entry = TimelineEntry(
         profile_id=profile.id,
         kind="triage",
-        title=(turn.advice_english or "")[:180] or f"Triage: {session.result_level}",
+        title=(turn.encounter_title or turn.advice_english or "")[:180]
+        or f"Triage: {session.result_level}",
         subtitle=turn.reason_english,
         level=session.result_level,
         payload=payload,
@@ -110,6 +140,7 @@ def _turn_from_session(db: Session, session: TriageSession, profile: Profile) ->
                 "quick_replies": [q.model_dump() for q in turn.quick_replies],
                 "question_goal": turn.question_goal,
                 "why_this_matters": turn.why_this_matters,
+                "encounter_title": turn.encounter_title,
                 "clinical_state": (
                     turn.clinical_state.model_dump(mode="json")
                     if turn.clinical_state
@@ -176,3 +207,43 @@ def answer(
     ]
 
     return _turn_from_session(db, session, profile)
+
+
+@router.get("/history", response_model=list[TriageSessionListItem])
+def history(
+    profile_id: int,
+    account: Account = Depends(get_current_account),
+    db: Session = Depends(get_db),
+) -> list[TriageSessionListItem]:
+    """List the signed-in patient's encounters, newest first."""
+    profile = _load_profile(db, account, profile_id)
+    sessions = (
+        db.query(TriageSession)
+        .filter(TriageSession.profile_id == profile.id)
+        .order_by(TriageSession.updated_at.desc(), TriageSession.id.desc())
+        .limit(100)
+        .all()
+    )
+    return [_session_item(session) for session in sessions]
+
+
+@router.get("/history/{session_id}", response_model=TriageSessionDetail)
+def history_detail(
+    session_id: int,
+    account: Account = Depends(get_current_account),
+    db: Session = Depends(get_db),
+) -> TriageSessionDetail:
+    session = db.get(TriageSession, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="session_not_found")
+    _load_profile(db, account, session.profile_id)
+    item = _session_item(session)
+    result = None
+    if session.result_payload:
+        try:
+            result = TriageTurn.model_validate(session.result_payload)
+        except Exception:  # Legacy or partially saved session remains viewable.
+            result = None
+    return TriageSessionDetail(
+        **item.model_dump(), turns=list(session.turns or []), result=result,
+    )

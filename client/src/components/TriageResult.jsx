@@ -40,14 +40,14 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, ttsSuppo
         <p className="advice-en">{turn.advice_english}</p>
 
         <div className="result-actions no-print">
-          <button className="btn btn-ghost" onClick={onReplay}>
+          {onReplay && <button className="btn btn-ghost" onClick={onReplay}>
             {speaking ? '🔊 …' : '🔊 دوبارہ سنیں'}
-          </button>
+          </button>}
           <button className="btn btn-outline" onClick={() => setShowWhy((s) => !s)}>
             کیوں؟ · Why?
           </button>
         </div>
-        {!ttsSupported && (
+        {ttsSupported === false && onReplay && (
           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
             🔇 Voice output isn’t available in this browser.
           </p>

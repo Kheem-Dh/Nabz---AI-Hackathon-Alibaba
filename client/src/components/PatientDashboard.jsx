@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getDashboard, seedDemoProfile } from '../api'
-import { useProfiles } from '../context/ProfileContext'
+import { getDashboard } from '../api'
 
 const DOC_LABELS = {
   xray: 'X-ray',
@@ -12,16 +11,8 @@ const DOC_LABELS = {
 }
 
 export default function PatientDashboard({ profile, onOpenVault, onOpenSummary }) {
-  const { refresh } = useProfiles()
   const [dashboard, setDashboard] = useState(null)
   const [error, setError] = useState('')
-  const [seeding, setSeeding] = useState(false)
-
-  async function loadDashboard() {
-    const data = await getDashboard(profile.id)
-    setDashboard(data)
-    return data
-  }
 
   useEffect(() => {
     let alive = true
@@ -46,20 +37,7 @@ export default function PatientDashboard({ profile, onOpenVault, onOpenSummary }
   }
 
   const counts = Object.entries(dashboard.document_counts || {})
-  const canSeedHassan = dashboard.patient_name.toLowerCase() === 'hassan' && dashboard.document_total === 0
-
-  async function seedHassan() {
-    setSeeding(true)
-    setError('')
-    try {
-      await seedDemoProfile(profile.id)
-      await Promise.all([loadDashboard(), refresh()])
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setSeeding(false)
-    }
-  }
+  const maxDocumentCount = Math.max(1, ...counts.map(([, count]) => count))
 
   return (
     <section className="patient-dashboard">
@@ -82,17 +60,30 @@ export default function PatientDashboard({ profile, onOpenVault, onOpenSummary }
       <p className="pd-summary-ur urdu">{dashboard.summary_urdu}</p>
       <p className="pd-summary-en">{dashboard.summary_english}</p>
 
-      {canSeedHassan && (
-        <button className="pd-demo-seed" onClick={seedHassan} disabled={seeding}>
-          {seeding ? 'Preparing demo record…' : '＋ Load Hassan’s synthetic demo history'}
-        </button>
-      )}
       {error && <div className="form-error">{error}</div>}
 
       <div className="pd-stats">
         <div><strong>{dashboard.document_total}</strong><span>Documents</span></div>
         <div><strong>{dashboard.current_medicines.length}</strong><span>Confirmed medicines</span></div>
         <div><strong>{dashboard.allergies.length}</strong><span>Allergies</span></div>
+      </div>
+
+      <div className="pd-record-visual">
+        <div className="pd-visual-head">
+          <strong>Record at a glance</strong>
+          <span>Built from your uploaded Vault records</span>
+        </div>
+        {counts.length > 0 ? counts.map(([type, count]) => (
+          <div className="pd-bar-row" key={`bar-${type}`}>
+            <span>{DOC_LABELS[type] || type}</span>
+            <div><i style={{ width: `${Math.max(12, (count / maxDocumentCount) * 100)}%` }} /></div>
+            <strong>{count}</strong>
+          </div>
+        )) : (
+          <button className="pd-empty-record" onClick={onOpenVault}>
+            Upload a lab, prescription, image, or report to build this view.
+          </button>
+        )}
       </div>
 
       {(dashboard.chronic_conditions.length > 0 || dashboard.allergies.length > 0) && (
@@ -144,6 +135,18 @@ export default function PatientDashboard({ profile, onOpenVault, onOpenSummary }
           <span>Recent documents</span>
           {dashboard.recent_documents.map((document) => (
             <button key={document.id} onClick={onOpenVault}>{document.title} ›</button>
+          ))}
+        </div>
+      )}
+
+      {dashboard.recent_activity?.length > 0 && (
+        <div className="pd-activity">
+          <span className="pd-activity-title">Health record timeline</span>
+          {dashboard.recent_activity.slice(0, 4).map((entry) => (
+            <div className="pd-activity-item" key={entry.id}>
+              <i />
+              <span><strong>{entry.title}</strong><small>{new Date(entry.created_at).toLocaleDateString()}</small></span>
+            </div>
           ))}
         </div>
       )}
