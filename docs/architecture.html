@@ -123,7 +123,7 @@
   .lede {
     font-size: 18px;
     color: var(--ink-soft);
-    max-width: 64ch;
+    max-width: 66ch;
     margin: 0;
   }
   .meta-row {
@@ -175,7 +175,7 @@
     color: var(--ink-soft);
     font-size: 15px;
     margin: -8px 0 22px;
-    max-width: 68ch;
+    max-width: 70ch;
   }
 
   figure {
@@ -266,7 +266,7 @@
   .card li b { color: var(--ink); font-weight: 600; }
   .card.key { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset, var(--shadow); }
 
-  /* --- Compare (mock vs real) --- */
+  /* --- Compare (two lanes) --- */
   .compare {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -299,10 +299,45 @@
   .lane li { margin: 4px 0; }
   .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
+  /* --- Step flow (location routing) --- */
+  .steps {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+  .step {
+    flex: 1 1 180px;
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .step .sidx {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .step h4 {
+    font-family: "Sora", sans-serif;
+    font-size: 14.5px;
+    margin: 2px 0 4px;
+  }
+  .step p { margin: 0; font-size: 12.5px; color: var(--ink-soft); }
+  .step .fallback {
+    margin-top: 8px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    color: var(--amber);
+  }
+
   /* --- Endpoint table --- */
   .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
-  table { width: 100%; border-collapse: collapse; background: var(--surface); min-width: 560px; }
-  th, td { text-align: left; padding: 11px 16px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); min-width: 620px; }
+  th, td { text-align: left; padding: 10px 16px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
   th {
     font-family: "IBM Plex Mono", monospace;
     font-size: 11px;
@@ -323,6 +358,14 @@
   }
   td.path { font-family: "IBM Plex Mono", monospace; color: var(--ink); font-size: 13px; }
   td.gu { color: var(--ink-mute); font-family: "IBM Plex Mono", monospace; font-size: 11px; }
+  .grp-row td {
+    font-family: "Sora", sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--accent-ink);
+    background: var(--surface-2);
+    letter-spacing: 0.02em;
+  }
 
   .note {
     margin-top: 22px;
@@ -361,7 +404,7 @@
     figure svg { min-width: 0; }         /* let diagrams shrink to page width */
     .table-scroll { overflow: visible; box-shadow: none; }
     table { min-width: 0; }
-    .card, .lane { box-shadow: none; break-inside: avoid; }
+    .card, .lane, .step { box-shadow: none; break-inside: avoid; }
     .sec-head { break-after: avoid; }
     footer { break-inside: avoid; }
   }
@@ -372,15 +415,18 @@
     <p class="eyebrow">System Architecture · End-to-End</p>
     <h1>Nabz <span class="ur">نبض</span></h1>
     <p class="lede">
-      A voice-first, Urdu-first AI health-triage companion. The browser captures speech; a React SPA
-      talks only to a FastAPI backend; the backend owns every AI call, safety guardrail, and byte of
-      patient data. It triages urgency — it never diagnoses or prescribes.
+      A voice-first, Urdu-first AI health companion for Pakistani families. The browser captures
+      speech and photos; a React SPA talks only to a FastAPI backend that owns every AI call, safety
+      guardrail, and byte of patient data. Nabz runs an <b>adaptive clinical interview</b>, explains a
+      non-diagnostic differential, routes to nearby care — and never states a diagnosis or invents a
+      medicine.
     </p>
     <div class="meta-row">
-      <span class="tag"><b>Frontend</b> React 18 · Vite · RTL</span>
+      <span class="tag"><b>Frontend</b> React 18 · Vite · RTL · PWA</span>
       <span class="tag"><b>Backend</b> FastAPI · Pydantic v2</span>
       <span class="tag"><b>AI</b> Qwen + Qwen-VL · DashScope</span>
       <span class="tag"><b>Data</b> SQLite · SQLAlchemy</span>
+      <span class="tag"><b>Care</b> Location + ranked facilities</span>
       <span class="tag"><b>Auth</b> JWT · bcrypt</span>
     </div>
   </header>
@@ -392,14 +438,15 @@
       <h2>The request path, top to bottom</h2>
     </div>
     <p class="sec-sub">
-      Every user action flows down one spine: voice or tap in the browser, through the React SPA,
+      Every action flows down one spine: voice, photo or tap in the browser, through the React SPA,
       across a single JWT-authenticated JSON boundary, into FastAPI — which fans out to the Qwen
-      models and the SQLite vault. The AI keys live only below that boundary.
+      models, a reverse-geocoder, the SQLite vault, and private file storage. AI keys and patient
+      files live only below the boundary.
     </p>
 
     <figure>
-      <svg viewBox="0 0 900 812" role="img"
-        aria-label="Layered architecture: user speaks or taps in the browser; the React SPA sends JSON with a bearer JWT to FastAPI; FastAPI's JWT guard, routers and safety layer call the Qwen text model, the Qwen-VL vision model on Alibaba Cloud DashScope, and the SQLite vault. API keys stay server-side.">
+      <svg viewBox="0 0 920 928" role="img"
+        aria-label="Layered architecture. User speaks, photographs, taps or types in the browser. The React SPA, with speech hooks, Auth/Profile/Location contexts and its pages, sends JSON with a bearer JWT to FastAPI. FastAPI's JWT guard, a dozen routers, and a safety layer (red-flag guardrails, evidence resolver, prompt-injection defence, strict JSON, five-question ceiling, timeout fallback) call the Qwen text model and Qwen-VL vision model on Alibaba Cloud DashScope, a Nominatim reverse-geocoder, the SQLite vault, and private upload storage. Secrets stay server-side.">
         <defs>
           <marker id="ar" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto">
             <path d="M1,1 L8,5 L1,9" fill="none" stroke="var(--ink-mute)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
@@ -407,234 +454,376 @@
         </defs>
 
         <!-- LAYER 1: USER -->
-        <rect x="180" y="16" width="540" height="66" rx="14" class="n-accent-tint n-accent-stroke" stroke-width="1.5" />
-        <text x="450" y="43" text-anchor="middle" class="box-label n-accent-ink" font-size="16">User &amp; Family</text>
-        <text x="450" y="64" text-anchor="middle" class="chip-label n-soft" font-size="12.5">Urdu voice · quick-reply chips · typed fallback</text>
+        <rect x="200" y="16" width="520" height="64" rx="14" class="n-accent-tint n-accent-stroke" stroke-width="1.5" />
+        <text x="460" y="42" text-anchor="middle" class="box-label n-accent-ink" font-size="16">User &amp; Family</text>
+        <text x="460" y="63" text-anchor="middle" class="chip-label n-soft" font-size="12.5">Urdu voice · photo of skin / report · quick-reply chips · text</text>
 
-        <line x1="450" y1="82" x2="450" y2="118" class="n-flow" stroke-width="1.6" marker-end="url(#ar)" />
-        <text x="462" y="104" class="mono n-mute" font-size="11">speak / tap</text>
+        <line x1="460" y1="80" x2="460" y2="116" class="n-flow" stroke-width="1.6" marker-end="url(#ar)" />
+        <text x="472" y="102" class="mono n-mute" font-size="11">speak / snap / tap</text>
 
         <!-- LAYER 2: REACT SPA -->
-        <rect x="70" y="120" width="760" height="150" rx="16" class="n-surface n-line" stroke-width="1.5" />
-        <text x="92" y="146" class="box-label n-ink" font-size="15">React 18 + Vite SPA</text>
-        <text x="808" y="146" text-anchor="end" class="mono n-mute" font-size="11">RTL · Urdu-lead UI</text>
+        <rect x="60" y="118" width="800" height="156" rx="16" class="n-surface n-line" stroke-width="1.5" />
+        <text x="82" y="144" class="box-label n-ink" font-size="15">React 18 + Vite SPA</text>
+        <text x="838" y="144" text-anchor="end" class="mono n-mute" font-size="11">RTL · Urdu-lead · installable PWA</text>
 
-        <!-- inner chips -->
-        <rect x="92" y="162" width="160" height="86" rx="10" class="n-panel n-line" stroke-width="1" />
-        <text x="172" y="184" text-anchor="middle" class="chip-label n-ink" font-size="12.5" font-weight="600">Speech hooks</text>
-        <text x="172" y="204" text-anchor="middle" class="mono n-soft" font-size="10.5">useSpeechRecognition</text>
-        <text x="172" y="220" text-anchor="middle" class="mono n-mute" font-size="10">STT · lang=ur-PK</text>
-        <text x="172" y="238" text-anchor="middle" class="mono n-mute" font-size="10">useTextToSpeech · TTS</text>
+        <rect x="82" y="160" width="176" height="94" rx="10" class="n-panel n-line" stroke-width="1" />
+        <text x="170" y="182" text-anchor="middle" class="chip-label n-ink" font-size="12.5" font-weight="600">Speech I/O</text>
+        <text x="170" y="202" text-anchor="middle" class="mono n-soft" font-size="10.5">useSpeechRecognition</text>
+        <text x="170" y="218" text-anchor="middle" class="mono n-mute" font-size="10">ur-PK · pause-tolerant</text>
+        <text x="170" y="236" text-anchor="middle" class="mono n-soft" font-size="10.5">useTextToSpeech · stop-all</text>
 
-        <rect x="264" y="162" width="160" height="86" rx="10" class="n-panel n-line" stroke-width="1" />
-        <text x="344" y="184" text-anchor="middle" class="chip-label n-ink" font-size="12.5" font-weight="600">Contexts</text>
-        <text x="344" y="204" text-anchor="middle" class="mono n-soft" font-size="10.5">AuthContext · token</text>
-        <text x="344" y="222" text-anchor="middle" class="mono n-soft" font-size="10.5">ProfileContext</text>
-        <text x="344" y="238" text-anchor="middle" class="mono n-mute" font-size="10">active patient</text>
+        <rect x="266" y="160" width="176" height="94" rx="10" class="n-panel n-line" stroke-width="1" />
+        <text x="354" y="182" text-anchor="middle" class="chip-label n-ink" font-size="12.5" font-weight="600">Contexts</text>
+        <text x="354" y="202" text-anchor="middle" class="mono n-soft" font-size="10.5">AuthContext · token</text>
+        <text x="354" y="220" text-anchor="middle" class="mono n-soft" font-size="10.5">ProfileContext</text>
+        <text x="354" y="238" text-anchor="middle" class="mono n-soft" font-size="10.5">LocationContext</text>
 
-        <rect x="436" y="162" width="180" height="86" rx="10" class="n-panel n-line" stroke-width="1" />
-        <text x="526" y="184" text-anchor="middle" class="chip-label n-ink" font-size="12.5" font-weight="600">Pages</text>
-        <text x="526" y="204" text-anchor="middle" class="mono n-soft" font-size="10.5">Home · Vault · Clinics</text>
-        <text x="526" y="222" text-anchor="middle" class="mono n-soft" font-size="10.5">Lab · Rx · Summary</text>
-        <text x="526" y="238" text-anchor="middle" class="mono n-mute" font-size="10">Live-analysis panel</text>
+        <rect x="450" y="160" width="196" height="94" rx="10" class="n-panel n-line" stroke-width="1" />
+        <text x="548" y="182" text-anchor="middle" class="chip-label n-ink" font-size="12.5" font-weight="600">Pages &amp; workspace</text>
+        <text x="548" y="202" text-anchor="middle" class="mono n-soft" font-size="10.5">Dashboard · Triage · Vault</text>
+        <text x="548" y="220" text-anchor="middle" class="mono n-soft" font-size="10.5">Documents · Summary · Rx</text>
+        <text x="548" y="238" text-anchor="middle" class="mono n-mute" font-size="10">live-analysis · NearbyCare</text>
 
-        <rect x="628" y="162" width="180" height="86" rx="10" class="n-panel n-line" stroke-width="1" />
-        <text x="718" y="184" text-anchor="middle" class="chip-label n-ink" font-size="12.5" font-weight="600">api.js client</text>
-        <text x="718" y="204" text-anchor="middle" class="mono n-soft" font-size="10.5">fetch + Bearer JWT</text>
-        <text x="718" y="222" text-anchor="middle" class="mono n-mute" font-size="10">Vite proxy /api</text>
-        <text x="718" y="238" text-anchor="middle" class="mono n-mute" font-size="10">no AI keys here</text>
+        <rect x="654" y="160" width="184" height="94" rx="10" class="n-panel n-line" stroke-width="1" />
+        <text x="746" y="182" text-anchor="middle" class="chip-label n-ink" font-size="12.5" font-weight="600">api.js client</text>
+        <text x="746" y="202" text-anchor="middle" class="mono n-soft" font-size="10.5">fetch + Bearer JWT</text>
+        <text x="746" y="220" text-anchor="middle" class="mono n-mute" font-size="10">Vite proxy /api</text>
+        <text x="746" y="238" text-anchor="middle" class="mono n-mute" font-size="10">no AI keys here</text>
 
-        <line x1="450" y1="270" x2="450" y2="318" class="n-flow" stroke-width="1.8" marker-end="url(#ar)" />
-        <rect x="352" y="282" width="196" height="24" rx="12" class="n-accent-tint" />
-        <text x="450" y="298" text-anchor="middle" class="mono n-accent-ink" font-size="11">HTTPS · JSON · Bearer JWT</text>
+        <line x1="460" y1="274" x2="460" y2="320" class="n-flow" stroke-width="1.8" marker-end="url(#ar)" />
+        <rect x="362" y="285" width="196" height="24" rx="12" class="n-accent-tint" />
+        <text x="460" y="301" text-anchor="middle" class="mono n-accent-ink" font-size="11">HTTPS · JSON · Bearer JWT</text>
 
-        <!-- BOUNDARY line -->
-        <line x1="40" y1="320" x2="860" y2="320" class="n-accent-stroke" stroke-width="1.2" stroke-dasharray="3 5" opacity="0.7" />
-        <text x="860" y="336" text-anchor="end" class="mono n-accent-ink" font-size="10.5">🔒 trust boundary — secrets stay below</text>
+        <!-- BOUNDARY -->
+        <line x1="40" y1="322" x2="880" y2="322" class="n-accent-stroke" stroke-width="1.2" stroke-dasharray="3 5" opacity="0.7" />
+        <text x="880" y="338" text-anchor="end" class="mono n-accent-ink" font-size="10.5">🔒 trust boundary — secrets &amp; files stay below</text>
 
         <!-- LAYER 3: FASTAPI -->
-        <rect x="70" y="346" width="760" height="196" rx="16" class="n-surface n-line" stroke-width="1.5" />
-        <text x="92" y="372" class="box-label n-ink" font-size="15">FastAPI backend</text>
-        <text x="808" y="372" text-anchor="end" class="mono n-mute" font-size="11">uvicorn · CORS</text>
+        <rect x="60" y="348" width="800" height="256" rx="16" class="n-surface n-line" stroke-width="1.5" />
+        <text x="82" y="374" class="box-label n-ink" font-size="15">FastAPI backend</text>
+        <text x="838" y="374" text-anchor="end" class="mono n-mute" font-size="11">uvicorn · CORS · python-dotenv</text>
 
         <!-- guard -->
-        <rect x="92" y="386" width="716" height="34" rx="9" class="n-accent-tint n-accent-stroke" stroke-width="1.2" />
-        <text x="104" y="407" class="chip-label n-accent-ink" font-size="12" font-weight="600">JWT auth guard</text>
-        <text x="796" y="407" text-anchor="end" class="mono n-accent-ink" font-size="10.5">get_current_account() on every vault / triage / report route</text>
+        <rect x="82" y="388" width="756" height="30" rx="9" class="n-accent-tint n-accent-stroke" stroke-width="1.2" />
+        <text x="94" y="408" class="chip-label n-accent-ink" font-size="12" font-weight="600">JWT auth guard</text>
+        <text x="826" y="408" text-anchor="end" class="mono n-accent-ink" font-size="10.5">get_current_account() + profile-ownership check on every private route</text>
 
         <!-- routers -->
-        <rect x="92" y="428" width="350" height="100" rx="10" class="n-panel n-line" stroke-width="1" />
-        <text x="108" y="449" class="chip-label n-ink" font-size="12.5" font-weight="600">Routers</text>
-        <text x="108" y="470" class="mono n-soft" font-size="10.5">auth · profiles · triage</text>
-        <text x="108" y="488" class="mono n-soft" font-size="10.5">labreport · prescription</text>
-        <text x="108" y="506" class="mono n-soft" font-size="10.5">summary · clinics · health · tts</text>
-        <text x="108" y="522" class="mono n-mute" font-size="10">triage/start · triage/answer state machine</text>
+        <rect x="82" y="426" width="378" height="166" rx="10" class="n-panel n-line" stroke-width="1" />
+        <text x="98" y="447" class="chip-label n-ink" font-size="12.5" font-weight="600">Routers</text>
+        <text x="98" y="468" class="mono n-soft" font-size="10.5">auth · profiles · triage (+image)</text>
+        <text x="98" y="486" class="mono n-soft" font-size="10.5">location · facilities · dashboard</text>
+        <text x="98" y="504" class="mono n-soft" font-size="10.5">documents · labreport · prescription</text>
+        <text x="98" y="522" class="mono n-soft" font-size="10.5">summary · clinics · demo · health · tts</text>
+        <text x="98" y="546" class="mono n-mute" font-size="10">triage/start · triage/answer</text>
+        <text x="98" y="562" class="mono n-mute" font-size="10">adaptive one-question-at-a-time machine</text>
+        <text x="98" y="580" class="mono n-mute" font-size="10">carries clinical_state across turns</text>
 
         <!-- safety -->
-        <rect x="458" y="428" width="350" height="100" rx="10" class="n-panel n-line" stroke-width="1" />
-        <text x="474" y="449" class="chip-label n-ink" font-size="12.5" font-weight="600">Safety &amp; parsing layer</text>
-        <text x="474" y="470" class="mono n-soft" font-size="10.5">emergency red-flag guardrails</text>
-        <text x="474" y="488" class="mono n-soft" font-size="10.5">strict JSON · Pydantic validate</text>
-        <text x="474" y="506" class="mono n-soft" font-size="10.5">≤5 questions · 20s timeout</text>
-        <text x="474" y="522" class="mono n-mute" font-size="10">safe DOCTOR_24H fallback on failure</text>
+        <rect x="470" y="426" width="368" height="166" rx="10" class="n-panel n-accent-stroke" stroke-width="1.2" />
+        <text x="486" y="447" class="chip-label n-accent-ink" font-size="12.5" font-weight="600">Safety &amp; evidence layer</text>
+        <text x="486" y="468" class="mono n-soft" font-size="10.5">emergency red-flag guardrails (every turn)</text>
+        <text x="486" y="486" class="mono n-soft" font-size="10.5">medicine-evidence resolver → med cards</text>
+        <text x="486" y="504" class="mono n-soft" font-size="10.5">prompt-injection defence on VL prompts</text>
+        <text x="486" y="522" class="mono n-soft" font-size="10.5">strict JSON · Pydantic · ≤5 questions</text>
+        <text x="486" y="540" class="mono n-soft" font-size="10.5">20s timeout → ai_unavailable fallback</text>
+        <text x="486" y="562" class="mono n-mute" font-size="10">response_source provenance stamped on</text>
+        <text x="486" y="578" class="mono n-mute" font-size="10">every turn: live_ai | ai_unavailable | test_model</text>
 
-        <!-- three arrows down -->
-        <line x1="230" y1="542" x2="230" y2="586" class="n-flow" stroke-width="1.6" marker-end="url(#ar)" />
-        <text x="240" y="568" class="mono n-mute" font-size="10">text</text>
-        <line x1="450" y1="542" x2="450" y2="586" class="n-flow" stroke-width="1.6" marker-end="url(#ar)" />
-        <text x="460" y="568" class="mono n-mute" font-size="10">image</text>
-        <line x1="690" y1="542" x2="690" y2="586" class="n-flow" stroke-width="1.6" marker-end="url(#ar)" />
-        <text x="700" y="568" class="mono n-mute" font-size="10">ORM</text>
+        <!-- four arrows down -->
+        <line x1="170" y1="604" x2="170" y2="648" class="n-flow" stroke-width="1.6" marker-end="url(#ar)" />
+        <line x1="370" y1="604" x2="370" y2="648" class="n-flow" stroke-width="1.6" marker-end="url(#ar)" />
+        <line x1="620" y1="604" x2="620" y2="648" class="n-flow" stroke-width="1.6" marker-end="url(#ar)" />
+        <line x1="790" y1="604" x2="790" y2="648" class="n-flow" stroke-width="1.6" marker-end="url(#ar)" />
 
-        <!-- LAYER 4: three sinks -->
-        <rect x="70" y="588" width="320" height="118" rx="14" class="n-surface n-accent-stroke" stroke-width="1.4" />
-        <text x="230" y="614" text-anchor="middle" class="box-label n-ink" font-size="13.5">Alibaba Cloud Model Studio · DashScope</text>
-        <rect x="86" y="626" width="140" height="66" rx="9" class="n-accent-tint" />
-        <text x="156" y="650" text-anchor="middle" class="chip-label n-accent-ink" font-size="12" font-weight="600">Qwen text</text>
-        <text x="156" y="668" text-anchor="middle" class="mono n-accent-ink" font-size="10">qwen-plus</text>
-        <text x="156" y="684" text-anchor="middle" class="mono n-soft" font-size="9.5">triage turns</text>
-        <rect x="234" y="626" width="140" height="66" rx="9" class="n-accent-tint" />
-        <text x="304" y="650" text-anchor="middle" class="chip-label n-accent-ink" font-size="12" font-weight="600">Qwen-VL</text>
-        <text x="304" y="668" text-anchor="middle" class="mono n-accent-ink" font-size="10">qwen-vl-plus</text>
-        <text x="304" y="684" text-anchor="middle" class="mono n-soft" font-size="9.5">labs + Rx</text>
+        <!-- LAYER 4: sinks -->
+        <rect x="60" y="650" width="420" height="118" rx="14" class="n-surface n-accent-stroke" stroke-width="1.4" />
+        <text x="270" y="675" text-anchor="middle" class="box-label n-ink" font-size="13">Alibaba Cloud Model Studio · DashScope</text>
+        <rect x="76" y="687" width="190" height="66" rx="9" class="n-accent-tint" />
+        <text x="171" y="711" text-anchor="middle" class="chip-label n-accent-ink" font-size="12" font-weight="600">Qwen text · qwen-plus</text>
+        <text x="171" y="729" text-anchor="middle" class="mono n-soft" font-size="9.5">interview · synthesis</text>
+        <text x="171" y="745" text-anchor="middle" class="mono n-mute" font-size="9">no dose / URL authoring</text>
+        <rect x="274" y="687" width="190" height="66" rx="9" class="n-accent-tint" />
+        <text x="369" y="711" text-anchor="middle" class="chip-label n-accent-ink" font-size="12" font-weight="600">Qwen-VL · qwen-vl-plus</text>
+        <text x="369" y="729" text-anchor="middle" class="mono n-soft" font-size="9.5">labs · Rx · skin photos</text>
+        <text x="369" y="745" text-anchor="middle" class="mono n-mute" font-size="9">injection-hardened prompt</text>
 
-        <rect x="560" y="588" width="270" height="118" rx="14" class="n-surface n-line" stroke-width="1.4" />
-        <text x="695" y="614" text-anchor="middle" class="box-label n-ink" font-size="13.5">SQLite vault · SQLAlchemy</text>
-        <text x="695" y="640" text-anchor="middle" class="mono n-soft" font-size="10.5">accounts · profiles · medicines</text>
-        <text x="695" y="658" text-anchor="middle" class="mono n-soft" font-size="10.5">timeline_entries · triage_sessions</text>
-        <text x="695" y="682" text-anchor="middle" class="mono n-mute" font-size="10">DATABASE_URL → swap to Postgres</text>
+        <rect x="498" y="650" width="150" height="118" rx="14" class="n-surface n-line" stroke-width="1.4" />
+        <text x="573" y="678" text-anchor="middle" class="box-label n-ink" font-size="12.5">Nominatim</text>
+        <text x="573" y="698" text-anchor="middle" class="mono n-soft" font-size="10">reverse-geocode</text>
+        <text x="573" y="716" text-anchor="middle" class="mono n-soft" font-size="10">lat/lon → label</text>
+        <text x="573" y="740" text-anchor="middle" class="mono n-mute" font-size="9.5">offline city fallback</text>
+
+        <rect x="666" y="650" width="194" height="118" rx="14" class="n-surface n-line" stroke-width="1.4" />
+        <text x="763" y="678" text-anchor="middle" class="box-label n-ink" font-size="12.5">SQLite vault · SQLAlchemy</text>
+        <text x="763" y="700" text-anchor="middle" class="mono n-soft" font-size="9.5">accounts · profiles · medicines</text>
+        <text x="763" y="716" text-anchor="middle" class="mono n-soft" font-size="9.5">timeline · triage_sessions</text>
+        <text x="763" y="732" text-anchor="middle" class="mono n-soft" font-size="9.5">location_preferences</text>
+        <text x="763" y="752" text-anchor="middle" class="mono n-mute" font-size="9">+ private uploads/ store (auth-gated)</text>
 
         <!-- secrets footer -->
-        <rect x="70" y="726" width="760" height="66" rx="12" class="n-panel n-line" stroke-width="1" />
-        <text x="90" y="752" class="chip-label n-ink" font-size="12.5" font-weight="600">🔒 Server-only secrets</text>
-        <text x="90" y="772" class="mono n-soft" font-size="11">DASHSCOPE_API_KEY · JWT_SECRET · uploads/ — loaded via python-dotenv, never sent to the browser</text>
+        <rect x="60" y="788" width="800" height="62" rx="12" class="n-panel n-line" stroke-width="1" />
+        <text x="80" y="814" class="chip-label n-ink" font-size="12.5" font-weight="600">🔒 Server-only</text>
+        <text x="80" y="834" class="mono n-soft" font-size="10.5">DASHSCOPE_API_KEY · JWT_SECRET · uploads/ files — never sent to the browser; documents served only after auth + ownership check</text>
+
+        <!-- data-model curated note -->
+        <text x="460" y="882" text-anchor="middle" class="mono n-mute" font-size="10">Medicine-evidence cards are built from a curated catalog, not from the DB or the model — see §03.</text>
       </svg>
       <figcaption>
-        <b>One JSON boundary.</b> The SPA holds a JWT but no model credentials; every Qwen call and
-        the entire patient vault sit behind FastAPI. Remove the dashed line and the security story
-        is the whole point — the browser can never reach DashScope directly.
+        <b>One JSON boundary, many sinks.</b> The SPA holds a JWT but no model keys and never touches
+        the file store. The router count grew — location, facilities, dashboard, documents, demo — but
+        the boundary is unchanged: the browser still cannot reach DashScope, Nominatim, or a raw file
+        directly.
       </figcaption>
     </figure>
   </section>
 
-  <!-- ============ FIGURE 2: STATE MACHINE ============ -->
+  <!-- ============ FIGURE 2: ADAPTIVE INTERVIEW + SYNTHESIS ============ -->
   <section>
     <div class="sec-head">
       <span class="sec-num">02</span>
-      <h2>Conversational triage — the state machine</h2>
+      <h2>Adaptive interview → clinical synthesis</h2>
     </div>
     <p class="sec-sub">
-      Nabz does not jump from a symptom to a verdict. It asks the single highest-value question at a
-      time, builds a live analysis, and only concludes when confident — <b>unless</b> a red flag
-      appears, which short-circuits straight to EMERGENCY with zero further questions.
+      Nabz asks the single most useful <em>complaint-relevant</em> question at a time — a skin mark gets
+      skin questions, not a reflex breathing question — accumulating a structured
+      <code class="mono">clinical_state</code>. A red flag on any turn short-circuits to EMERGENCY. On
+      conclusion it emits an explainable, non-diagnostic result.
     </p>
 
     <figure>
-      <svg viewBox="0 0 900 470" role="img"
-        aria-label="Triage state machine: a symptom enters and is checked for emergency red flags on every turn. A red flag returns EMERGENCY immediately with zero questions. Otherwise the engine asks one question, takes an answer, updates the running analysis, and checks whether it is confident or has asked five questions; if not it loops back to ask another question, if so it returns a HOME_CARE or DOCTOR_24H result.">
+      <svg viewBox="0 0 920 520" role="img"
+        aria-label="Adaptive triage state machine. A symptom or photo enters and is checked for emergency red flags on every turn; a red flag returns EMERGENCY immediately with zero questions. Otherwise Nabz asks one complaint-relevant question, takes an answer or photo, updates a structured clinical state and completeness, and checks whether it is confident or has asked five questions; if not it loops, if so it produces a result that fans out into a patient-facing impression and qualitative differential, self-care and exercise suggestions, safety-validated medication cards, and a facility intent that drives nearby-care routing.">
         <defs>
           <marker id="ar2" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto">
             <path d="M1,1 L8,5 L1,9" fill="none" stroke="var(--ink-mute)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
           </marker>
-          <marker id="ar-red" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto">
+          <marker id="ar-red2" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto">
             <path d="M1,1 L8,5 L1,9" fill="none" stroke="var(--red)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </marker>
+          <marker id="ar-acc" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto">
+            <path d="M1,1 L8,5 L1,9" fill="none" stroke="var(--accent)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
           </marker>
         </defs>
 
         <!-- start -->
-        <rect x="24" y="150" width="150" height="60" rx="12" class="n-accent-tint n-accent-stroke" stroke-width="1.4" />
-        <text x="99" y="176" text-anchor="middle" class="box-label n-accent-ink" font-size="13">Symptom in</text>
-        <text x="99" y="196" text-anchor="middle" class="mono n-soft" font-size="10">voice / text / chip</text>
+        <rect x="20" y="150" width="140" height="60" rx="12" class="n-accent-tint n-accent-stroke" stroke-width="1.4" />
+        <text x="90" y="176" text-anchor="middle" class="box-label n-accent-ink" font-size="12.5">Symptom / photo</text>
+        <text x="90" y="196" text-anchor="middle" class="mono n-soft" font-size="9.5">+ active profile + vault</text>
 
-        <line x1="174" y1="180" x2="214" y2="180" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
+        <line x1="160" y1="180" x2="196" y2="180" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
 
         <!-- red-flag diamond -->
-        <polygon points="300,130 372,180 300,230 228,180" class="n-surface red-stroke" stroke-width="1.6" />
-        <text x="300" y="176" text-anchor="middle" class="chip-label n-ink" font-size="11.5" font-weight="600">Red-flag?</text>
-        <text x="300" y="192" text-anchor="middle" class="mono n-mute" font-size="9">every turn</text>
+        <polygon points="270,132 340,180 270,228 200,180" class="n-surface red-stroke" stroke-width="1.6" />
+        <text x="270" y="177" text-anchor="middle" class="chip-label n-ink" font-size="11" font-weight="600">Red-flag?</text>
+        <text x="270" y="192" text-anchor="middle" class="mono n-mute" font-size="8.5">every turn</text>
 
-        <!-- red flag -> EMERGENCY (up) -->
-        <line x1="300" y1="130" x2="300" y2="70" class="red-stroke" stroke-width="1.8" marker-end="url(#ar-red)" />
-        <text x="312" y="104" class="mono red-fill" font-size="10.5" font-weight="600">yes</text>
-        <rect x="196" y="24" width="208" height="46" rx="12" class="red-tint red-stroke" stroke-width="1.6" />
-        <text x="300" y="45" text-anchor="middle" class="box-label red-fill" font-size="13">▲ EMERGENCY</text>
-        <text x="300" y="61" text-anchor="middle" class="mono red-fill" font-size="10">0 questions · go now</text>
+        <line x1="270" y1="132" x2="270" y2="74" class="red-stroke" stroke-width="1.8" marker-end="url(#ar-red2)" />
+        <text x="282" y="108" class="mono red-fill" font-size="10" font-weight="600">yes</text>
+        <rect x="176" y="28" width="188" height="46" rx="12" class="red-tint red-stroke" stroke-width="1.6" />
+        <text x="270" y="49" text-anchor="middle" class="box-label red-fill" font-size="12.5">▲ EMERGENCY</text>
+        <text x="270" y="65" text-anchor="middle" class="mono red-fill" font-size="9.5">0 questions · go now</text>
 
-        <!-- no -> ask -->
-        <line x1="372" y1="180" x2="418" y2="180" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
-        <text x="384" y="172" class="mono n-soft" font-size="10.5">no</text>
+        <line x1="340" y1="180" x2="384" y2="180" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
+        <text x="352" y="172" class="mono n-soft" font-size="10">no</text>
 
         <!-- ask ONE -->
-        <rect x="420" y="146" width="150" height="68" rx="12" class="n-surface n-accent-stroke" stroke-width="1.4" />
-        <text x="495" y="170" text-anchor="middle" class="box-label n-ink" font-size="12.5">Ask ONE</text>
-        <text x="495" y="188" text-anchor="middle" class="chip-label n-soft" font-size="10.5">best question</text>
-        <text x="495" y="204" text-anchor="middle" class="mono n-mute" font-size="9.5">addressed by name</text>
+        <rect x="386" y="146" width="152" height="68" rx="12" class="n-surface n-accent-stroke" stroke-width="1.4" />
+        <text x="462" y="170" text-anchor="middle" class="box-label n-ink" font-size="12.5">Ask ONE</text>
+        <text x="462" y="187" text-anchor="middle" class="chip-label n-soft" font-size="10">complaint-relevant Q</text>
+        <text x="462" y="203" text-anchor="middle" class="mono n-mute" font-size="9">by name · +quick replies</text>
 
-        <line x1="570" y1="180" x2="612" y2="180" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
+        <line x1="538" y1="180" x2="580" y2="180" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
 
-        <!-- update analysis -->
-        <rect x="614" y="146" width="160" height="68" rx="12" class="n-panel n-line" stroke-width="1.2" />
-        <text x="694" y="170" text-anchor="middle" class="box-label n-ink" font-size="12.5">Update analysis</text>
-        <text x="694" y="188" text-anchor="middle" class="chip-label n-soft" font-size="10.5">collected + confidence</text>
-        <text x="694" y="204" text-anchor="middle" class="mono n-mute" font-size="9.5">answer via voice / chip</text>
+        <!-- update clinical_state -->
+        <rect x="582" y="146" width="168" height="68" rx="12" class="n-panel n-line" stroke-width="1.2" />
+        <text x="666" y="169" text-anchor="middle" class="box-label n-ink" font-size="12">Update clinical_state</text>
+        <text x="666" y="186" text-anchor="middle" class="chip-label n-soft" font-size="9.5">findings + completeness</text>
+        <text x="666" y="202" text-anchor="middle" class="mono n-mute" font-size="9">answer by voice / chip / photo</text>
 
         <!-- decision down -->
-        <line x1="694" y1="214" x2="694" y2="262" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
-        <polygon points="694,262 770,312 694,362 618,312" class="n-surface n-line" stroke-width="1.6" />
-        <text x="694" y="308" text-anchor="middle" class="chip-label n-ink" font-size="11" font-weight="600">Confident</text>
-        <text x="694" y="323" text-anchor="middle" class="chip-label n-ink" font-size="11" font-weight="600">or 5 asked?</text>
+        <line x1="666" y1="214" x2="666" y2="256" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
+        <polygon points="666,256 742,304 666,352 590,304" class="n-surface n-line" stroke-width="1.6" />
+        <text x="666" y="300" text-anchor="middle" class="chip-label n-ink" font-size="10.5" font-weight="600">Confident</text>
+        <text x="666" y="315" text-anchor="middle" class="chip-label n-ink" font-size="10.5" font-weight="600">or 5 asked?</text>
 
-        <!-- loop back (no) -->
-        <path d="M618,312 L495,312 L495,214" fill="none" class="n-flow" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ar2)" />
-        <text x="520" y="304" class="mono n-soft" font-size="10.5">no — loop</text>
+        <!-- loop back -->
+        <path d="M590,304 L462,304 L462,214" fill="none" class="n-flow" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ar2)" />
+        <text x="486" y="296" class="mono n-soft" font-size="10">no — loop</text>
 
-        <!-- yes -> results -->
-        <line x1="694" y1="362" x2="694" y2="398" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
-        <text x="706" y="384" class="mono n-soft" font-size="10.5">yes</text>
+        <!-- yes -> RESULT hub -->
+        <line x1="666" y1="352" x2="666" y2="392" class="n-flow" stroke-width="1.6" marker-end="url(#ar2)" />
+        <text x="678" y="378" class="mono n-soft" font-size="10">yes</text>
+        <rect x="560" y="394" width="212" height="50" rx="12" class="n-accent-tint n-accent-stroke" stroke-width="1.5" />
+        <text x="666" y="415" text-anchor="middle" class="box-label n-accent-ink" font-size="13">RESULT turn</text>
+        <text x="666" y="432" text-anchor="middle" class="mono n-accent-ink" font-size="9.5">level · reason · vault_context_used</text>
 
-        <rect x="470" y="400" width="210" height="52" rx="12" class="green-tint green-stroke" stroke-width="1.5" />
-        <text x="575" y="422" text-anchor="middle" class="box-label green-fill" font-size="12.5">🏠 HOME_CARE</text>
-        <text x="575" y="440" text-anchor="middle" class="mono green-fill" font-size="9.5">rest &amp; monitor</text>
+        <!-- fan-out from result: four outputs to the left/bottom -->
+        <!-- impression + differential -->
+        <path d="M560,410 L360,410 L360,392" fill="none" class="n-accent-stroke" stroke-width="1.4" marker-end="url(#ar-acc)" />
+        <rect x="250" y="342" width="220" height="50" rx="10" class="n-surface n-line" stroke-width="1.1" />
+        <text x="360" y="363" text-anchor="middle" class="chip-label n-ink" font-size="11" font-weight="600">Impression + possible causes</text>
+        <text x="360" y="379" text-anchor="middle" class="mono n-mute" font-size="9">qualitative: MORE_LIKELY / POSSIBLE / LESS_LIKELY</text>
 
-        <rect x="700" y="400" width="176" height="52" rx="12" class="amber-tint amber-stroke" stroke-width="1.5" />
-        <text x="788" y="422" text-anchor="middle" class="box-label amber-fill" font-size="12">🩺 DOCTOR_24H</text>
-        <text x="788" y="440" text-anchor="middle" class="mono amber-fill" font-size="9.5">see a clinician</text>
+        <!-- self-care + exercise -->
+        <rect x="250" y="286" width="220" height="48" rx="10" class="green-tint green-stroke" stroke-width="1.2" />
+        <text x="360" y="306" text-anchor="middle" class="chip-label green-fill" font-size="11" font-weight="600">Self-care + exercise</text>
+        <text x="360" y="322" text-anchor="middle" class="mono green-fill" font-size="9">suggestions · exercise_suggestions</text>
+        <line x1="560" y1="418" x2="474" y2="310" class="n-accent-stroke" stroke-width="1.2" opacity="0.55" marker-end="url(#ar-acc)" />
+
+        <!-- medication cards (via resolver) -->
+        <rect x="250" y="230" width="220" height="48" rx="10" class="n-surface n-accent-stroke" stroke-width="1.2" />
+        <text x="360" y="250" text-anchor="middle" class="chip-label n-accent-ink" font-size="11" font-weight="600">Medication cards</text>
+        <text x="360" y="266" text-anchor="middle" class="mono n-mute" font-size="9">only via evidence resolver — see §03</text>
+        <line x1="560" y1="416" x2="474" y2="256" class="n-accent-stroke" stroke-width="1.2" opacity="0.55" marker-end="url(#ar-acc)" />
+
+        <!-- facility intent -> nearby care -->
+        <line x1="666" y1="444" x2="666" y2="474" class="n-accent-stroke" stroke-width="1.4" marker-end="url(#ar-acc)" />
+        <rect x="470" y="476" width="392" height="38" rx="10" class="amber-tint amber-stroke" stroke-width="1.2" />
+        <text x="666" y="500" text-anchor="middle" class="chip-label amber-fill" font-size="10.5">facility_intent → ranked NearbyCare (emergency_hospital · clinic_or_bhu · optional)</text>
 
         <!-- persistence note -->
-        <rect x="24" y="290" width="330" height="120" rx="12" class="n-panel n-line" stroke-width="1" />
-        <text x="44" y="316" class="chip-label n-ink" font-size="12.5" font-weight="600">Persisted per turn</text>
-        <text x="44" y="338" class="mono n-soft" font-size="10.5">triage_sessions.turns[]  (full history)</text>
-        <text x="44" y="356" class="mono n-soft" font-size="10.5">triage_sessions.analysis  (running)</text>
-        <text x="44" y="374" class="mono n-soft" font-size="10.5">→ survives reloads</text>
-        <text x="44" y="396" class="mono n-mute" font-size="10">on RESULT → timeline_entries (dated)</text>
+        <rect x="20" y="392" width="300" height="122" rx="12" class="n-panel n-line" stroke-width="1" />
+        <text x="40" y="418" class="chip-label n-ink" font-size="12" font-weight="600">Persisted per turn</text>
+        <text x="40" y="440" class="mono n-soft" font-size="10">triage_sessions.turns[] + analysis</text>
+        <text x="40" y="458" class="mono n-soft" font-size="10">clinical_state snapshot</text>
+        <text x="40" y="476" class="mono n-soft" font-size="10">response_source provenance</text>
+        <text x="40" y="498" class="mono n-mute" font-size="9.5">on RESULT → dated timeline entry + encounter</text>
       </svg>
       <figcaption>
-        <b>The red-flag check runs on every turn, not just the first</b> — breathlessness reported on
-        question three still escalates instantly. Uncertainty after five questions resolves upward to
-        at least DOCTOR_24H, never down. The active profile's name, conditions and medicines are
-        injected into each turn.
+        <b>The result is a briefing, not a verdict.</b> Likelihoods stay qualitative on purpose — a chat
+        or photo can't support a calibrated disease percentage. Medication cards never come straight from
+        the model; they pass through the evidence resolver in §03. The red-flag check still runs on
+        <em>every</em> turn, so danger reported late still escalates instantly.
       </figcaption>
     </figure>
+  </section>
+
+  <!-- ============ FIGURE 3: EVIDENCE RESOLVER ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2>The medication-evidence safety gate</h2>
+    </div>
+    <p class="sec-sub">
+      This is why Nabz can suggest a medicine without prescribing one. The model only proposes
+      <em>candidate names and purposes</em>; a server-side resolver is the sole writer of dose, evidence
+      URL, and safety text — all drawn from a small curated catalog. Anything the model invents is dropped.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 900 300" role="img"
+        aria-label="Medication evidence resolver. The Qwen model proposes candidate medicine names and purposes over an untrusted dashed path. The resolver passes each candidate through five gates: strip all model-written dose, URL and safety text; reject if it conflicts with a vault allergy; reject prescription-only drugs; require an allowlisted evidence URL; and require a match in the curated catalog. Dose, URL and safety text are read only from the curated catalog and the patient vault, not the model. Survivors become validated medication cards; everything else is dropped, because empty is better than fabricated.">
+        <defs>
+          <marker id="ar3" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto">
+            <path d="M1,1 L8,5 L1,9" fill="none" stroke="var(--ink-mute)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          </marker>
+        </defs>
+
+        <!-- model (untrusted) -->
+        <rect x="20" y="118" width="150" height="66" rx="12" class="n-surface n-line" stroke-width="1.3" stroke-dasharray="5 4" />
+        <text x="95" y="142" text-anchor="middle" class="box-label n-ink" font-size="12">Qwen candidates</text>
+        <text x="95" y="160" text-anchor="middle" class="mono n-mute" font-size="9.5">names + purpose only</text>
+        <text x="95" y="176" text-anchor="middle" class="mono red-fill" font-size="9">untrusted · no dose/URL</text>
+
+        <line x1="170" y1="151" x2="212" y2="151" class="n-flow" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ar3)" />
+
+        <!-- resolver box with 5 gates -->
+        <rect x="214" y="40" width="470" height="222" rx="14" class="n-panel n-accent-stroke" stroke-width="1.4" />
+        <text x="234" y="64" class="box-label n-accent-ink" font-size="13">resolve_medication_candidates()</text>
+
+        <rect x="234" y="76" width="430" height="30" rx="8" class="n-surface n-line" stroke-width="1" />
+        <text x="246" y="95" class="chip-label n-ink" font-size="11">1 · strip model dose / URL / safety text</text>
+        <rect x="234" y="112" width="430" height="30" rx="8" class="n-surface n-line" stroke-width="1" />
+        <text x="246" y="131" class="chip-label n-ink" font-size="11">2 · reject if it conflicts with a vault allergy</text>
+        <rect x="234" y="148" width="430" height="30" rx="8" class="n-surface n-line" stroke-width="1" />
+        <text x="246" y="167" class="chip-label n-ink" font-size="11">3 · reject prescription-only drugs</text>
+        <rect x="234" y="184" width="430" height="30" rx="8" class="n-surface n-line" stroke-width="1" />
+        <text x="246" y="203" class="chip-label n-ink" font-size="11">4 · require an allowlisted evidence URL</text>
+        <rect x="234" y="220" width="430" height="30" rx="8" class="n-surface n-line" stroke-width="1" />
+        <text x="246" y="239" class="chip-label n-ink" font-size="11">5 · require a match in the curated catalog</text>
+
+        <!-- trusted inputs from top -->
+        <rect x="238" y="4" width="200" height="26" rx="8" class="n-accent-tint" />
+        <text x="338" y="22" text-anchor="middle" class="mono n-accent-ink" font-size="10">curated catalog → dose · URL · safety</text>
+        <line x1="338" y1="30" x2="338" y2="40" class="n-accent-stroke" stroke-width="1.3" marker-end="url(#ar3)" />
+        <rect x="460" y="4" width="150" height="26" rx="8" class="n-accent-tint" />
+        <text x="535" y="22" text-anchor="middle" class="mono n-accent-ink" font-size="10">patient vault → allergies</text>
+        <line x1="535" y1="30" x2="535" y2="40" class="n-accent-stroke" stroke-width="1.3" marker-end="url(#ar3)" />
+
+        <!-- outputs -->
+        <line x1="684" y1="120" x2="726" y2="120" class="green-stroke" stroke-width="1.7" marker-end="url(#ar3)" />
+        <rect x="728" y="92" width="150" height="58" rx="12" class="green-tint green-stroke" stroke-width="1.5" />
+        <text x="803" y="114" text-anchor="middle" class="box-label green-fill" font-size="12">Med cards</text>
+        <text x="803" y="132" text-anchor="middle" class="mono green-fill" font-size="9">validated · with WHO ref</text>
+
+        <line x1="684" y1="200" x2="726" y2="200" class="red-stroke" stroke-width="1.7" marker-end="url(#ar3)" />
+        <rect x="728" y="172" width="150" height="58" rx="12" class="red-tint red-stroke" stroke-width="1.4" />
+        <text x="803" y="194" text-anchor="middle" class="box-label red-fill" font-size="12">Dropped</text>
+        <text x="803" y="212" text-anchor="middle" class="mono red-fill" font-size="9">empty &gt; fabricated</text>
+      </svg>
+      <figcaption>
+        <b>The model never authors clinical numbers.</b> Dose, evidence URL, and safety text are read only
+        from the curated catalog and the patient's own vault. The same catalog also annotates
+        clinician-confirmed Vault medicines with WHO population-level context on the dashboard and doctor
+        summary.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ LOCATION ROUTING ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <h2>Location-first care routing</h2>
+    </div>
+    <p class="sec-sub">
+      Location is a first-run input, not an afterthought — so every triage result can point to real,
+      ranked facilities. The flow always answers, even on flaky Wi-Fi.
+    </p>
+    <div class="steps">
+      <div class="step">
+        <div class="sidx">STEP 1</div>
+        <h4>First-run gate</h4>
+        <p>App withholds the workspace until a care location is set; the location screen stays editable later.</p>
+      </div>
+      <div class="step">
+        <div class="sidx">STEP 2</div>
+        <h4>Resolve</h4>
+        <p><code class="mono">/location/resolve</code> reverse-geocodes lat/lon via Nominatim.</p>
+        <div class="fallback">↳ offline → coarse PK-city lookup</div>
+      </div>
+      <div class="step">
+        <div class="sidx">STEP 3</div>
+        <h4>Confirm</h4>
+        <p><code class="mono">/location/confirm</code> persists a <code class="mono">LocationPreference</code> (GPS or manual city).</p>
+      </div>
+      <div class="step">
+        <div class="sidx">STEP 4</div>
+        <h4>Rank facilities</h4>
+        <p><code class="mono">/facilities/nearby</code> scores by severity-fit + type + real distance + verified + emergency capability.</p>
+      </div>
+    </div>
   </section>
 
   <!-- ============ DATA MODEL ============ -->
   <section>
     <div class="sec-head">
-      <span class="sec-num">03</span>
+      <span class="sec-num">05</span>
       <h2>Data model — the family vault</h2>
     </div>
     <p class="sec-sub">
-      One account owns many patient profiles; everything else hangs off a profile and is deleted with
-      it (cascade). Personalization always pulls from the <b>active profile alone</b> — never a shared pool.
+      One account owns many patient profiles; everything hangs off a profile and is deleted with it
+      (cascade). Personalization always pulls from the <b>active profile alone</b>. Location is stored
+      per account; medicine evidence is derived at read time, never stored.
     </p>
     <div class="grid">
       <div class="card">
         <h3>accounts</h3>
-        <div class="rel">1 ──▶ ∞ profiles</div>
+        <div class="rel">1 ──▶ ∞ profiles · 1 ──▶ 1 location</div>
         <ul>
           <li><b>full_name</b>, <b>phone</b> (unique)</li>
           <li>password_hash <span style="color:var(--ink-mute)">· bcrypt</span></li>
-          <li>created_at</li>
         </ul>
       </div>
       <div class="card key">
@@ -643,16 +832,15 @@
         <ul>
           <li><b>display_name</b>, relation, age, gender</li>
           <li>blood_group, is_self</li>
-          <li>chronic_conditions[], allergies[]</li>
-          <li>notes</li>
+          <li>chronic_conditions[], allergies[], notes</li>
         </ul>
       </div>
       <div class="card">
         <h3>medicines</h3>
         <div class="rel">∞ ◀── profile</div>
         <ul>
-          <li><b>name</b>, strength, frequency</li>
-          <li>duration, with_food, notes</li>
+          <li><b>name</b>, strength, frequency, duration</li>
+          <li>with_food, notes</li>
           <li>source <span style="color:var(--ink-mute)">manual | prescription</span></li>
         </ul>
       </div>
@@ -660,65 +848,79 @@
         <h3>timeline_entries</h3>
         <div class="rel">∞ ◀── profile</div>
         <ul>
-          <li><b>kind</b> triage | lab | prescription</li>
+          <li><b>kind</b> triage | lab | prescription | document</li>
           <li>title, subtitle, level</li>
-          <li>payload <span style="color:var(--ink-mute)">JSON</span></li>
+          <li>payload <span style="color:var(--ink-mute)">JSON · image_ref</span></li>
         </ul>
       </div>
       <div class="card">
         <h3>triage_sessions</h3>
         <div class="rel">∞ ◀── profile</div>
         <ul>
-          <li><b>turns[]</b>, analysis <span style="color:var(--ink-mute)">JSON</span></li>
-          <li>status, result_level</li>
-          <li>initial_text, result_payload</li>
+          <li><b>turns[]</b>, analysis, clinical_state</li>
+          <li>status, result_level, result_payload</li>
+          <li>response_source, initial_text</li>
         </ul>
       </div>
       <div class="card">
-        <h3>uploads/</h3>
-        <div class="rel">filesystem, not DB</div>
+        <h3>location_preferences</h3>
+        <div class="rel">1 ◀── account</div>
         <ul>
-          <li>original lab &amp; Rx images</li>
+          <li><b>label</b>, city, province</li>
+          <li>latitude, longitude, manual</li>
+          <li>accuracy_m, updated_at</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>uploads/ + documents</h3>
+        <div class="rel">filesystem · timeline-linked</div>
+        <ul>
+          <li>xray · mri · skin · lab · prescription</li>
+          <li>private store, auth + ownership gated</li>
           <li>referenced by timeline payload</li>
-          <li>view the source paper later</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>medicine evidence</h3>
+        <div class="rel">derived · not stored</div>
+        <ul>
+          <li>WHO context for confirmed meds</li>
+          <li>built from curated catalog</li>
+          <li>shown on dashboard + summary</li>
         </ul>
       </div>
     </div>
   </section>
 
-  <!-- ============ MOCK vs REAL ============ -->
+  <!-- ============ PROVENANCE ============ -->
   <section>
     <div class="sec-head">
-      <span class="sec-num">04</span>
-      <h2>Mock mode vs. real mode</h2>
+      <span class="sec-num">06</span>
+      <h2>Response provenance &amp; demo seeding</h2>
     </div>
     <p class="sec-sub">
-      The whole app is demoable with zero credentials. A single gate —
-      <code class="mono">is_mock_mode()</code> = <code class="mono">MOCK_MODE</code> truthy
-      <b>or</b> no API key — decides which backend answers. Every AI response carries
-      <code class="mono">"mock": true|false</code>.
+      The running app is <b>live-AI first</b>. Every turn is stamped with a <code class="mono">response_source</code>
+      so a safe outage reply or a test double can never masquerade as a real assessment.
     </p>
     <div class="compare">
-      <div class="lane">
-        <h3><span class="dot" style="background:var(--ink-mute)"></span> Mock backend</h3>
-        <div class="cond">when MOCK_MODE=true OR key is missing</div>
+      <div class="lane real">
+        <h3><span class="dot" style="background:var(--accent)"></span> Live path — <code class="mono">live_ai</code></h3>
+        <div class="cond">DASHSCOPE_API_KEY set</div>
         <ul>
-          <li>Deterministic keyword-based triage heuristic</li>
-          <li>Canned follow-up questions &amp; live analysis</li>
-          <li>Sample CBC lab (flagged Hb / Iron)</li>
-          <li>2-medicine Rx extraction, one low-confidence field</li>
-          <li>No network, no credentials — ideal for demos &amp; CI</li>
+          <li>qwen-plus adaptive interview + synthesis</li>
+          <li>qwen-vl-plus for photos, labs, prescriptions</li>
+          <li>Guardrails + evidence resolver run outside the model</li>
+          <li>Timeout / bad output → safe fallback marked <code class="mono">ai_unavailable</code></li>
         </ul>
       </div>
-      <div class="lane real">
-        <h3><span class="dot" style="background:var(--accent)"></span> Real backend</h3>
-        <div class="cond">when DASHSCOPE_API_KEY set &amp; MOCK_MODE=false</div>
+      <div class="lane">
+        <h3><span class="dot" style="background:var(--ink-mute)"></span> Offline &amp; demo</h3>
+        <div class="cond">no key · tests · one-click demo</div>
         <ul>
-          <li>qwen-plus for conversational triage turns</li>
-          <li>qwen-vl-plus for lab reports &amp; prescriptions</li>
-          <li>OpenAI-compatible SDK → DashScope intl endpoint</li>
-          <li>Same guardrails still enforced outside the model</li>
-          <li>Bad / untrusted output → safe DOCTOR_24H fallback</li>
+          <li>pytest injects a <code class="mono">test_model</code> double — API contracts only</li>
+          <li>Live clinical behaviour still needs a real key</li>
+          <li><code class="mono">/api/demo/hassan</code> seeds a synthetic longitudinal vault (mock-only, idempotent)</li>
+          <li>4 watermarked fixtures · confirmed Cetirizine · low-Hb CBC · ibuprofen allergy</li>
         </ul>
       </div>
     </div>
@@ -727,33 +929,42 @@
   <!-- ============ API SURFACE ============ -->
   <section>
     <div class="sec-head">
-      <span class="sec-num">05</span>
+      <span class="sec-num">07</span>
       <h2>API surface</h2>
     </div>
-    <p class="sec-sub">All routes except auth, clinics and health require a bearer JWT.</p>
+    <p class="sec-sub">All routes except auth, clinics, health and location-resolve require a bearer JWT; private routes also check profile ownership.</p>
     <div class="table-scroll">
       <table>
         <thead>
           <tr><th>Method</th><th>Endpoint</th><th>Purpose</th><th>Guard</th></tr>
         </thead>
         <tbody>
+          <tr class="grp-row"><td colspan="4">Auth &amp; profiles</td></tr>
           <tr><td><span class="verb">POST</span></td><td class="path">/api/auth/register · /login</td><td>Create account (+ self profile) · issue JWT</td><td class="gu">public</td></tr>
-          <tr><td><span class="verb">GET</span></td><td class="path">/api/auth/me</td><td>Current account</td><td class="gu">jwt</td></tr>
-          <tr><td><span class="verb">GET·POST</span></td><td class="path">/api/profiles</td><td>List / create family profiles</td><td class="gu">jwt</td></tr>
-          <tr><td><span class="verb">···</span></td><td class="path">/api/profiles/{id}</td><td>GET · PUT · DELETE (+ all its data)</td><td class="gu">jwt · owner</td></tr>
-          <tr><td><span class="verb">POST</span></td><td class="path">/api/triage/start · /answer</td><td>Conversational triage state machine</td><td class="gu">jwt</td></tr>
-          <tr><td><span class="verb">POST</span></td><td class="path">/api/labreport</td><td>Qwen-VL lab extraction + Urdu explain</td><td class="gu">jwt</td></tr>
-          <tr><td><span class="verb">POST</span></td><td class="path">/api/prescription · /confirm</td><td>Extract → user reviews → save to profile</td><td class="gu">jwt</td></tr>
-          <tr><td><span class="verb">GET</span></td><td class="path">/api/summary/{id}</td><td>English doctor-handoff summary</td><td class="gu">jwt</td></tr>
-          <tr><td><span class="verb">GET</span></td><td class="path">/api/clinics · /health · /tts</td><td>8 KP facilities · status · spoken Urdu</td><td class="gu">public</td></tr>
+          <tr><td><span class="verb">···</span></td><td class="path">/api/profiles · /{id}</td><td>Family profile CRUD (cascade delete)</td><td class="gu">jwt · owner</td></tr>
+          <tr class="grp-row"><td colspan="4">Triage &amp; synthesis</td></tr>
+          <tr><td><span class="verb">POST</span></td><td class="path">/api/triage/start · /answer</td><td>Adaptive interview → explainable result</td><td class="gu">jwt</td></tr>
+          <tr><td><span class="verb">POST</span></td><td class="path">/api/triage/&hellip;/image</td><td>Photo turn (skin / report) via Qwen-VL</td><td class="gu">jwt</td></tr>
+          <tr class="grp-row"><td colspan="4">Vault &amp; documents</td></tr>
+          <tr><td><span class="verb">GET</span></td><td class="path">/api/dashboard/{id}</td><td>Patient-specific Home dashboard</td><td class="gu">jwt · owner</td></tr>
+          <tr><td><span class="verb">···</span></td><td class="path">/api/documents · /{id}</td><td>Patient-scoped document vault (private files)</td><td class="gu">jwt · owner</td></tr>
+          <tr><td><span class="verb">POST</span></td><td class="path">/api/labreport · /prescription · /confirm</td><td>Qwen-VL read → review → save to profile</td><td class="gu">jwt · owner</td></tr>
+          <tr><td><span class="verb">GET</span></td><td class="path">/api/summary/{id}</td><td>Doctor handoff (+ docs + WHO refs)</td><td class="gu">jwt · owner</td></tr>
+          <tr class="grp-row"><td colspan="4">Location &amp; care</td></tr>
+          <tr><td><span class="verb">POST</span></td><td class="path">/api/location/resolve · /confirm · /me</td><td>Reverse-geocode + persist care location</td><td class="gu">mixed</td></tr>
+          <tr><td><span class="verb">GET</span></td><td class="path">/api/facilities/nearby</td><td>Ranked facilities by urgency + distance</td><td class="gu">jwt</td></tr>
+          <tr class="grp-row"><td colspan="4">Misc</td></tr>
+          <tr><td><span class="verb">POST</span></td><td class="path">/api/demo/hassan</td><td>One-click synthetic vault (mock-only)</td><td class="gu">jwt · mock</td></tr>
+          <tr><td><span class="verb">GET</span></td><td class="path">/api/clinics · /health · /tts</td><td>Sample facilities · status · spoken Urdu</td><td class="gu">public</td></tr>
         </tbody>
       </table>
     </div>
 
     <div class="note">
-      <b>Safety boundary.</b> Nabz triages urgency and reads documents — it never states a diagnosis,
-      never prescribes, and never delays an emergency to keep asking. Prescription scanning only
-      transcribes an existing clinician's paper and requires human confirmation before saving.
+      <b>Safety boundary.</b> Nabz triages urgency, explains a non-diagnostic differential, and reads
+      documents — it never states a confirmed diagnosis, never authors a dose, and never delays an
+      emergency to keep asking. Suggested medicines pass the §03 evidence gate; prescription scanning
+      only transcribes an existing clinician's paper and requires human confirmation before saving.
     </div>
   </section>
 

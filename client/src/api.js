@@ -53,13 +53,20 @@ async function jsonReq(path, method, payload) {
 
 // --- Auth --------------------------------------------------------------------
 
-export const registerAccount = (full_name, phone, password) =>
-  jsonReq('/api/auth/register', 'POST', { full_name, phone, password })
+export const registerAccount = (full_name, phone, password, email) =>
+  jsonReq('/api/auth/register', 'POST', { full_name, phone, password, email: email || null })
 
 export const loginAccount = (phone, password) =>
   jsonReq('/api/auth/login', 'POST', { phone, password })
 
 export const getMe = () => jsonReq('/api/auth/me', 'GET')
+
+// Verification (soft gate). requestOtp returns { dev_code } in mock mode.
+export const requestOtp = (channel) =>
+  jsonReq('/api/auth/request-otp', 'POST', { channel })
+
+export const verifyOtp = (channel, code) =>
+  jsonReq('/api/auth/verify-otp', 'POST', { channel, code })
 
 // --- Profiles ----------------------------------------------------------------
 

@@ -20,11 +20,24 @@ class RegisterRequest(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=120)
     phone: str = Field(..., min_length=6, max_length=32)
     password: str = Field(..., min_length=6, max_length=128)
+    email: Optional[str] = Field(default=None, max_length=160)
 
     @field_validator("full_name", "phone")
     @classmethod
     def _strip(cls, v: str) -> str:
         return v.strip()
+
+    @field_validator("email")
+    @classmethod
+    def _clean_email(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        v = v.strip().lower()
+        if not v:
+            return None
+        if "@" not in v or "." not in v.split("@")[-1]:
+            raise ValueError("invalid email address")
+        return v
 
 
 class LoginRequest(BaseModel):
@@ -36,11 +49,49 @@ class AccountOut(BaseModel):
     id: int
     full_name: str
     phone: str
+    email: Optional[str] = None
+    phone_verified: bool = False
+    email_verified: bool = False
 
 
 class AuthResponse(BaseModel):
     token: str
     account: AccountOut
+
+
+# --- Verification (phone SMS OTP + email code) -------------------------------
+
+class OtpChannel(str, Enum):
+    phone = "phone"
+    email = "email"
+
+
+class OtpRequest(BaseModel):
+    channel: OtpChannel
+
+
+class OtpVerifyRequest(BaseModel):
+    channel: OtpChannel
+    code: str = Field(..., min_length=4, max_length=8)
+
+    @field_validator("code")
+    @classmethod
+    def _digits(cls, v: str) -> str:
+        v = v.strip()
+        if not v.isdigit():
+            raise ValueError("code must be digits")
+        return v
+
+
+class OtpSendResponse(BaseModel):
+    channel: str
+    sent: bool
+    already_verified: bool = False
+    expires_in_seconds: int = 0
+    message: str = ""
+    # Present ONLY when the code could not really be delivered (mock / no
+    # provider) so the demo stays usable. Never populated in real delivery.
+    dev_code: Optional[str] = None
 
 
 # --- Profiles -----------------------------------------------------------------

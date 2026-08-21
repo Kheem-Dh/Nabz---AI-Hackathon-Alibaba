@@ -6,6 +6,7 @@ export default function AuthPage() {
   const [mode, setMode] = useState('login')
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -17,7 +18,7 @@ export default function AuthPage() {
     try {
       if (mode === 'register') {
         if (fullName.trim().length < 2) throw new Error('Please enter your full name.')
-        await register(fullName.trim(), phone.trim(), password)
+        await register(fullName.trim(), phone.trim(), password, email.trim() || null)
       } else {
         await login(phone.trim(), password)
       }
@@ -95,6 +96,22 @@ export default function AuthPage() {
                 autoComplete="tel"
               />
             </div>
+            {mode === 'register' && (
+              <div className="field">
+                <label>
+                  <span className="ur urdu">ای میل</span> Email{' '}
+                  <span className="muted" style={{ fontWeight: 400 }}>(optional)</span>
+                </label>
+                <input
+                  className="input"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                />
+              </div>
+            )}
             <div className="field">
               <label>
                 <span className="ur urdu">پاس ورڈ</span> Password

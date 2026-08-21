@@ -16,6 +16,8 @@ import LabReportPage from './pages/LabReportPage'
 import PrescriptionPage from './pages/PrescriptionPage'
 import SummaryPage from './pages/SummaryPage'
 import PrivacyPage from './pages/PrivacyPage'
+import VerifyPage from './pages/VerifyPage'
+import VerifyBanner from './components/VerifyBanner'
 import DocumentsPage from './pages/DocumentsPage'
 import { stopAllSpeech } from './hooks/useTextToSpeech'
 
@@ -66,10 +68,12 @@ export default function App() {
     <div className="app-shell">
       <div className="app-container">
         {!isPrintRoute && <TopBar />}
+        {!isPrintRoute && !onLocationScreen && <VerifyBanner />}
         <main className="app-main">
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/location" element={<LocationSetupPage />} />
+            <Route path="/verify" element={<VerifyPage />} />
             <Route path="/vault" element={<VaultPage />} />
             <Route path="/profile/new" element={<ProfileEditPage mode="create" />} />
             <Route path="/profile/:id" element={<ProfilePage />} />

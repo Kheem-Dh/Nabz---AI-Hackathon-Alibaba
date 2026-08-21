@@ -1,4 +1,4 @@
-"""Authentication routes — register, login, /me."""
+"""Authentication routes — register, login, /me, and phone/email verification."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,14 +6,30 @@ from sqlalchemy.orm import Session
 
 from db import get_db
 from models_db import Account, Profile
-from schemas import AccountOut, AuthResponse, LoginRequest, RegisterRequest
+from schemas import (
+    AccountOut,
+    AuthResponse,
+    LoginRequest,
+    OtpRequest,
+    OtpSendResponse,
+    OtpVerifyRequest,
+    RegisterRequest,
+)
 from security import get_current_account, hash_password, issue_token, verify_password
+from verification import request_code, verify_code
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 def _account_out(account: Account) -> AccountOut:
-    return AccountOut(id=account.id, full_name=account.full_name, phone=account.phone)
+    return AccountOut(
+        id=account.id,
+        full_name=account.full_name,
+        phone=account.phone,
+        email=account.email,
+        phone_verified=bool(account.phone_verified),
+        email_verified=bool(account.email_verified),
+    )
 
 
 @router.post("/register", response_model=AuthResponse)
@@ -25,6 +41,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> AuthRes
     account = Account(
         full_name=payload.full_name.strip(),
         phone=payload.phone.strip(),
+        email=payload.email,
         password_hash=hash_password(payload.password),
     )
     db.add(account)
@@ -54,4 +71,33 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> AuthResponse:
 
 @router.get("/me", response_model=AccountOut)
 def me(account: Account = Depends(get_current_account)) -> AccountOut:
+    return _account_out(account)
+
+
+# --- Verification (soft gate) ------------------------------------------------
+
+@router.post("/request-otp", response_model=OtpSendResponse)
+def request_otp(
+    payload: OtpRequest,
+    account: Account = Depends(get_current_account),
+    db: Session = Depends(get_db),
+) -> OtpSendResponse:
+    """Send a one-time code to the account's phone or email.
+
+    In mock mode / without an SMS or SMTP provider, the code is returned as
+    `dev_code` so the flow is demoable with zero credentials.
+    """
+    result = request_code(db, account, payload.channel.value)
+    return OtpSendResponse(**result)
+
+
+@router.post("/verify-otp", response_model=AccountOut)
+def verify_otp(
+    payload: OtpVerifyRequest,
+    account: Account = Depends(get_current_account),
+    db: Session = Depends(get_db),
+) -> AccountOut:
+    """Confirm a code and mark the channel verified. Returns the updated account."""
+    verify_code(db, account, payload.channel.value, payload.code)
+    db.refresh(account)
     return _account_out(account)

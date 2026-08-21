@@ -28,10 +28,19 @@ class Account(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     full_name: Mapped[str] = mapped_column(String(120), nullable=False)
     phone: Mapped[str] = mapped_column(String(32), unique=True, index=True, nullable=False)
+    email: Mapped[str | None] = mapped_column(String(160), index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Soft-gate verification state (phone via SMS OTP, email via emailed code).
+    phone_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    phone_verified_at: Mapped[datetime | None] = mapped_column(DateTime)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
     profiles: Mapped[list["Profile"]] = relationship(
+        back_populates="account", cascade="all, delete-orphan"
+    )
+    verification_codes: Mapped[list["VerificationCode"]] = relationship(
         back_populates="account", cascade="all, delete-orphan"
     )
     location: Mapped["LocationPreference | None"] = relationship(
@@ -160,3 +169,23 @@ class TriageSession(Base):
     )
 
     profile: Mapped[Profile] = relationship(back_populates="triage_sessions")
+
+
+class VerificationCode(Base):
+    """A short-lived, single-use, attempt-limited OTP for phone/email verify."""
+
+    __tablename__ = "verification_codes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    channel: Mapped[str] = mapped_column(String(10), nullable=False)  # phone | email
+    destination: Mapped[str] = mapped_column(String(160), nullable=False)
+    code_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    consumed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+
+    account: Mapped[Account] = relationship(back_populates="verification_codes")

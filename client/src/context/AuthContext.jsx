@@ -43,8 +43,8 @@ export function AuthProvider({ children }) {
     return res.account
   }, [])
 
-  const register = useCallback(async (fullName, phone, password) => {
-    const res = await registerAccount(fullName, phone, password)
+  const register = useCallback(async (fullName, phone, password, email) => {
+    const res = await registerAccount(fullName, phone, password, email)
     setToken(res.token)
     setAccount(res.account)
     return res.account
@@ -55,8 +55,13 @@ export function AuthProvider({ children }) {
     setAccount(null)
   }, [])
 
+  // Let verification screens push the freshly-verified account into context.
+  const applyAccount = useCallback((next) => setAccount(next), [])
+
   return (
-    <AuthContext.Provider value={{ account, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ account, loading, login, register, logout, applyAccount }}
+    >
       {children}
     </AuthContext.Provider>
   )
