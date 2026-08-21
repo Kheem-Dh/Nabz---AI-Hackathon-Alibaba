@@ -293,6 +293,13 @@ export default function TriageConversation({ profile, onExit }) {
   return (
     <div className="conv">
       <div className="q-card">
+        <div className={`ai-source-badge ${turn.response_source || 'live_ai'}`}>
+          {turn.response_source === 'live_ai'
+            ? '✦ Live AI · transcript + patient Vault'
+            : turn.response_source === 'ai_unavailable'
+              ? 'AI assessment unavailable'
+              : 'Test model'}
+        </div>
         <div className="q-bot" aria-hidden="true">
           🩺
         </div>
@@ -300,6 +307,9 @@ export default function TriageConversation({ profile, onExit }) {
           {turn.question_urdu}
         </div>
         {turn.question_english && <div className="q-en">{turn.question_english}</div>}
+        {turn.why_this_matters && (
+          <div className="q-purpose">Why Nabz is asking: {turn.why_this_matters}</div>
+        )}
         <button className="q-speak" onClick={() => tts.speak(turn.question_urdu)}>
           🔊 دوبارہ سنیں · Replay
         </button>

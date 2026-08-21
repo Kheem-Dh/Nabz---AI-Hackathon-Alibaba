@@ -30,6 +30,10 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from db import init_db  # noqa: E402
 from main import app  # noqa: E402
+from fake_ai_provider import fake_ai_turn  # noqa: E402
+from triage import set_turn_provider_for_tests  # noqa: E402
+
+set_turn_provider_for_tests(fake_ai_turn)
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -92,7 +92,7 @@ export default function HomePage() {
         <section className="home-care-column">
           <div className="care-workspace-title">
             <div><span>ADAPTIVE TRIAGE</span><h2>Describe what is happening now</h2></div>
-            <small>Live Qwen when configured; offline safety engine otherwise</small>
+            <small>Live Qwen · full transcript + private patient Vault</small>
           </div>
           {/* key forces a fresh conversation when the active profile changes */}
           <TriageConversation key={active.id} profile={active} />

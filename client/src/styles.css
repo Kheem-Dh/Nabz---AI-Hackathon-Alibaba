@@ -2359,6 +2359,38 @@ textarea.input {
 .mo-evidence { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
 .mo-evidence a { font-size: 12px; color: var(--teal-dark, #0b7d6e); text-decoration: none; }
 .mo-evidence a:hover { text-decoration: underline; }
+
+.ai-source-badge {
+  width: fit-content;
+  margin: 0 0 12px;
+  padding: 5px 9px;
+  border: 1px solid var(--teal-100, #b9e5dd);
+  border-radius: 999px;
+  background: var(--teal-050, #eefaf7);
+  color: var(--teal-dark, #0b7d6e);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+.ai-source-badge.ai_unavailable {
+  border-color: #efc27b;
+  background: #fff8e8;
+  color: #8a5900;
+}
+.q-purpose {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--teal, #0f9d8a);
+  border-radius: 6px;
+  background: rgba(15, 157, 138, .06);
+  color: var(--ink-mute, #60706d);
+  font-size: 11px;
+}
+.ai-unavailable-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
 .mo-safety { font-size: 11px; color: var(--muted, #6b7c79); }
 
 .demo-loader {

@@ -17,7 +17,16 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, ttsSuppo
 
   return (
     <div className="stack">
+      {turn.response_source === 'ai_unavailable' && (
+        <div className="notice notice-warn ai-unavailable-notice" role="alert">
+          <strong>AI assessment unavailable</strong>
+          <span>This safety response is not an AI interpretation of the transcript.</span>
+        </div>
+      )}
       <div className={`result-card ${cfg.className}`} role="status">
+        {turn.response_source === 'live_ai' && (
+          <div className="ai-source-badge live_ai">✦ Live AI · transcript + patient Vault</div>
+        )}
         <div className="result-icon" aria-hidden="true">
           {cfg.icon}
         </div>
@@ -51,7 +60,9 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, ttsSuppo
           </div>
         )}
 
-        {turn.mock && <span className="mock-badge">offline demo · adaptive rules, not live AI</span>}
+        {turn.response_source === 'test_model' && (
+          <span className="mock-badge">test model · not shown in production</span>
+        )}
       </div>
 
       {(turn.patient_facing_impression_english || turn.possible_causes?.length > 0) && (

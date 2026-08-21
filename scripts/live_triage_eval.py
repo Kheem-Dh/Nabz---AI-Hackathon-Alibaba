@@ -21,8 +21,11 @@ import os
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE / "server"))
+load_dotenv(HERE / "server" / ".env")
 
 MAX_TOTAL_CALLS = 25
 SESSIONS = 5
@@ -69,6 +72,13 @@ def main() -> int:
         turns = [{"role": "user", "text": COMPLAINT}]
         turn = qwen_next_turn(profile, session_id=1000 + i, turns=turns)
         calls_used += 1
+
+        if turn.response_source == "ai_unavailable":
+            print(
+                "BLOCKED — the configured DashScope service did not return a valid live-AI "
+                "turn. Check account quota/authorization. Stopping after one logical call."
+            )
+            return 2
 
         q_urdu = turn.question_urdu or turn.advice_urdu or ""
         q_english = (turn.question_english or turn.advice_english or "").lower()

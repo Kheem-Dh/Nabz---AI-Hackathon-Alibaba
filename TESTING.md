@@ -96,7 +96,7 @@ if an emergency short-circuit asks any follow-up questions.
 | Home care | Mild cold (Urdu script) | HOME_CARE | — |
 | Non-health | Greeting only | HOME_CARE | graceful redirect |
 
-> **Mock vs. real:** the mock heuristic is deterministic and passes all 16.
+> **Offline vs. live AI:** pytest injects a test-only model double to validate API contracts. The running app never uses that double or a symptom rule engine. Live clinical behaviour requires a working DashScope key.
 > With a real Qwen key, results are model-driven; the eval accepts a milder
 > case being escalated (safe direction) but flags any emergency under-triaged.
 

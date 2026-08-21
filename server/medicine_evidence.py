@@ -6,8 +6,7 @@ Two responsibilities, kept in one module because they share the catalog:
    medicine with WHO population-level context. Used by the patient dashboard.
 
 2) `resolve_medication_candidates(candidates, ...)` — accept short-list
-   candidate medication names/purposes proposed by the triage layer (in mock
-   mode) or by the Qwen model (in real mode) and return only those that pass
+   candidate medication names/purposes proposed by the live Qwen interview and return only those that pass
    every safety and evidence check as `MedicationOption` objects. The model
    NEVER writes evidence URLs, doses, or safety text; every field comes from
    the curated catalog below.
@@ -73,6 +72,7 @@ _ALWAYS_PRESCRIPTION_ONLY = {
 
 _CATALOG: dict[tuple[str, str], dict] = {
     ("mild_headache_adult", "paracetamol"): {
+        "minimum_age": 16,
         "purpose": "Short-term relief of a mild-to-moderate tension-type or migraine headache in an adult with no red flags.",
         "recommendation_type": "OTC_INFORMATION",
         "why_it_may_help": (
@@ -117,6 +117,7 @@ _CATALOG: dict[tuple[str, str], dict] = {
         ),
     },
     ("mild_pain_adult", "paracetamol"): {
+        "minimum_age": 16,
         "purpose": "Short-term relief of mild-to-moderate pain in an adult with no contraindications.",
         "recommendation_type": "OTC_INFORMATION",
         "why_it_may_help": (
@@ -157,6 +158,7 @@ _CATALOG: dict[tuple[str, str], dict] = {
         ),
     },
     ("mild_fever_adult", "paracetamol"): {
+        "minimum_age": 16,
         "purpose": "Short-term relief of mild fever or mild pain in an adult with no contraindications.",
         "recommendation_type": "OTC_INFORMATION",
         "why_it_may_help": "Paracetamol lowers fever and eases mild pain in adults when used as labelled.",
@@ -192,6 +194,7 @@ _CATALOG: dict[tuple[str, str], dict] = {
         ),
     },
     ("mild_dehydration_adult", "ors"): {
+        "minimum_age": 16,
         "purpose": "Oral rehydration for mild dehydration from vomiting, diarrhoea, or fever.",
         "recommendation_type": "OTC_INFORMATION",
         "why_it_may_help": "WHO-formula oral rehydration salts replace water and electrolytes lost through gastrointestinal illness.",
@@ -224,6 +227,7 @@ _CATALOG: dict[tuple[str, str], dict] = {
         ),
     },
     ("allergic_rhinitis_adult", "cetirizine"): {
+        "minimum_age": 12,
         "purpose": "Relief of allergic-type itch or hay-fever symptoms in adults.",
         "recommendation_type": "OTC_INFORMATION",
         "why_it_may_help": (
@@ -259,6 +263,7 @@ _CATALOG: dict[tuple[str, str], dict] = {
         ),
     },
     ("mild_skin_care_adult", "petroleum_jelly"): {
+        "minimum_age": 16,
         "purpose": "Barrier moisturisation and simple protection of intact, non-infected skin.",
         "recommendation_type": "OTC_INFORMATION",
         "why_it_may_help": (
@@ -354,9 +359,9 @@ def resolve_medication_candidates(
 
     A candidate may look like ``{"generic_name": "paracetamol", "purpose": "…",
     "why_it_may_help": "…", "condition_key": "mild_fever_adult"}``. Fields
-    other than ``generic_name`` and (optionally) ``condition_key`` /
-    ``purpose_hint`` are IGNORED — evidence, dose, and safety text always come
-    from the catalog.
+    Only ``generic_name``, ``condition_key``, and a bounded patient-specific
+    relevance sentence are considered. Evidence, dose, eligibility, and
+    safety text always come from the catalog.
 
     Never returns a card when:
       * urgency is EMERGENCY,
@@ -422,14 +427,32 @@ def resolve_medication_candidates(
             # Catalog author error — never emit an unverifiable link.
             continue
 
+        # Catalog entries in this hackathon build are adult-labelled. Unknown
+        # age is not silently treated as adult, and pediatric profiles cannot
+        # receive an adult dose card even if the model nominates one.
+        minimum_age = row.get("minimum_age")
+        age = profile.get("age")
+        if minimum_age is not None and (age is None or age < minimum_age):
+            continue
+
+        # Never present a new option that duplicates a medicine already in the
+        # patient's confirmed Vault list. The existing medicine remains visible
+        # in its separate clinician-confirmed section.
+        if any(_normalized(name) == generic for name in current):
+            continue
+
         seen_generics.add(generic)
 
         conflicts_checked: list[str] = []
         for name in current:
             if name and _normalized(name) != generic:
-                conflicts_checked.append(f"Not the same drug as current '{name}'.")
+                conflicts_checked.append(
+                    f"No same-name duplication with current '{name}'; a pharmacist must still review interactions."
+                )
         if not conflicts_checked:
-            conflicts_checked.append("No current Vault medicine conflicts with this option.")
+            conflicts_checked.append(
+                "No current medicines are recorded in the Vault; a pharmacist must still confirm interactions."
+            )
 
         option = MedicationOption(
             generic_name=generic.title() if generic.islower() else generic,

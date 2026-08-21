@@ -133,14 +133,15 @@ audio (Nabz currently uses browser STT/TTS with a server gTTS fallback).
 `type: "question"` (+ `quick_replies`, `analysis`) or `type: "result"`
 (+ `level`, `advice_urdu/english`, `reason_english`, `facility_intent`).
 
-Deterministic emergency guardrails run **on every turn**, before the LLM.
-Uncertainty after five questions resolves upward to at least `DOCTOR_24H`.
+Qwen interprets emergency features from the full encounter on every turn; the
+server forces `EMERGENCY` if the model reports any red flag. Uncertainty after
+five questions resolves upward through a model repair or visibly labelled safe fallback.
 
-Mock-mode follow-ups are complaint-specific (skin, fever, respiratory,
-stomach, pain, or general) and recognize common Urdu/Roman-Urdu lay phrases.
-Real-model instructions likewise forbid generic or repeated questions. Browser
+Live follow-ups are generated from the complete transcript and relevant Vault
+context rather than selected from complaint categories. Model instructions
+forbid generic or repeated questions. Browser
 speech capture uses continuous recognition, waits through short pauses, and
-submits after three seconds of silence or an explicit Done tap.
+uses configurable longer silence windows followed by explicit transcript review.
 
 The response's `analysis.confidence` and `analysis.completeness` carry the
 same value; the UI labels it **"Assessment completeness"** — never diagnostic

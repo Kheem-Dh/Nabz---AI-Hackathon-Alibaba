@@ -121,7 +121,7 @@ def test_resolver_returns_none_when_no_catalog_match():
 
     out = resolve_medication_candidates(
         [{"generic_name": "some_random_drug", "condition_key": "any"}],
-        profile={"allergies": [], "current_medicines": []},
+        profile={"age": 34, "allergies": [], "current_medicines": []},
         urgency="HOME_CARE",
     )
     assert out == []
@@ -132,7 +132,7 @@ def test_resolver_returns_none_for_emergency():
 
     out = resolve_medication_candidates(
         [{"generic_name": "paracetamol", "condition_key": "mild_fever_adult"}],
-        profile={"allergies": [], "current_medicines": []},
+        profile={"age": 34, "allergies": [], "current_medicines": []},
         urgency="EMERGENCY",
     )
     assert out == []
@@ -143,7 +143,7 @@ def test_resolver_returns_valid_option_when_safe():
 
     out = resolve_medication_candidates(
         [{"generic_name": "paracetamol", "condition_key": "mild_fever_adult"}],
-        profile={"allergies": [], "current_medicines": []},
+        profile={"age": 34, "allergies": [], "current_medicines": []},
         urgency="DOCTOR_24H",
     )
     assert len(out) == 1
@@ -168,7 +168,7 @@ def test_resolver_ignores_model_url_and_dose():
             "evidence_source_url": "https://malicious.example.com/dose",
             "dose_guidance": "10 g every hour",  # NEVER honoured
         }],
-        profile={"allergies": [], "current_medicines": []},
+        profile={"age": 34, "allergies": [], "current_medicines": []},
         urgency="HOME_CARE",
     )
     assert len(out) == 1
@@ -252,8 +252,8 @@ def test_prompt_injection_in_transcript_is_ignored(client, auth):
             ),
         },
     ).json()
-    # Mock triage still routes based on symptoms only — no medication_options
-    # should ever include amoxicillin (it's on the prescription-only blocklist).
+    # The injected model double must still pass through the production
+    # prescription-only evidence gate.
     for opt in resp.get("medication_options", []):
         assert opt["generic_name"].lower() != "amoxicillin"
 
@@ -287,6 +287,11 @@ def test_headache_asks_headache_specific_questions_and_reaches_paracetamol_card(
     """The exact scenario the user flagged: 'mere sar m dard hai' must ask
     headache-specific questions and eventually surface a paracetamol option."""
     headers, _acc, pid = auth
+    current = client.get(f"/api/profiles/{pid}", headers=headers).json()
+    client.put(
+        f"/api/profiles/{pid}", headers=headers,
+        json={"display_name": current["display_name"], "age": 34},
+    )
     started = client.post(
         "/api/triage/start",
         headers=headers,
@@ -367,7 +372,7 @@ def test_hassan_headache_surfaces_paracetamol_not_ibuprofen(client, auth):
 
 
 def test_worst_headache_short_circuits_to_emergency(client, auth):
-    """A 'worst headache of my life' phrase must trigger the deterministic emergency."""
+    """The test model marks a worst-ever headache as an emergency."""
     headers, _acc, pid = auth
     resp = client.post(
         "/api/triage/start",
@@ -379,7 +384,7 @@ def test_worst_headache_short_circuits_to_emergency(client, auth):
     assert resp["analysis"]["questions_asked"] == 0
 
 
-def test_mock_result_carries_mock_true(client, auth):
+def test_injected_test_model_is_explicitly_labelled(client, auth):
     headers, _acc, pid = auth
     resp = client.post(
         "/api/triage/start",
@@ -387,3 +392,4 @@ def test_mock_result_carries_mock_true(client, auth):
         json={"profile_id": pid, "text": "halka sa zukam hai"},
     ).json()
     assert resp["mock"] is True
+    assert resp["response_source"] == "test_model"

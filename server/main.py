@@ -1,9 +1,9 @@
 """Nabz (نبض) — FastAPI backend.
 
 A voice-first, Urdu-first AI health companion for underserved communities in
-Pakistan. It triages urgency only — it never diagnoses a disease and never
-prescribes or names a medicine. Every AI call goes through this backend so the
-DashScope API key never reaches the browser.
+Pakistan. It provides non-diagnostic triage and can show evidence-validated
+generic medication information, but never issues a prescription. Every AI call
+goes through this backend so the DashScope API key never reaches the browser.
 
 This module only wires the application together: routers live in their own
 modules (auth, profiles, triage, labreport, prescription, summary, clinics).
@@ -14,12 +14,16 @@ import io
 import logging
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-load_dotenv()
+# Resolve the backend environment relative to this file. Relying on the shell's
+# current directory caused a configured key in server/.env to be missed when
+# Uvicorn was launched from the repository root, silently activating demo mode.
+load_dotenv(Path(__file__).with_name(".env"))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,7 +46,7 @@ from profiles import router as profiles_router  # noqa: E402
 from schemas import Clinic, HealthResponse  # noqa: E402
 from sessions import router as triage_router  # noqa: E402
 from summary import router as summary_router  # noqa: E402
-from triage import get_model_name, is_mock_mode  # noqa: E402
+from triage import get_model_name, is_mock_mode, triage_engine_mode  # noqa: E402
 from vision import get_vl_model  # noqa: E402
 
 logger = logging.getLogger("nabz")
@@ -52,7 +56,11 @@ logger = logging.getLogger("nabz")
 async def lifespan(_app: FastAPI):
     """Create tables (idempotent) and log the current mode at startup."""
     init_db()
-    logger.info("Nabz backend started (mock_mode=%s)", is_mock_mode())
+    logger.info(
+        "Nabz backend started (mock_mode=%s triage_engine=%s)",
+        is_mock_mode(),
+        triage_engine_mode(),
+    )
     yield
 
 
@@ -108,6 +116,7 @@ def health_detail() -> dict:
     return {
         "status": "ok",
         "mock_mode": is_mock_mode(),
+        "triage_engine": triage_engine_mode(),
         "text_model": get_model_name(),
         "vision_model": get_vl_model(),
         "location_provider": (

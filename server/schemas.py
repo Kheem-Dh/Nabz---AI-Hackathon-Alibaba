@@ -260,6 +260,9 @@ class TriageTurn(BaseModel):
     patient_name: str
     analysis: TriageAnalysis
     mock: bool = False
+    # Explicit provenance prevents a safe outage response or test double from
+    # masquerading as a live model-generated clinical assessment.
+    response_source: str = "live_ai"  # live_ai | ai_unavailable | test_model
 
     # question fields
     question_urdu: Optional[str] = None

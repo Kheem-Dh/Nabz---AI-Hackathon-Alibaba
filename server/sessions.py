@@ -108,6 +108,13 @@ def _turn_from_session(db: Session, session: TriageSession, profile: Profile) ->
                 "text": turn.question_urdu or "",
                 "text_english": turn.question_english or "",
                 "quick_replies": [q.model_dump() for q in turn.quick_replies],
+                "question_goal": turn.question_goal,
+                "why_this_matters": turn.why_this_matters,
+                "clinical_state": (
+                    turn.clinical_state.model_dump(mode="json")
+                    if turn.clinical_state
+                    else None
+                ),
             }
         ]
         session.analysis = turn.analysis.model_dump(mode="json")
