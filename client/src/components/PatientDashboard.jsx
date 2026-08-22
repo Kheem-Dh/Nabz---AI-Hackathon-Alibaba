@@ -152,7 +152,12 @@ export default function PatientDashboard({ profile, onOpenVault, onOpenSummary }
       )}
 
       {dashboard.latest_triage?.doctor_differential?.length > 0 && (
-        <section className="pd-differential">
+        <details className="pd-differential">
+          <summary>
+            <span>Latest clinical snapshot</span>
+            <small>{dashboard.latest_triage?.level?.replace('_', ' ')}</small>
+          </summary>
+          <div className="pd-differential-body">
           <div className="pd-evidence-head">
             <span>Doctor-facing differential — latest encounter</span>
             <small>
@@ -196,7 +201,8 @@ export default function PatientDashboard({ profile, onOpenVault, onOpenSummary }
               </ol>
             </details>
           )}
-        </section>
+          </div>
+        </details>
       )}
 
       {dashboard.medicine_evidence?.length > 0 && (

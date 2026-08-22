@@ -24,6 +24,9 @@ export default function PastEncounter({ encounter, loading, onNew, onRetry }) {
           onNew={onNew}
           onRetry={encounter.result.response_source === 'ai_unavailable' ? onRetry : undefined}
           ttsSupported={false}
+          chatSlot={encounter.turns?.length > 0
+            ? <EncounterChat sessionId={encounter.id} initialTurns={encounter.turns} />
+            : null}
         />
       ) : (
         <div className="notice notice-info">
@@ -31,9 +34,6 @@ export default function PastEncounter({ encounter, loading, onNew, onRetry }) {
         </div>
       )}
 
-      {encounter.turns?.length > 0 && (
-        <EncounterChat sessionId={encounter.id} initialTurns={encounter.turns} />
-      )}
     </div>
   )
 }

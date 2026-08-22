@@ -26,7 +26,7 @@ function normalizeCause(cause) {
 }
 
 // Color-coded triage result card (RED / AMBER / GREEN by status only).
-export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry, ttsSupported }) {
+export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry, ttsSupported, chatSlot }) {
   const cfg = levelConfig(turn.level)
   const [showWhy, setShowWhy] = useState(false)
   const navigate = useNavigate()
@@ -92,6 +92,18 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
           <span className="mock-badge">test model · not shown in production</span>
         )}
       </div>
+
+      {chatSlot}
+
+      <details className="clinical-report-details">
+        <summary>
+          <span>
+            <strong>Full assessment and care plan</strong>
+            <small>Possible causes, medication evidence, doctor handoff and nearby care</small>
+          </span>
+          <span className="details-open-label">Open report</span>
+        </summary>
+        <div className="clinical-report-body stack">
 
       {(turn.patient_facing_impression_english || turn.possible_causes?.length > 0) && (
         <section className="impression-card">
@@ -297,6 +309,9 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
       )}
 
       <NearbyCare urgency={turn.level || 'DOCTOR_24H'} />
+
+        </div>
+      </details>
 
       <div className="btn-row no-print">
         <button className="btn btn-outline" onClick={() => navigate('/clinics')}>

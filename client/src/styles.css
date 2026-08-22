@@ -28,7 +28,7 @@
   --shadow-soft: 0 2px 8px rgba(31, 45, 43, 0.06);
   --shadow-btn: 0 6px 16px rgba(15, 157, 138, 0.28);
 
-  --container: 1600px;
+  --container: 1920px;
   --nav-h: 64px;
   --font-en: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   --font-ur: 'Noto Nastaliq Urdu', serif;
@@ -176,10 +176,41 @@ a {
   padding: 0 11px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 12px;
-  background: rgba(68, 20, 20, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
+}
+.audio-stop-btn svg,
+.top-action-btn svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.top-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.top-action-btn:hover,
+.top-action-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.18);
+  outline: 2px solid rgba(255, 255, 255, 0.36);
+  outline-offset: 1px;
 }
 .audio-stop-btn:hover,
 .audio-stop-btn:focus-visible {
@@ -196,6 +227,8 @@ a {
 @media (max-width: 560px) {
   .audio-stop-btn { width: 40px; padding: 0; }
   .audio-stop-label { display: none; }
+  .top-action-btn { width: 40px; padding: 0; }
+  .top-action-btn span { display: none; }
 }
 
 /* --- Cards ------------------------------------------------------------- */
@@ -1686,6 +1719,8 @@ textarea.input {
 
 /* Patient-specific Home summary */
 .patient-dashboard {
+  min-width: 0;
+  overflow: hidden;
   background: linear-gradient(145deg, #ffffff, var(--teal-050));
   border: 1px solid var(--teal-100);
   border-radius: var(--radius-lg);
@@ -1710,6 +1745,15 @@ textarea.input {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+.patient-dashboard * { min-width: 0; }
+.pd-summary-ur,
+.pd-summary-en,
+.pd-record-item strong,
+.pd-recent button,
+.pd-evidence,
+.pd-differential-body {
+  overflow-wrap: anywhere;
 }
 .pd-eyebrow {
   color: var(--teal-dark);
@@ -2149,7 +2193,7 @@ textarea.input {
       var(--bg);
   }
   .app-container {
-    padding: 0 28px;
+    padding: 0 clamp(18px, 1.65vw, 32px);
   }
   .topbar {
     top: 12px;
@@ -2179,6 +2223,11 @@ textarea.input {
   .desktop-nav button:hover {
     background: rgba(255, 255, 255, 0.14);
     color: #fff;
+  }
+  .desktop-nav button.active {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   }
   .app-main {
     padding: 28px 0 90px;
@@ -2627,8 +2676,8 @@ textarea.input {
 @media (min-width: 1250px) {
   .desktop-health-workspace {
     display: grid;
-    grid-template-columns: 270px minmax(470px, 1fr) 340px;
-    gap: 18px;
+    grid-template-columns: 250px minmax(0, 1fr) 340px;
+    gap: 16px;
     align-items: start;
   }
   .encounter-sidebar {
@@ -2638,7 +2687,16 @@ textarea.input {
   }
   .encounter-sidebar { min-height: calc(100vh - 124px); }
   .encounter-history { flex: 1; max-height: none; }
-  .health-insights-column { overflow: visible; padding-right: 0; }
+  .health-insights-column {
+    position: sticky;
+    top: 104px;
+    max-height: calc(100vh - 124px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-color: rgba(15, 157, 138, .32) transparent;
+    scrollbar-width: thin;
+  }
   .assessment-workspace { min-height: calc(100vh - 150px); }
   .health-insights-column .patient-dashboard { padding: 15px; }
   .health-insights-column .pd-name { font-size: 18px; }
@@ -2648,7 +2706,18 @@ textarea.input {
 }
 
 @media (min-width: 1500px) {
-  .desktop-health-workspace { grid-template-columns: 315px minmax(650px, 1fr) 410px; gap: 22px; }
+  .desktop-health-workspace { grid-template-columns: 280px minmax(760px, 1fr) 370px; gap: 18px; }
+}
+
+@media (min-width: 1800px) {
+  .desktop-health-workspace { grid-template-columns: 290px minmax(0, 1fr) 390px; gap: 20px; }
+}
+
+@media (min-width: 900px) and (max-width: 1180px) {
+  .top-action-btn { width: 40px; padding: 0; }
+  .top-action-btn span { display: none; }
+  .desktop-nav { margin-right: 10px; }
+  .desktop-nav button { padding-inline: 10px; }
 }
 
 @media (max-width: 1249px) {
@@ -2830,6 +2899,48 @@ textarea.input {
   border: 1px solid var(--border, #e3ecea);
   border-radius: 12px;
 }
+.pd-differential > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+}
+.pd-differential > summary::-webkit-details-marker { display: none; }
+.pd-differential > summary::after {
+  content: '+';
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--teal-050);
+  color: var(--teal-dark);
+  font-size: 15px;
+}
+.pd-differential[open] > summary::after { content: '−'; }
+.pd-differential > summary small {
+  margin-left: auto;
+  color: var(--teal-dark);
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.pd-differential-body {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.pd-differential-body ul,
+.pd-transcript ol {
+  margin-left: 0;
+  padding-left: 18px;
+}
 .pd-impression { margin: 8px 0; color: var(--text, #1f2d2b); font-size: 13px; }
 .pd-redflags {
   background: var(--red-bg, #fdecea);
@@ -3004,11 +3115,12 @@ textarea.input {
 .compact-composer textarea { min-height: 58px; padding-top: 12px; }
 
 .encounter-chat {
-  margin-top: 18px;
-  padding: 18px;
-  border: 1px solid #dfe7e4;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #fbfcfa 0%, #f6f8f6 100%);
+  margin-top: 2px;
+  padding: 20px;
+  border: 1px solid #d9e4e0;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faf8 100%);
+  box-shadow: 0 12px 34px rgba(31,45,43,.07);
 }
 .encounter-chat-head {
   display: flex;
@@ -3037,7 +3149,7 @@ textarea.input {
   font-size: 9px;
   font-weight: 700;
 }
-.transcript-scroll { max-height: 330px; overflow-y: auto; }
+.transcript-scroll { max-height: 270px; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
 .followup-thread { display: flex; flex-direction: column; gap: 9px; margin: 12px 0; }
 .followup-bubble {
   max-width: 88%;
@@ -3057,6 +3169,47 @@ textarea.input {
 .chat-thinking i { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); animation: pulse 1s infinite alternate; }
 .chat-thinking i:nth-child(2) { animation-delay: .16s; }
 .chat-thinking i:nth-child(3) { animation-delay: .32s; }
+
+.clinical-report-details {
+  overflow: hidden;
+  margin-top: 2px;
+  border: 1px solid #dfe7e4;
+  border-radius: 17px;
+  background: rgba(255,255,255,.78);
+}
+.clinical-report-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 76px;
+  padding: 15px 18px;
+  list-style: none;
+  cursor: pointer;
+}
+.clinical-report-details > summary::-webkit-details-marker { display: none; }
+.clinical-report-details > summary:hover { background: var(--teal-050); }
+.clinical-report-details > summary > span:first-child { display: flex; flex-direction: column; gap: 3px; }
+.clinical-report-details > summary strong { color: var(--ink); font-size: 14px; }
+.clinical-report-details > summary small { color: var(--ink-mute); font-size: 10px; font-weight: 400; }
+.details-open-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: var(--teal-050);
+  color: var(--teal-dark);
+  font-size: 10px;
+  font-weight: 700;
+}
+.details-open-label::after { content: '↓'; font-size: 12px; }
+.clinical-report-details[open] .details-open-label::after { content: '↑'; }
+.clinical-report-body {
+  padding: 4px 16px 18px;
+  border-top: 1px solid var(--line);
+}
 
 @media (max-width: 640px) {
   .encounter-chat { padding: 13px; }

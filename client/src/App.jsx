@@ -101,6 +101,8 @@ export default function App() {
 function TopBar({ minimal = false }) {
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const navClass = (path) => location.pathname === path ? 'active' : ''
   return (
     <header className="topbar">
       <div className="topbar-row">
@@ -113,9 +115,9 @@ function TopBar({ minimal = false }) {
         </div>
         {!minimal && (
           <nav className="desktop-nav" aria-label="Primary navigation">
-            <button onClick={() => navigate('/')}>Home</button>
-            <button onClick={() => navigate('/vault')}>Medical Vault</button>
-            <button onClick={() => navigate('/clinics')}>Nearby Care</button>
+            <button className={navClass('/')} onClick={() => navigate('/')}>Workspace</button>
+            <button className={navClass('/vault')} onClick={() => navigate('/vault')}>Medical Vault</button>
+            <button className={navClass('/clinics')} onClick={() => navigate('/clinics')}>Find care</button>
           </nav>
         )}
         <div className="row">
@@ -126,24 +128,26 @@ function TopBar({ minimal = false }) {
             onClick={stopAllSpeech}
             aria-label="Stop all audio"
           >
-            <span aria-hidden="true">■</span>
-            <span className="audio-stop-label">Stop audio</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.8 8.5H3v7h3.8L11 19V5Zm4.2 4.2 5.6 5.6m0-5.6-5.6 5.6" /></svg>
+            <span className="audio-stop-label">Mute</span>
           </button>
           <button
-            className="icon-btn"
+            className="top-action-btn"
             title="Privacy"
             onClick={() => navigate('/privacy')}
             aria-label="Privacy"
           >
-            🔒
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8.1 7 10 4.2-1.9 7-5.4 7-10V6l-7-3Zm-3 9 2 2 4-4" /></svg>
+            <span>Privacy</span>
           </button>
           <button
-            className="icon-btn"
+            className="top-action-btn"
             title="Log out"
             onClick={() => { stopAllSpeech(); logout() }}
             aria-label="Log out"
           >
-            ⏻
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v14h5m4-4 4-3-4-3m4 3H9" /></svg>
+            <span>Sign out</span>
           </button>
         </div>
       </div>
