@@ -3333,3 +3333,268 @@ textarea.input {
 .facility-card .fc-title { font-size: 14.5px; }
 .facility-card .fc-meta { font-size: 12px; }
 .facility-card .fc-reason { font-style: normal; color: var(--muted, #6b7c79); font-size: 11.5px; }
+
+/* ============================================================
+   Judge-facing presentation polish (2026-08-22)
+   Clear assessment journey, compact interaction states, and
+   evidence-first report presentation.
+   ============================================================ */
+
+.q-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.q-card-meta .ai-source-badge { margin: 0; }
+.assessment-step {
+  color: var(--ink-mute);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+.q-card {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(22px, 3vw, 34px);
+  border: 1px solid #e2e9e7;
+  background:
+    radial-gradient(circle at 50% 0, rgba(15,157,138,.07), transparent 34%),
+    #fff;
+  box-shadow: 0 12px 34px rgba(31,45,43,.06);
+}
+.q-card .q-bot {
+  width: 38px;
+  height: 38px;
+  margin-bottom: 9px;
+  border: 1px solid var(--teal-100);
+  background: #fff;
+  color: var(--teal-dark);
+  box-shadow: 0 5px 14px rgba(15,157,138,.12);
+  font-family: var(--font-en);
+  font-size: 17px;
+}
+.q-card .q-urdu {
+  max-width: 920px;
+  margin: 0 auto;
+  font-size: clamp(21px, 1.55vw, 27px);
+  line-height: 1.85;
+}
+.q-card .q-en { margin-top: 0; font-size: 13px; }
+.q-purpose {
+  max-width: 940px;
+  margin: 14px auto 0;
+  padding: 9px 14px;
+  border-left-width: 2px;
+  background: #f2f8f6;
+  line-height: 1.55;
+}
+.q-speak {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 12px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+.q-speak:hover { background: var(--teal-050); }
+.chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 9px;
+  width: min(100%, 800px);
+  margin: 8px auto 0;
+}
+.chip {
+  width: 100%;
+  min-height: 62px;
+  justify-content: center;
+  padding: 9px 12px;
+  border-radius: 13px;
+  background: rgba(255,255,255,.88);
+  line-height: 1.65;
+}
+.chip:hover,
+.chip:focus-visible {
+  border-color: var(--teal);
+  background: var(--teal-050);
+  box-shadow: 0 7px 18px rgba(15,157,138,.1);
+  outline: none;
+}
+.chip .chip-en { line-height: 1.35; }
+
+.conv > .compact-composer { margin-top: 0; }
+.conv > .compact-composer textarea {
+  min-height: 46px;
+  max-height: 120px;
+  padding: 12px 16px 2px;
+  resize: none;
+}
+.conv > .compact-composer footer {
+  min-height: 42px;
+  padding: 4px 9px 7px 12px;
+}
+.conv > .compact-composer .mini-mic {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.analysis {
+  padding: 16px 18px;
+  border: 1px solid #dcebe7;
+  border-radius: 17px;
+  background: linear-gradient(135deg, #fff, #f3faf8);
+  box-shadow: none;
+}
+.analysis-percent {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--teal-050);
+  color: var(--teal-dark);
+  font-size: 11px;
+  font-weight: 700;
+}
+.analysis .progress { height: 7px; margin: 10px 0 13px; }
+.analysis .fact-chip {
+  display: grid;
+  min-width: 118px;
+  gap: 1px;
+  padding: 8px 11px;
+  border-radius: 11px;
+  background: rgba(255,255,255,.9);
+}
+.analysis .fact-chip .f-value { line-height: 1.75; }
+.analysis .still-checking {
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px solid #e1eeea;
+}
+
+.assessment-thinking {
+  display: flex;
+  min-height: 360px;
+  padding: 54px 24px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.thinking-mark {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  margin-bottom: 18px;
+  place-items: center;
+  border: 1px solid var(--teal-100);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(15,157,138,.12);
+}
+.thinking-mark .spinner { width: 31px; height: 31px; border-width: 3px; }
+.thinking-kicker {
+  color: var(--teal-dark);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .14em;
+}
+.assessment-thinking .cs-ur { margin: 8px 0 0; font-size: 23px; }
+.assessment-thinking .cs-en { max-width: 510px; margin: 3px 0 0; color: var(--ink-mute); font-size: 12px; }
+.thinking-steps {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 24px;
+  color: var(--ink-mute);
+  font-size: 9px;
+  font-weight: 600;
+}
+.thinking-steps i { width: 26px; height: 1px; background: var(--line); }
+.thinking-steps span { padding: 5px 8px; border-radius: 999px; }
+.thinking-steps .done { color: var(--teal-dark); background: var(--teal-050); }
+.thinking-steps .active { color: var(--ink); background: #fff; box-shadow: 0 0 0 1px var(--line); }
+
+.result-card {
+  padding: clamp(22px, 3vw, 36px);
+  box-shadow: 0 14px 36px rgba(31,45,43,.07);
+}
+.result-card .advice-ur,
+.result-card .advice-en { max-width: 930px; margin-left: auto; margin-right: auto; }
+.result-card .result-actions { max-width: 930px; margin-left: auto; margin-right: auto; }
+.clinical-report-details { box-shadow: 0 8px 24px rgba(31,45,43,.04); }
+.clinical-report-details[open] > summary { background: #f6faf8; }
+.clinical-report-body { padding: 18px; background: #f8faf9; }
+
+.web-quick-actions button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  text-align: left;
+}
+.web-quick-actions button > span:last-child { min-width: 0; }
+.web-quick-actions strong,
+.web-quick-actions small { display: block; }
+.web-quick-actions strong { color: var(--ink); font-size: 10px; }
+.web-quick-actions small { margin-top: 2px; color: var(--ink-mute); font-size: 8px; font-weight: 400; }
+.quick-action-icon {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--teal-050);
+  color: var(--teal-dark);
+}
+.quick-action-icon svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (min-width: 1250px) {
+  .encounter-sidebar {
+    top: 112px;
+    min-height: calc(100vh - 144px);
+    max-height: calc(100vh - 144px);
+  }
+  .health-insights-column {
+    top: 112px;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+  .assessment-workspace { padding: clamp(22px, 1.7vw, 30px); }
+}
+
+@media (min-width: 1500px) {
+  .possible-cause-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .possible-cause-list .likelihood-note,
+  .possible-cause-list .escalation-block { grid-column: 1 / -1; }
+}
+
+@media (max-width: 640px) {
+  .q-card-meta { align-items: flex-start; }
+  .assessment-step { max-width: 86px; text-align: right; }
+  .chips { grid-template-columns: 1fr 1fr; }
+  .chip { min-height: 58px; }
+  .thinking-steps i { width: 12px; }
+  .thinking-steps span { padding-inline: 4px; }
+  .clinical-report-body { padding: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner,
+  .chat-thinking i,
+  .still-checking .dots i { animation-duration: 2.5s; }
+}

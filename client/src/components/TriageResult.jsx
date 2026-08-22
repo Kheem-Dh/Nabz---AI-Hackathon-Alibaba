@@ -99,9 +99,11 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
         <summary>
           <span>
             <strong>Full assessment and care plan</strong>
-            <small>Possible causes, medication evidence, doctor handoff and nearby care</small>
+            <small>
+              {turn.possible_causes?.length || 0} ranked explanations · {medicationSteps.length || 0} medication options · doctor handoff · nearby care
+            </small>
           </span>
-          <span className="details-open-label">Open report</span>
+          <span className="details-open-label">Review evidence</span>
         </summary>
         <div className="clinical-report-body stack">
 

@@ -311,16 +311,24 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   // --- Starting / thinking spinners --------------------------------------
   if (phase === 'starting' || phase === 'thinking' || phase === 'analyzing-image') {
     return (
-      <div className="center-state">
-        <div className="spinner" />
+      <div className="assessment-thinking" role="status" aria-live="polite">
+        <div className="thinking-mark"><div className="spinner" /></div>
+        <span className="thinking-kicker">PRIVATE CLINICAL REASONING</span>
         <p className="cs-ur urdu">
-          {phase === 'analyzing-image' ? 'تصویر کا محتاط جائزہ لیا جا رہا ہے…' : 'نبض سوچ رہا ہے…'}
+          {phase === 'analyzing-image' ? 'تصویر کا محتاط جائزہ لیا جا رہا ہے…' : 'نبض آپ کی معلومات کا جائزہ لے رہا ہے…'}
         </p>
         <p className="cs-en">
           {phase === 'analyzing-image'
-            ? 'Observing the image and continuing your assessment…'
-            : 'Nabz is thinking…'}
+            ? 'Reviewing the image alongside your conversation and Vault context.'
+            : 'Reviewing your conversation, safety signals, and relevant Vault context.'}
         </p>
+        <div className="thinking-steps" aria-hidden="true">
+          <span className="done">Transcript</span>
+          <i />
+          <span className="active">Safety check</span>
+          <i />
+          <span>Next question</span>
+        </div>
       </div>
     )
   }
@@ -354,7 +362,6 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           onRetry={turn.response_source === 'ai_unavailable' ? retryAssessment : undefined}
           chatSlot={turn.response_source !== 'ai_unavailable' ? <EncounterChat sessionId={sessionId} /> : null}
         />
-        {turn.analysis?.collected?.length > 0 && <AnalysisPanel analysis={turn.analysis} />}
       </div>
     )
   }
@@ -364,15 +371,18 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   return (
     <div className="conv">
       <div className="q-card">
-        <div className={`ai-source-badge ${turn.response_source || 'live_ai'}`}>
-          {turn.response_source === 'live_ai'
-            ? '✦ Live AI · transcript + patient Vault'
-            : turn.response_source === 'ai_unavailable'
-              ? 'AI assessment unavailable'
-              : 'Test model'}
+        <div className="q-card-meta">
+          <div className={`ai-source-badge ${turn.response_source || 'live_ai'}`}>
+            {turn.response_source === 'live_ai'
+              ? '✦ Live AI · transcript + patient Vault'
+              : turn.response_source === 'ai_unavailable'
+                ? 'AI assessment unavailable'
+                : 'Test model'}
+          </div>
+          <span className="assessment-step">Step {Math.min(turn.analysis?.questions_asked || 1, 5)} of about 5</span>
         </div>
         <div className="q-bot" aria-hidden="true">
-          🩺
+          ✦
         </div>
         <div className="q-urdu urdu" dir="rtl">
           {turn.question_urdu}

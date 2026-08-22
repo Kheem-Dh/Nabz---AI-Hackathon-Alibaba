@@ -185,8 +185,14 @@ export default function HomePage() {
           onOpenSummary={() => navigate(`/summary/${active.id}`)}
         />
         <div className="web-quick-actions">
-          <button onClick={() => navigate(`/profile/${active.id}/lab`)}><span>🧪</span> Explain lab</button>
-          <button onClick={() => navigate(`/profile/${active.id}/prescription`)}><span>📝</span> Add prescription</button>
+          <button onClick={() => navigate(`/profile/${active.id}/lab`)}>
+            <span className="quick-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 3h6m-1 0v5l4.5 8.1A3.3 3.3 0 0 1 15.6 21H8.4a3.3 3.3 0 0 1-2.9-4.9L10 8V3m-2 11h8" /></svg></span>
+            <span><strong>Explain lab</strong><small>Understand flagged values</small></span>
+          </button>
+          <button onClick={() => navigate(`/profile/${active.id}/prescription`)}>
+            <span className="quick-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6V3Zm8 0v4h4M9 12h6m-6 4h6" /></svg></span>
+            <span><strong>Add prescription</strong><small>Enrich Vault context</small></span>
+          </button>
         </div>
       </aside>
     </div>

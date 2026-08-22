@@ -7,20 +7,22 @@ export default function AnalysisPanel({ analysis }) {
   // NOT a diagnostic probability. Backend exposes both fields with the same
   // value; we read completeness first per the winning plan §4.5.
   const raw = analysis.completeness ?? analysis.confidence ?? 0
-  const pct = Math.round(Math.min(1, Math.max(0, raw)) * 100)
   const collected = analysis.collected || []
   const asked = analysis.questions_asked || 0
+  // A step can be complete even when some clinical uncertainty remains. Use
+  // the stronger of the model's information score and the interview journey,
+  // while retaining a final review buffer before the result is produced.
+  const journeyProgress = asked > 0 ? Math.min(0.85, asked / 5 * 0.85) : 0
+  const pct = Math.round(Math.min(1, Math.max(0, raw, journeyProgress)) * 100)
 
   return (
     <div className="analysis" aria-live="polite">
       <div className="analysis-head">
         <div>
           <div className="a-title-ur urdu">نبض کا تجزیہ</div>
-          <div className="a-title-en">
-            Assessment completeness · Question {Math.min(asked, 5)} of ~5
-          </div>
+          <div className="a-title-en">Information gathered · Step {Math.min(asked, 5)} of about 5</div>
         </div>
-        <div style={{ fontWeight: 700, color: 'var(--teal-dark)', fontSize: 13 }}>{pct}%</div>
+        <div className="analysis-percent">{pct}%</div>
       </div>
 
       <div className="progress" aria-label={`assessment completeness ${pct}%`}>
