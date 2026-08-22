@@ -155,6 +155,9 @@ def test_resolver_returns_valid_option_when_safe():
     assert opt.fda_approval_status == "FDA-approved product verified"
     assert opt.fda_application_number == "NDA 019872"
     assert "accessdata.fda.gov" in opt.fda_approval_source_url
+    assert opt.dailymed_setid
+    assert "dailymed.nlm.nih.gov" in opt.dailymed_source_url
+    assert opt.dailymed_source_status == "reviewed_cache"
     # Dose guidance only from the curated catalog.
     assert opt.dose_guidance and "4 g" in opt.dose_guidance
 
@@ -191,6 +194,49 @@ def test_resolver_suppresses_non_fda_verified_catalog_option():
         urgency="HOME_CARE",
     )
     assert out == []
+
+
+def test_dailymed_live_service_prefers_single_ingredient_label(monkeypatch):
+    import dailymed
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "data": [
+                    {
+                        "setid": "combo",
+                        "title": "ACETAMINOPHEN, ASPIRIN, CAFFEINE TABLET",
+                        "spl_version": 1,
+                        "published_date": "Aug 22, 2026",
+                    },
+                    {
+                        "setid": "single",
+                        "title": "ACETAMINOPHEN TABLET, FILM COATED [TEST LABELER]",
+                        "spl_version": 4,
+                        "published_date": "Aug 21, 2026",
+                    },
+                ]
+            }
+
+    captured = {}
+    monkeypatch.setenv("MOCK_MODE", "false")
+    monkeypatch.setenv("NABZ_DAILYMED_LIVE", "true")
+    monkeypatch.setattr(
+        dailymed.httpx,
+        "get",
+        lambda url, **kwargs: captured.update({"url": url, **kwargs}) or Response(),
+    )
+    dailymed.lookup_dailymed_label.cache_clear()
+    label = dailymed.lookup_dailymed_label("paracetamol")
+    dailymed.lookup_dailymed_label.cache_clear()
+
+    assert label["setid"] == "single"
+    assert label["source_status"] == "live_dailymed"
+    assert captured["params"]["drug_name"] == "acetaminophen"
+    assert set(captured["params"]) == {"drug_name", "name_type", "pagesize", "page"}
 
 
 # --- Hassan demo seed idempotence + fixtures ------------------------------

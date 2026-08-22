@@ -703,6 +703,68 @@ def test_summary_generates(client, auth):
     assert body["recent_triage"]["level"] == "EMERGENCY"
 
 
+def test_followup_chat_uses_owned_transcript_and_current_vault(
+    client, auth, monkeypatch
+):
+    import sessions
+    from schemas import TriageChatResponse
+
+    headers, _account, self_id = auth
+    result = client.post(
+        "/api/triage/start",
+        headers=headers,
+        json={"profile_id": self_id, "text": "seenay mein dard hai"},
+    ).json()
+    assert result["type"] == "result"
+    captured = {}
+
+    def followup(profile, session_id, saved_result, turns, question):
+        captured.update({
+            "profile": profile,
+            "session_id": session_id,
+            "saved_result": saved_result,
+            "turns": turns,
+            "question": question,
+        })
+        return TriageChatResponse(
+            session_id=session_id,
+            answer_urdu="محفوظ گفتگو کے مطابق فوری معائنہ ضروری ہے۔",
+            answer_english="The saved conversation indicates that urgent assessment is needed.",
+            vault_context_used=["Allergies reviewed"],
+            safety_note="Do not delay emergency care.",
+        )
+
+    monkeypatch.setattr(sessions, "qwen_followup_chat", followup)
+    response = client.post(
+        "/api/triage/chat",
+        headers=headers,
+        json={"session_id": result["session_id"], "text": "Why is this urgent?"},
+    )
+    assert response.status_code == 200, response.text
+    assert "urgent assessment" in response.json()["answer_english"]
+    assert captured["profile"]["id"] == self_id
+    assert captured["saved_result"]["level"] == "EMERGENCY"
+    assert captured["turns"][0]["text"] == "seenay mein dard hai"
+
+    history = client.get(
+        f"/api/triage/history/{result['session_id']}", headers=headers
+    ).json()
+    assert history["turns"][-2]["kind"] == "followup_user"
+    assert history["turns"][-1]["kind"] == "followup_assistant"
+
+    other = client.post(
+        "/api/auth/register",
+        json={"full_name": "Other Chat", "phone": "03127774444", "password": "pass1234"},
+    ).json()
+    other_headers = {"Authorization": f"Bearer {other['token']}"}
+    denied = client.post(
+        "/api/triage/chat",
+        headers=other_headers,
+        json={"session_id": result["session_id"], "text": "Show transcript"},
+    )
+    assert denied.status_code == 404
+
+
 # --- Validation --------------------------------------------------------------
 
 def test_empty_triage_text_rejected(client, auth):

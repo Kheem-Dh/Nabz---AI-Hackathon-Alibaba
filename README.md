@@ -22,7 +22,7 @@ After login, the user sees only the health record linked to their own account. T
 | --- | --- | --- |
 | Past conversations, clear titles, dates, and urgency | Voice/text conversation and AI assessment | Vault documents, medicines, allergies, conditions, labs, and activity |
 
-The conversation list works like a chat history. Qwen creates a short descriptive title such as **“Right arm red mark assessment.”** Selecting an old conversation opens its result and transcript. Selecting **New health conversation** starts a clean assessment.
+The conversation list works like a chat history. Qwen creates a short descriptive title such as **“Right arm red mark assessment.”** Selecting an old conversation opens its result and transcript. The patient can then ask follow-up questions grounded in that transcript and the current Vault summary without changing the saved urgency result. Selecting **New health conversation** starts a clean assessment.
 
 ### Main user flow
 
@@ -38,7 +38,8 @@ flowchart LR
     H --> F
     G -- Yes --> I[Show urgency and next steps]
     I --> J[Save conversation in history]
-    J --> K[Open doctor handoff or nearby care]
+    J --> K[Ask transcript-grounded follow-up questions]
+    K --> L[Open doctor handoff or nearby care]
 ```
 
 ---
@@ -157,7 +158,7 @@ Other Vault uploads can provide structured supportive context for later live con
 
 ### Medicine information and evidence
 
-The AI may nominate a generic medicine for the server to check. It cannot directly create a medicine card, dose, citation, or evidence link.
+The AI may nominate a generic medicine for the server to check. It cannot directly create a medicine card, dose, citation, evidence link, or prescription. Nabz builds a proposed **medication discussion plan** from the unconfirmed clinical impression—not from a claimed diagnosis.
 
 ```mermaid
 flowchart LR
@@ -165,7 +166,8 @@ flowchart LR
     B --> C{Emergency, allergy, duplicate, unsafe, or no FDA approval record?}
     C -- Yes --> D[Do not show the medicine]
     C -- No --> E[Load reviewed catalog information]
-    E --> F[Show purpose, safety notes, dose guidance, and evidence link]
+    E --> F[Fetch current label metadata from DailyMed v2]
+    F --> G[Show discussion plan, safety notes, dose guidance, and sources]
 ```
 
 The server:
@@ -176,8 +178,9 @@ The server:
 - discards model-written doses and URLs;
 - uses only reviewed catalog doses and allowlisted sources;
 - emits a medication option only when a reviewed Drugs@FDA application record verifies that an FDA-approved product exists for the active ingredient;
+- queries the official DailyMed v2 service using only the allowlisted generic name and links the selected current Structured Product Label;
 - displays the FDA application number and source, while warning that U.S. FDA status does not replace Pakistani product registration or pharmacist review;
-- describes medicine cards as information to discuss, not a prescription.
+- labels the complete plan as discussion-only, includes non-drug care, monitoring/escalation signs, and pharmacist/clinician follow-up, and never presents it as a prescription.
 
 Possible causes are shown with qualitative labels such as **More likely**, **Possible**, and **Less likely**, followed by a simple explanation and what would help a clinician confirm the cause. Nabz does not display invented disease percentages from a chat or photo.
 
@@ -191,6 +194,7 @@ flowchart LR
     F --> Q[Qwen text model]
     F --> V[Qwen-VL document model]
     F --> M[Evidence resolver]
+    M --> DM[DailyMed v2 labels]
     F --> D[(SQLite database)]
     F --> S[Private upload storage]
     D --> F
@@ -248,6 +252,8 @@ Set at least:
 DASHSCOPE_API_KEY=your-key
 NABZ_TEXT_MODEL=qwen3.7-plus
 NABZ_TRIAGE_TIMEOUT_SECONDS=60
+NABZ_DAILYMED_LIVE=true
+NABZ_DAILYMED_TIMEOUT_SECONDS=4
 NABZ_VL_MODEL=qwen3.7-plus
 JWT_SECRET=replace-with-a-long-random-secret
 MOCK_MODE=false
@@ -306,6 +312,7 @@ All personal health routes require a valid login token.
 | `GET` | `/api/auth/me` | Read the signed-in account |
 | `POST` | `/api/triage/start` | Start a live AI health conversation |
 | `POST` | `/api/triage/answer` | Send one answer and receive the next turn |
+| `POST` | `/api/triage/chat` | Ask a follow-up grounded in one saved transcript and current Vault |
 | `POST` | `/api/triage/image` | Analyze one optional AI-requested clinical photo |
 | `POST` | `/api/triage/retry/{session_id}` | Retry a timed-out AI turn without losing the transcript |
 | `GET` | `/api/triage/history?profile_id={id}` | List titled and dated conversations |
@@ -381,6 +388,7 @@ client/
   src/pages/HomePage.jsx              desktop patient workspace
   src/components/EncounterSidebar.jsx conversation history
   src/components/TriageConversation.jsx voice and interview flow
+  src/components/EncounterChat.jsx        transcript-grounded follow-up chat
   src/components/PatientDashboard.jsx Vault visual dashboard
   src/components/TriageResult.jsx      urgency, suggestions, evidence, handoff
 
@@ -389,6 +397,7 @@ server/
   sessions.py                assessment sessions and conversation history
   triage.py                  live Qwen prompt, parsing, and safety validation
   medicine_evidence.py       reviewed medicine evidence resolver
+  dailymed.py                cached official DailyMed v2 label client
   dashboard.py               personal Vault dashboard data
   documents.py               authenticated file storage
   labreport.py               lab extraction and explanation

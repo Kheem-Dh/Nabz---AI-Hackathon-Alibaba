@@ -13,13 +13,15 @@ from models_db import Account, Profile, TimelineEntry, TriageSession
 from schemas import (
     TriageAnalysis,
     TriageAnswerRequest,
+    TriageChatRequest,
+    TriageChatResponse,
     TriageStartRequest,
     TriageTurn,
     TriageSessionDetail,
     TriageSessionListItem,
 )
 from security import get_current_account
-from triage import next_turn
+from triage import next_turn, qwen_followup_chat
 from vision import analyze_image
 
 router = APIRouter(prefix="/api/triage", tags=["triage"])
@@ -294,6 +296,49 @@ def answer(
     ]
 
     return _turn_from_session(db, session, profile)
+
+
+@router.post("/chat", response_model=TriageChatResponse)
+def chat_about_saved_transcript(
+    payload: TriageChatRequest,
+    account: Account = Depends(get_current_account),
+    db: Session = Depends(get_db),
+) -> TriageChatResponse:
+    """Ask a follow-up grounded in one owned transcript and current Vault."""
+    session = db.get(TriageSession, payload.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="session_not_found")
+    profile = _load_profile(db, account, session.profile_id)
+    existing_turns = list(session.turns or [])
+    result = qwen_followup_chat(
+        _profile_payload(profile),
+        session.id,
+        dict(session.result_payload or {}),
+        existing_turns,
+        payload.text.strip(),
+    )
+    session.turns = existing_turns + [
+        {"role": "user", "kind": "followup_user", "text": payload.text.strip()},
+        {
+            "role": "assistant",
+            "kind": "followup_assistant",
+            "text": result.answer_urdu,
+            "text_english": result.answer_english,
+            "vault_context_used": result.vault_context_used,
+            "response_source": result.response_source,
+            "safety_note": result.safety_note,
+        },
+    ]
+    # Keep the doctor-facing timeline transcript synchronized without changing
+    # the original assessment result or urgency.
+    for entry in profile.timeline:
+        entry_payload = entry.payload or {}
+        if entry.kind == "triage" and entry_payload.get("session_id") == session.id:
+            entry.payload = {**entry_payload, "encounter_transcript": list(session.turns)}
+            break
+    db.add(session)
+    db.commit()
+    return result
 
 
 @router.post("/image", response_model=TriageTurn)

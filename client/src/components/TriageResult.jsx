@@ -31,6 +31,7 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
   const [showWhy, setShowWhy] = useState(false)
   const navigate = useNavigate()
   const isEmergency = turn.level === 'EMERGENCY'
+  const medicationSteps = turn.medication_plan?.medication_steps || turn.medication_options || []
 
   async function copyHandoff() {
     if (!turn.doctor_handoff_english) return
@@ -160,16 +161,28 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
         </section>
       )}
 
-      {turn.medication_options?.length > 0 && (
+      {(turn.medication_plan || medicationSteps.length > 0) && (
         <section className="medication-card">
           <div className="care-plan-head">
             <span className="care-plan-icon">💊</span>
             <div>
-              <div className="urdu">دوا کی معلومات</div>
-              <small>Options to discuss — Nabz does not prescribe</small>
+              <div className="urdu">مجوزہ دوا کا مشاورتی منصوبہ</div>
+              <small>Proposed medication discussion plan — not a prescription</small>
             </div>
+            {turn.medication_plan?.status && (
+              <span className="plan-status">{turn.medication_plan.status.replaceAll('_', ' ')}</span>
+            )}
           </div>
-          {turn.medication_options.map((opt) => (
+          {turn.medication_plan?.basis_urdu && (
+            <p className="plan-basis urdu" dir="rtl">{turn.medication_plan.basis_urdu}</p>
+          )}
+          {turn.medication_plan?.basis_english && (
+            <p className="plan-basis"><strong>Clinical basis:</strong> {turn.medication_plan.basis_english}</p>
+          )}
+          {medicationSteps.length === 0 && (
+            <div className="notice notice-info">No new drug option passed the current safety and evidence checks.</div>
+          )}
+          {medicationSteps.map((opt) => (
             <div key={opt.generic_name} className="medication-option">
               <div className="mo-title">
                 <strong>{opt.generic_name}</strong>
@@ -207,11 +220,23 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
                     {opt.fda_approval_status} · {opt.fda_application_number} ↗
                   </a>
                 )}
+                {opt.dailymed_source_url && (
+                  <a href={opt.dailymed_source_url} target="_blank" rel="noreferrer">
+                    {opt.dailymed_source_status === 'live_dailymed' ? 'Live DailyMed label' : 'Reviewed DailyMed label cache'}
+                    {' · '}{opt.dailymed_published_date} ↗
+                  </a>
+                )}
                 {opt.availability_note && <div className="mo-safety">{opt.availability_note}</div>}
                 <div className="mo-safety">{opt.safety_note}</div>
               </div>
             </div>
           ))}
+          {turn.medication_plan?.follow_up && (
+            <p className="plan-followup"><strong>Before use:</strong> {turn.medication_plan.follow_up}</p>
+          )}
+          {turn.medication_plan?.disclaimer && (
+            <small className="plan-disclaimer">{turn.medication_plan.disclaimer}</small>
+          )}
         </section>
       )}
 

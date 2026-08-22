@@ -30,7 +30,10 @@ store, why, and how you stay in control.
 
 Your **password is never stored in plain text** — only a bcrypt hash. The
 DashScope/Qwen API key lives only on the backend and **never reaches the
-browser**.
+browser**. Health-conversation and relevant Vault context are sent from the
+backend to the configured Qwen service to generate an assessment or follow-up
+answer. DailyMed receives only an allowlisted generic medicine name; Nabz does
+not send DailyMed a patient name, transcript, diagnosis, or Vault data.
 
 ## Consent
 
@@ -49,7 +52,7 @@ browser**.
 
 ## What Nabz does **not** do
 
-- It does not sell or share your data with advertisers or third parties.
+- It does not sell your data or share it with advertisers.
 - It does not use your health data to train AI models.
 - It does not put personal or health data in URLs or query strings.
 - It does not diagnose a disease or prescribe medicine.

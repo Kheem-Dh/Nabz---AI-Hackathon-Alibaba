@@ -224,6 +224,28 @@ class TriageAnswerRequest(BaseModel):
         return v
 
 
+class TriageChatRequest(BaseModel):
+    session_id: int
+    text: str = Field(..., min_length=1, max_length=2000)
+
+    @field_validator("text")
+    @classmethod
+    def _chat_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("text must not be blank")
+        return v
+
+
+class TriageChatResponse(BaseModel):
+    session_id: int
+    answer_urdu: str
+    answer_english: str
+    transcript_context_used: bool = True
+    vault_context_used: list[str] = Field(default_factory=list)
+    response_source: str = "live_ai"
+    safety_note: str
+
+
 class QuickReply(BaseModel):
     urdu: str
     english: str
@@ -347,7 +369,26 @@ class MedicationOption(BaseModel):
     fda_approval_source_title: Optional[str] = None
     fda_approval_source_url: Optional[str] = None
     availability_note: Optional[str] = None
+    dailymed_setid: Optional[str] = None
+    dailymed_label_title: Optional[str] = None
+    dailymed_published_date: Optional[str] = None
+    dailymed_source_url: Optional[str] = None
+    dailymed_source_status: Optional[str] = None
     safety_note: str
+
+
+class MedicationPlan(BaseModel):
+    """A discussion plan, never an issued prescription or confirmed diagnosis."""
+
+    status: str  # DISCUSSION_ONLY | NO_DRUG_OPTION | EMERGENCY_NO_MEDICATION
+    basis_english: str
+    basis_urdu: str = ""
+    medication_steps: list[MedicationOption] = Field(default_factory=list)
+    non_drug_steps_english: list[str] = Field(default_factory=list)
+    non_drug_steps_urdu: list[str] = Field(default_factory=list)
+    monitoring_and_escalation: list[str] = Field(default_factory=list)
+    follow_up: str
+    disclaimer: str
 
 
 class TriageAnalysis(BaseModel):
@@ -428,6 +469,7 @@ class TriageTurn(BaseModel):
     # Nabz-validated medication information cards. Empty when nothing safe
     # can be suggested. Populated only by the server-side evidence resolver.
     medication_options: list[MedicationOption] = Field(default_factory=list)
+    medication_plan: Optional[MedicationPlan] = None
 
     # Hints the frontend for facility filtering:
     #   emergency_hospital | clinic_or_bhu | optional

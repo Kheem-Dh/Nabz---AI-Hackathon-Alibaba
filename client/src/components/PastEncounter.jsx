@@ -1,4 +1,5 @@
 import TriageResult from './TriageResult'
+import EncounterChat from './EncounterChat'
 
 export default function PastEncounter({ encounter, loading, onNew, onRetry }) {
   if (loading) {
@@ -31,19 +32,7 @@ export default function PastEncounter({ encounter, loading, onNew, onRetry }) {
       )}
 
       {encounter.turns?.length > 0 && (
-        <details className="encounter-transcript">
-          <summary>View full conversation transcript</summary>
-          <div>
-            {encounter.turns.map((turn, index) => (
-              <article className={`transcript-turn ${turn.role}`} key={`${turn.role}-${index}`}>
-                <strong>{turn.role === 'assistant' ? 'Nabz' : 'You'}</strong>
-                <p dir="auto" className={turn.role === 'assistant' ? 'urdu' : ''}>
-                  {turn.text_english || turn.text}
-                </p>
-              </article>
-            ))}
-          </div>
-        </details>
+        <EncounterChat sessionId={encounter.id} initialTurns={encounter.turns} />
       )}
     </div>
   )

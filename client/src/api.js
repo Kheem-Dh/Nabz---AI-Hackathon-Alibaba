@@ -84,6 +84,9 @@ export const triageStart = (profile_id, text) =>
 export const triageAnswer = (session_id, text) =>
   jsonReq('/api/triage/answer', 'POST', { session_id, text })
 
+export const triageChat = (session_id, text) =>
+  jsonReq('/api/triage/chat', 'POST', { session_id, text })
+
 export function triageImage(sessionId, file) {
   const form = new FormData()
   form.append('session_id', String(sessionId))

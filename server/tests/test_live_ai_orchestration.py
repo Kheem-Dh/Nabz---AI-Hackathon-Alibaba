@@ -139,6 +139,8 @@ def test_possible_causes_are_plain_language_and_qualitative():
     assert cause.name_english == "Bruise"
     assert cause.likelihood == "POSSIBLE"
     assert "blood vessels" in cause.what_it_is_english
+    assert turn.medication_plan.status == "NO_DRUG_OPTION"
+    assert "not a diagnosis" in turn.medication_plan.disclaimer.lower()
 
 
 def test_exact_repeated_model_question_gets_one_ai_repair(monkeypatch):

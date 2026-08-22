@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import MicButton from './MicButton'
 import AnalysisPanel from './AnalysisPanel'
 import TriageResult from './TriageResult'
+import EncounterChat from './EncounterChat'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import { useTextToSpeech } from '../hooks/useTextToSpeech'
 import { triageStart, triageAnswer, triageImage, retryTriageAssessment } from '../api'
@@ -208,24 +209,35 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
         )}
 
         <form
-          className="answer-bar"
-          style={{ marginTop: 14 }}
+          className="claude-composer symptom-composer"
           onSubmit={(e) => {
             e.preventDefault()
             tts.prime()
             doStart(typed)
           }}
         >
-          <input
-            className="input urdu"
+          <textarea
+            className="urdu"
             dir="auto"
-            placeholder="مثلاً: تین دن سے بخار ہے…"
+            rows={3}
+            placeholder="اپنی علامات تفصیل سے لکھیں…  Describe your symptoms naturally"
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && typed.trim()) {
+                e.preventDefault()
+                tts.prime()
+                doStart(typed)
+              }
+            }}
           />
-          <button className="mini-mic" type="submit" disabled={!typed.trim()} aria-label="Send">
-            ➤
-          </button>
+          <footer>
+            <button className="composer-voice" type="button" onClick={startVoice} disabled={!speech.supported}>
+              🎤 Voice
+            </button>
+            <span>Enter to send · Shift+Enter for a new line</span>
+            <button className="composer-send" type="submit" disabled={!typed.trim()} aria-label="Send">↑</button>
+          </footer>
         </form>
       </div>
     )
@@ -342,6 +354,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           onRetry={turn.response_source === 'ai_unavailable' ? retryAssessment : undefined}
         />
         {turn.analysis?.collected?.length > 0 && <AnalysisPanel analysis={turn.analysis} />}
+        {turn.response_source !== 'ai_unavailable' && <EncounterChat sessionId={sessionId} />}
       </div>
     )
   }
@@ -433,19 +446,24 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
         </div>}
       </div>
 
-      {!turn.image_request && <div className="answer-bar">
-        <input
-          className="input urdu"
+      {!turn.image_request && <div className="claude-composer compact-composer">
+        <textarea
+          className="urdu"
           dir="auto"
+          rows={2}
           placeholder={answeringByVoice ? speech.transcript || 'سن رہے ہیں…' : 'یا یہاں جواب لکھیں…'}
           value={answeringByVoice ? speech.transcript : typed}
           onChange={(e) => setTyped(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && typed.trim()) doAnswer(typed)
+            if (e.key === 'Enter' && !e.shiftKey && typed.trim()) {
+              e.preventDefault()
+              doAnswer(typed)
+            }
           }}
           disabled={answeringByVoice}
         />
-        {speech.supported ? (
+        <footer>
+        {speech.supported && (
           <button
             className={`mini-mic ${answeringByVoice && speech.listening ? 'listening' : ''}`}
             onClick={() => (answeringByVoice && speech.listening ? speech.stop() : answerVoice())}
@@ -453,16 +471,10 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           >
             {answeringByVoice && speech.listening ? '⏹' : '🎤'}
           </button>
-        ) : (
-          <button
-            className="mini-mic"
-            onClick={() => doAnswer(typed)}
-            disabled={!typed.trim()}
-            aria-label="Send"
-          >
-            ➤
-          </button>
         )}
+          <span>Answer naturally</span>
+          <button className="composer-send" onClick={() => doAnswer(typed)} disabled={!typed.trim() || answeringByVoice} aria-label="Send">↑</button>
+        </footer>
       </div>}
 
       <AnalysisPanel analysis={turn.analysis} />

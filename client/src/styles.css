@@ -2910,6 +2910,161 @@ textarea.input {
   margin-top: 10px;
 }
 .mo-evidence a { font-weight: 600; }
+.plan-status {
+  margin-left: auto;
+  padding: 4px 8px;
+  border: 1px solid rgba(15,157,138,.24);
+  border-radius: 999px;
+  color: var(--teal-dark);
+  background: var(--teal-050);
+  font-size: 9px;
+  font-weight: 700;
+}
+.plan-basis {
+  margin: 10px 0 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.plan-basis.urdu { font-size: 14px; line-height: 1.9; }
+.plan-followup {
+  margin: 12px 0 4px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: #fff8e8;
+  color: #704b08;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.plan-disclaimer { display: block; color: var(--ink-mute); line-height: 1.5; }
+
+/* Calm, Claude-inspired text composer: generous writing space and one clear action. */
+.claude-composer {
+  overflow: hidden;
+  border: 1px solid #d9e2df;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 26px rgba(31,45,43,.08);
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.claude-composer:focus-within {
+  border-color: rgba(15,157,138,.62);
+  box-shadow: 0 10px 32px rgba(15,157,138,.12);
+}
+.claude-composer textarea {
+  display: block;
+  width: 100%;
+  min-height: 76px;
+  padding: 16px 18px 8px;
+  border: 0;
+  outline: 0;
+  resize: vertical;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.claude-composer footer {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 7px 9px 9px 12px;
+}
+.claude-composer footer > span {
+  flex: 1;
+  color: var(--ink-mute);
+  font-size: 9px;
+}
+.composer-send,
+.followup-composer footer .composer-send,
+.followup-composer footer button:last-child {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+}
+.composer-send:disabled,
+.followup-composer footer button:last-child:disabled { opacity: .28; }
+.composer-voice {
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fafbf9;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+.symptom-composer { margin-top: 18px; text-align: left; }
+.compact-composer { margin-top: 12px; border-radius: 15px; }
+.compact-composer textarea { min-height: 58px; padding-top: 12px; }
+
+.encounter-chat {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid #dfe7e4;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fbfcfa 0%, #f6f8f6 100%);
+}
+.encounter-chat-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 12px;
+}
+.chat-orb {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 11px;
+  background: #1d2926;
+  color: #d6f5ec;
+}
+.encounter-chat-head h3 { margin: 0; color: var(--ink); font-size: 14px; }
+.encounter-chat-head p { margin: 2px 0 0; color: var(--ink-mute); font-size: 10px; }
+.context-pill {
+  margin-left: auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #e7f5f1;
+  color: var(--teal-dark);
+  font-size: 9px;
+  font-weight: 700;
+}
+.transcript-scroll { max-height: 330px; overflow-y: auto; }
+.followup-thread { display: flex; flex-direction: column; gap: 9px; margin: 12px 0; }
+.followup-bubble {
+  max-width: 88%;
+  padding: 10px 12px;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(31,45,43,.05);
+}
+.followup-bubble.user { align-self: flex-end; background: #e6f3ef; }
+.followup-bubble > span { color: var(--ink-mute); font-size: 9px; font-weight: 700; }
+.followup-bubble p { margin: 4px 0 0; color: var(--ink-soft); font-size: 12px; line-height: 1.55; }
+.followup-bubble p.urdu { font-size: 14px; line-height: 1.9; }
+.followup-bubble small { display: block; margin-top: 6px; color: var(--ink-mute); font-size: 9px; }
+.followup-composer { margin-top: 12px; border-radius: 15px; }
+.followup-composer textarea { min-height: 62px; }
+.chat-thinking { display: flex; gap: 4px; padding: 8px 10px; }
+.chat-thinking i { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); animation: pulse 1s infinite alternate; }
+.chat-thinking i:nth-child(2) { animation-delay: .16s; }
+.chat-thinking i:nth-child(3) { animation-delay: .32s; }
+
+@media (max-width: 640px) {
+  .encounter-chat { padding: 13px; }
+  .context-pill { display: none; }
+  .claude-composer footer > span { display: none; }
+  .followup-bubble { max-width: 96%; }
+  .plan-status { display: none; }
+}
 
 /* Doctor handoff — darker, more clinical, higher-contrast */
 .handoff-card {

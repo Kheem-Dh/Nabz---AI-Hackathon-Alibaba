@@ -24,6 +24,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from db import get_db
+from dailymed import lookup_dailymed_label
 from models_db import Account, Medicine, Profile
 from schemas import MedicationOption, MedicineEvidenceOut
 from security import get_current_account
@@ -438,6 +439,11 @@ def resolve_medication_candidates(
             # ordinary care-plan text, but not represented as an approved drug.
             continue
 
+        dailymed_label = lookup_dailymed_label(generic)
+        if not dailymed_label:
+            # DailyMed metadata is required for every new medication plan.
+            continue
+
         # Prefer a row whose condition_key is in the hint set.
         chosen: Optional[tuple[tuple[str, str], dict]] = None
         wanted = str(raw.get("condition_key", "")).lower()
@@ -518,6 +524,11 @@ def resolve_medication_candidates(
             fda_approval_source_title=approval["source_title"],
             fda_approval_source_url=approval["source_url"],
             availability_note=approval["availability_note"],
+            dailymed_setid=dailymed_label["setid"],
+            dailymed_label_title=dailymed_label["title"],
+            dailymed_published_date=dailymed_label["published_date"],
+            dailymed_source_url=dailymed_label["source_url"],
+            dailymed_source_status=dailymed_label["source_status"],
             safety_note=row["safety_note"],
         )
         out.append(option)
