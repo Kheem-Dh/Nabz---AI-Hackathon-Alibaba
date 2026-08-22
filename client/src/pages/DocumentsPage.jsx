@@ -60,6 +60,10 @@ export default function DocumentsPage() {
 
   async function onUpload(event) {
     event.preventDefault()
+    if (documentType === 'lab') {
+      navigate(`/profile/${id}/lab`)
+      return
+    }
     if (documentType === 'prescription') {
       navigate(`/profile/${id}/prescription`)
       return
@@ -118,7 +122,7 @@ export default function DocumentsPage() {
             </button>
           ))}
         </div>
-        {documentType !== 'prescription' && (
+        {!['lab', 'prescription'].includes(documentType) && (
           <input
             ref={fileRef}
             className="form-input"
@@ -148,13 +152,22 @@ export default function DocumentsPage() {
             Prescription papers use the confirmation scanner. Nothing enters the Vault until you confirm every field.
           </div>
         )}
+        {documentType === 'lab' && (
+          <div className="notice notice-info">
+            Lab reports use structured value extraction and highlight only values that are clearly outside the printed reference range.
+          </div>
+        )}
         {['xray', 'mri', 'skin'].includes(documentType) && (
-          <div className="notice notice-info">Nabz stores this image securely; it does not diagnose from it.</div>
+          <div className="notice notice-info">
+            Nabz extracts supportive context without diagnosing: radiology types use visible report text only, and skin photos use neutral visible observations.
+          </div>
         )}
         {error && <div className="form-error">{error}</div>}
         <button className="btn btn-primary" disabled={busy}>
           {documentType === 'prescription'
             ? '📝 Open prescription confirmation'
+            : documentType === 'lab'
+              ? '🧪 Open lab extraction'
             : busy ? 'Saving…' : '🔒 Save to this patient’s vault'}
         </button>
       </form>
@@ -175,6 +188,23 @@ export default function DocumentsPage() {
                 <span>{document.original_filename}{fmtBytes(document.size_bytes) ? ` · ${fmtBytes(document.size_bytes)}` : ''}</span>
                 <span>{new Date(document.created_at).toLocaleDateString('en-GB')}</span>
                 {document.notes && <small>{document.notes}</small>}
+                {document.extracted_summary && (
+                  <div className="document-extraction">
+                    <small>AI-extracted supportive context · verify against original</small>
+                    <p>{document.extracted_summary}</p>
+                    {document.extracted_facts?.length > 0 && (
+                      <ul>{document.extracted_facts.map((fact) => <li key={fact}>{fact}</li>)}</ul>
+                    )}
+                    {document.attention_items?.length > 0 && (
+                      <div className="document-attention">
+                        Review with clinician: {document.attention_items.join(' · ')}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {['ai_unavailable', 'failed', 'unreadable', 'stored_only'].includes(document.extraction_status) && (
+                  <small>Structured extraction unavailable — original file stored safely.</small>
+                )}
               </div>
               <div className="document-actions">
                 <button onClick={() => openDocument(document)} aria-label="View document">View</button>

@@ -44,6 +44,8 @@ _ALLOWED_EVIDENCE_DOMAINS = {
     "dailymed.nlm.nih.gov",
     "www.dra.gov.pk",
     "medlineplus.gov",
+    "www.accessdata.fda.gov",
+    "www.fda.gov",
 }
 
 # Never a self-treatment recommendation. Antibiotics, systemic steroids,
@@ -302,6 +304,35 @@ _BY_GENERIC: dict[str, list[tuple[tuple[str, str], dict]]] = {}
 for _key, _row in _CATALOG.items():
     _BY_GENERIC.setdefault(_key[1], []).append((_key, _row))
 
+# Approval provenance is deliberately separate from drug-label evidence.
+# FDA notes that an SPL/openFDA label can contain manufacturer-submitted
+# changes and is not, by itself, proof of approval. Every suggestion therefore
+# needs a reviewed Drugs@FDA application record in this map. The application
+# verifies that an FDA-approved product exists for this active ingredient; it
+# does not imply that every formulation sold worldwide is FDA-approved.
+_FDA_APPROVALS: dict[str, dict[str, str]] = {
+    "paracetamol": {
+        "status": "FDA-approved product verified",
+        "application_number": "NDA 019872",
+        "source_title": "FDA Drugs@FDA — acetaminophen (Tylenol) approval record",
+        "source_url": "https://www.accessdata.fda.gov/drugsatfda_docs/nda/2000/75077_Acetaminophen.pdf",
+        "availability_note": (
+            "FDA approval is a U.S. regulatory status. In Pakistan, use only a "
+            "locally registered product and confirm the exact formulation with a pharmacist."
+        ),
+    },
+    "cetirizine": {
+        "status": "FDA-approved product verified",
+        "application_number": "NDA 019835",
+        "source_title": "FDA Drugs@FDA — cetirizine (Zyrtec) approval record",
+        "source_url": "https://www.accessdata.fda.gov/drugsatfda_docs/nda/98/19835-S005_Zyrtec.pdf",
+        "availability_note": (
+            "FDA approval is a U.S. regulatory status. In Pakistan, use only a "
+            "locally registered product and confirm the exact formulation with a pharmacist."
+        ),
+    },
+}
+
 
 # --- Helpers ----------------------------------------------------------------
 
@@ -400,6 +431,13 @@ def resolve_medication_candidates(
         if not rows:
             continue
 
+        approval = _FDA_APPROVALS.get(generic)
+        if not approval or not _url_is_allowlisted(approval.get("source_url", "")):
+            # The requested product policy is FDA-verified suggestions only.
+            # Helpful non-drug care such as ORS can still be returned in the
+            # ordinary care-plan text, but not represented as an approved drug.
+            continue
+
         # Prefer a row whose condition_key is in the hint set.
         chosen: Optional[tuple[tuple[str, str], dict]] = None
         wanted = str(raw.get("condition_key", "")).lower()
@@ -475,6 +513,11 @@ def resolve_medication_candidates(
             evidence_source_url=row["evidence_source_url"],
             evidence_summary=row["evidence_summary"],
             evidence_last_reviewed=row["evidence_last_reviewed"],
+            fda_approval_status=approval["status"],
+            fda_application_number=approval["application_number"],
+            fda_approval_source_title=approval["source_title"],
+            fda_approval_source_url=approval["source_url"],
+            availability_note=approval["availability_note"],
             safety_note=row["safety_note"],
         )
         out.append(option)

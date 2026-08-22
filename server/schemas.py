@@ -139,6 +139,11 @@ class VaultDocumentOut(BaseModel):
     content_type: str
     size_bytes: int
     notes: Optional[str] = None
+    extraction_status: str = "not_requested"
+    extracted_summary: Optional[str] = None
+    extracted_facts: list[str] = Field(default_factory=list)
+    attention_items: list[str] = Field(default_factory=list)
+    context_for_ai: Optional[str] = None
     created_at: datetime
     view_url: str
     deletable: bool = True
@@ -335,6 +340,13 @@ class MedicationOption(BaseModel):
     evidence_source_url: str
     evidence_summary: str
     evidence_last_reviewed: str
+    # Optional defaults preserve display of legacy encounter history. New
+    # resolver output always populates all five FDA provenance fields.
+    fda_approval_status: Optional[str] = None
+    fda_application_number: Optional[str] = None
+    fda_approval_source_title: Optional[str] = None
+    fda_approval_source_url: Optional[str] = None
+    availability_note: Optional[str] = None
     safety_note: str
 
 

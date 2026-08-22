@@ -202,6 +202,12 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
                 <a href={opt.evidence_source_url} target="_blank" rel="noreferrer">
                   Evidence: {opt.evidence_source_title} ↗
                 </a>
+                {opt.fda_approval_source_url && (
+                  <a href={opt.fda_approval_source_url} target="_blank" rel="noreferrer">
+                    {opt.fda_approval_status} · {opt.fda_application_number} ↗
+                  </a>
+                )}
+                {opt.availability_note && <div className="mo-safety">{opt.availability_note}</div>}
                 <div className="mo-safety">{opt.safety_note}</div>
               </div>
             </div>

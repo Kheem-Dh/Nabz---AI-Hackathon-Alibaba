@@ -1975,6 +1975,31 @@ textarea.input {
   color: var(--ink-mute);
   font-size: 10px;
 }
+.document-extraction {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--teal);
+  border-radius: 6px;
+  background: var(--teal-050);
+}
+.document-extraction p {
+  margin: 4px 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.document-extraction ul {
+  margin: 4px 0;
+  padding-left: 18px;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+.document-attention {
+  margin-top: 6px;
+  color: #9a3412;
+  font-size: 10px;
+  font-weight: 600;
+}
 .document-actions {
   display: flex;
   flex-direction: column;

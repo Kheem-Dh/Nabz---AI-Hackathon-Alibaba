@@ -166,6 +166,7 @@ export default function SummaryPage() {
                     <li key={index}>
                       <strong>{document.title}</strong> ({document.type})
                       {document.notes ? ` — ${document.notes}` : ''}
+                      {document.extracted_summary ? ` — Extracted context: ${document.extracted_summary}` : ''}
                     </li>
                   ))}
                 </ul>

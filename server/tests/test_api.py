@@ -513,6 +513,7 @@ def test_document_vault_upload_download_delete_and_isolation(client, auth):
     document = uploaded.json()
     assert document["profile_id"] == self_id
     assert document["document_type"] == "xray"
+    assert document["extraction_status"] == "ai_unavailable"
 
     listed = client.get(
         f"/api/documents?profile_id={self_id}", headers=headers_a
@@ -533,6 +534,56 @@ def test_document_vault_upload_download_delete_and_isolation(client, auth):
 
     assert client.delete(f"/api/documents/{document['id']}", headers=headers_a).status_code == 204
     assert client.get(document["view_url"], headers=headers_a).status_code == 404
+
+
+def test_document_extraction_is_bounded_and_available_to_doctor_summary(
+    client, auth, monkeypatch
+):
+    import documents
+
+    headers, _account, self_id = auth
+    monkeypatch.setenv("MOCK_MODE", "false")
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
+    monkeypatch.setattr(
+        documents,
+        "analyze_image",
+        lambda *_args, **_kwargs: (
+            {
+                "extracted_summary": "Radiology report text states no acute chest finding.",
+                "extracted_facts": ["Report date: 2026-08-20", "No acute chest finding stated"],
+                "attention_items": [],
+                "context_for_ai": "Prior chest X-ray report dated 2026-08-20 states no acute finding.",
+                "limitations": ["Pixels were not interpreted."],
+            },
+            "",
+        ),
+    )
+    uploaded = client.post(
+        "/api/documents",
+        headers=headers,
+        data={"profile_id": str(self_id), "document_type": "xray"},
+        files={"file": ("report.png", io.BytesIO(_png_bytes()), "image/png")},
+    )
+    assert uploaded.status_code == 201, uploaded.text
+    document = uploaded.json()
+    assert document["extraction_status"] == "extracted"
+    assert document["extracted_facts"][0] == "Report date: 2026-08-20"
+
+    doctor_summary = client.get(f"/api/summary/{self_id}", headers=headers).json()
+    recent = doctor_summary["recent_documents"][0]
+    assert "no acute chest finding" in recent["extracted_summary"].lower()
+
+
+def test_generic_lab_upload_requires_structured_lab_flow(client, auth):
+    headers, _account, self_id = auth
+    response = client.post(
+        "/api/documents",
+        headers=headers,
+        data={"profile_id": str(self_id), "document_type": "lab"},
+        files={"file": ("lab.png", io.BytesIO(_png_bytes()), "image/png")},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "use_lab_extraction_flow"
 
 
 def test_dashboard_is_patient_specific(client, auth):

@@ -132,6 +132,17 @@ def _profile_payload(profile: Profile) -> dict[str, Any]:
                 "flagged_lab_values": (entry.payload or {}).get("flagged", [])[:6]
                 if entry.kind == "lab"
                 else [],
+                "patient_document_note": (entry.payload or {}).get("notes")
+                if entry.kind == "document"
+                else None,
+                "extracted_document_context": (entry.payload or {}).get("context_for_ai")
+                if entry.kind == "document"
+                and (entry.payload or {}).get("extraction_status") == "extracted"
+                else None,
+                "document_attention_items": (entry.payload or {}).get("attention_items", [])[:6]
+                if entry.kind == "document"
+                and (entry.payload or {}).get("extraction_status") == "extracted"
+                else [],
             }
             for entry in recent_entries
         ],

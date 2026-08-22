@@ -152,6 +152,9 @@ def test_resolver_returns_valid_option_when_safe():
     assert opt.recommendation_type == "OTC_INFORMATION"
     assert opt.evidence_source_url.startswith("https://")
     assert "medlineplus" in opt.evidence_source_url.lower()
+    assert opt.fda_approval_status == "FDA-approved product verified"
+    assert opt.fda_application_number == "NDA 019872"
+    assert "accessdata.fda.gov" in opt.fda_approval_source_url
     # Dose guidance only from the curated catalog.
     assert opt.dose_guidance and "4 g" in opt.dose_guidance
 
@@ -177,6 +180,17 @@ def test_resolver_ignores_model_url_and_dose():
     assert "example.com" not in opt.evidence_source_url
     # Dose text is the catalog's own copy — no "10 g every hour".
     assert "10 g" not in (opt.dose_guidance or "")
+
+
+def test_resolver_suppresses_non_fda_verified_catalog_option():
+    from medicine_evidence import resolve_medication_candidates
+
+    out = resolve_medication_candidates(
+        [{"generic_name": "ors", "condition_key": "mild_dehydration_adult"}],
+        profile={"age": 34, "allergies": [], "current_medicines": []},
+        urgency="HOME_CARE",
+    )
+    assert out == []
 
 
 # --- Hassan demo seed idempotence + fixtures ------------------------------

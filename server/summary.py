@@ -139,6 +139,9 @@ def summary(
                 "type": document.document_type,
                 "date": document.created_at.isoformat(),
                 "notes": document.notes,
+                "extracted_summary": document.extracted_summary,
+                "extracted_facts": document.extracted_facts,
+                "attention_items": document.attention_items,
             }
             for document in list_profile_documents(profile)[:6]
         ],

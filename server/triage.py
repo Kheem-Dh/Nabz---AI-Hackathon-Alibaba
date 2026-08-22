@@ -170,6 +170,15 @@ def _profile_context(profile: dict[str, Any]) -> dict[str, Any]:
                 "level": _bounded_text(raw.get("level"), 40),
                 "date": _bounded_text(raw.get("date"), 80),
                 "flagged_lab_values": (raw.get("flagged_lab_values") or [])[:6],
+                "patient_document_note": _bounded_text(
+                    raw.get("patient_document_note"), 600
+                ) or None,
+                "extracted_document_context": _bounded_text(
+                    raw.get("extracted_document_context"), 1200
+                ) or None,
+                "document_attention_items": _short_string_list(
+                    raw.get("document_attention_items"), 6, 300
+                ),
             }
         )
 
@@ -278,8 +287,9 @@ Medication candidates:
   or dose; the server discards them and uses its reviewed evidence catalog.
 - Allowed evidence-catalog pairs are:
   mild_headache_adult/paracetamol, mild_pain_adult/paracetamol,
-  mild_fever_adult/paracetamol, mild_dehydration_adult/ors,
-  allergic_rhinitis_adult/cetirizine, mild_skin_care_adult/petroleum_jelly.
+  mild_fever_adult/paracetamol, allergic_rhinitis_adult/cetirizine.
+- The server emits only options with a separately reviewed Drugs@FDA approval
+  record. Put hydration and skin-barrier care in non-drug suggestions instead.
 - Do not nominate an adult option unless the profile confirms an adult.
 - Never nominate an option that conflicts with a recorded allergy, duplicates
   a current medicine, or is inappropriate because of the transcript.

@@ -138,11 +138,13 @@ flowchart TD
     A[Patient uploads a health record] --> B{Document type}
     B -->|Lab report| C[Qwen-VL extracts values]
     B -->|Prescription| D[Qwen-VL reads medicine fields]
-    B -->|Image or scan| E[Store the original file securely]
-    C --> F[Patient reviews the explanation]
+    B -->|Radiology report| E[Extract visible report text only]
+    B -->|Skin / other record| F[Extract neutral facts with limits]
+    C --> L[Patient reviews the explanation]
     D --> G[Patient confirms or edits every field]
     E --> H[Personal Medical Vault]
     F --> H
+    L --> H
     G --> H
     H --> I[Visual patient dashboard]
     H --> J[Relevant context for future AI assessments]
@@ -151,6 +153,8 @@ flowchart TD
 
 Prescription extraction is document reading, not prescribing. Extracted medicines are not saved until the patient confirms them.
 
+Other Vault uploads can provide structured supportive context for later live conversations. X-ray and MRI uploads use only visible report text—the model does not interpret radiology pixels. Skin photos produce neutral visible observations, not a diagnosis. If extraction is unavailable or unreliable, Nabz keeps the original and labels the extraction status instead of fabricating content.
+
 ### Medicine information and evidence
 
 The AI may nominate a generic medicine for the server to check. It cannot directly create a medicine card, dose, citation, or evidence link.
@@ -158,7 +162,7 @@ The AI may nominate a generic medicine for the server to check. It cannot direct
 ```mermaid
 flowchart LR
     A[AI nominates a generic option] --> B[Server evidence resolver]
-    B --> C{Emergency, allergy, duplicate, or unsafe?}
+    B --> C{Emergency, allergy, duplicate, unsafe, or no FDA approval record?}
     C -- Yes --> D[Do not show the medicine]
     C -- No --> E[Load reviewed catalog information]
     E --> F[Show purpose, safety notes, dose guidance, and evidence link]
@@ -171,6 +175,8 @@ The server:
 - blocks prescription-only and high-risk self-treatment options;
 - discards model-written doses and URLs;
 - uses only reviewed catalog doses and allowlisted sources;
+- emits a medication option only when a reviewed Drugs@FDA application record verifies that an FDA-approved product exists for the active ingredient;
+- displays the FDA application number and source, while warning that U.S. FDA status does not replace Pakistani product registration or pharmacist review;
 - describes medicine cards as information to discuss, not a prescription.
 
 Possible causes are shown with qualitative labels such as **More likely**, **Possible**, and **Less likely**, followed by a simple explanation and what would help a clinician confirm the cause. Nabz does not display invented disease percentages from a chat or photo.

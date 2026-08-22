@@ -136,6 +136,17 @@ def seed_profile(profile: Profile, db: Session) -> bool:
                 "content_type": "image/png",
                 "size_bytes": xray_size,
                 "notes": "Synthetic demo record; no imaging interpretation by Nabz.",
+                "extraction_status": "extracted",
+                "extracted_summary": (
+                    "Synthetic radiology report text says there is no acute chest finding."
+                ),
+                "extracted_facts": ["Report text: no acute chest finding."],
+                "attention_items": [],
+                "context_for_ai": (
+                    "Synthetic prior chest X-ray report text states no acute finding; "
+                    "this does not establish the cause of a new symptom."
+                ),
+                "extraction_limitations": ["Radiology pixels were not interpreted."],
             },
         ),
         TimelineEntry(
@@ -152,6 +163,17 @@ def seed_profile(profile: Profile, db: Session) -> bool:
                 "content_type": "image/png",
                 "size_bytes": skin_size,
                 "notes": "Patient-recorded progress photo; Nabz does not diagnose from this image.",
+                "extraction_status": "extracted",
+                "extracted_summary": (
+                    "Synthetic progress image shows a localized red area on the right arm."
+                ),
+                "extracted_facts": ["Localized visible redness on the right arm."],
+                "attention_items": [],
+                "context_for_ai": (
+                    "Synthetic prior progress photo objectively showed localized right-arm "
+                    "redness; it does not prove the cause of a current mark."
+                ),
+                "extraction_limitations": ["A photograph cannot confirm a diagnosis."],
             },
         ),
         TimelineEntry(
