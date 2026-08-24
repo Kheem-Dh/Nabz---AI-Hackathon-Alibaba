@@ -387,6 +387,13 @@ docker compose --env-file .env.production -f compose.prod.yaml up -d --build
 server/venv/bin/python scripts/production_smoke.py http://127.0.0.1
 ```
 
+The private product dashboard is available at `/admin`. Set
+`NABZ_ADMIN_IDENTIFIERS` on the backend to the exact email or phone of the
+owner account (comma-separated values are supported). The server re-checks
+this allowlist for every dashboard API request. Usage tracking records active
+seconds, page routes, status codes and latency; it never stores request bodies,
+chat text, tokens or uploaded content in analytics logs.
+
 Follow [docs/ALIBABA_CLOUD_DEPLOY.md](docs/ALIBABA_CLOUD_DEPLOY.md) for the Alibaba Cloud ECS setup, HTTPS, backups, and rollback steps.
 
 ---

@@ -13,6 +13,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -176,6 +177,39 @@ class TriageSession(Base):
     )
 
     profile: Mapped[Profile] = relationship(back_populates="triage_sessions")
+
+
+class UsageSession(Base):
+    """Privacy-safe, authenticated product usage for the owner dashboard."""
+
+    __tablename__ = "usage_sessions"
+    __table_args__ = (UniqueConstraint("account_id", "session_key", name="uq_usage_account_session"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    session_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True, nullable=False)
+    active_seconds: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    page_views: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_path: Mapped[str | None] = mapped_column(String(180))
+
+
+class RequestLog(Base):
+    """Operational request metadata. Bodies, query strings and tokens are never stored."""
+
+    __tablename__ = "request_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    request_id: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+    account_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    method: Mapped[str] = mapped_column(String(12), nullable=False)
+    path: Mapped[str] = mapped_column(String(180), index=True, nullable=False)
+    status_code: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    latency_ms: Mapped[float] = mapped_column(Float, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True, nullable=False)
 
 
 class VerificationCode(Base):

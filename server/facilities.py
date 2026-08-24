@@ -180,10 +180,18 @@ def nearby(
         if f.get("latitude") is not None and f.get("longitude") is not None:
             dist = round(_haversine_km(olat, olon, f["latitude"], f["longitude"]), 1)
         score, reason = _score_facility(f, urgency, dist)
+        if pref and pref.city and f.get("city", "").lower() == pref.city.lower():
+            score += 65
+            reason = reason.replace("Nearby", "In your city")
+        elif pref and pref.province and f.get("province", "").lower() == pref.province.lower():
+            score += 15
         ranked.append((score, dist, reason, f))
 
     ranked.sort(key=lambda t: (-t[0], t[1] if t[1] is not None else 999))
-    top = ranked[:limit]
+    # Do not label cross-country results as nearby. The browser offers a live
+    # Google Maps search when the curated directory has no result within 100km.
+    local_ranked = [row for row in ranked if row[1] is None or row[1] <= 100]
+    top = local_ranked[:limit]
 
     facilities_out = [
         Facility(

@@ -61,8 +61,8 @@ export function AuthProvider({ children }) {
     return () => { alive = false }
   }, [])
 
-  const login = useCallback(async (phone, password) => {
-    const res = await loginAccount(phone, password)
+  const login = useCallback(async (identifier, password) => {
+    const res = await loginAccount(identifier, password)
     setToken(res.token)
     setAccount(res.account)
     clearPendingRegistration()

@@ -17,6 +17,7 @@ os.environ["APP_ENV"] = "test"
 os.environ["NABZ_ENABLE_DEMO"] = "true"
 os.environ.pop("DASHSCOPE_API_KEY", None)
 os.environ["JWT_SECRET"] = "test-secret-nabz"
+os.environ["NABZ_ADMIN_IDENTIFIERS"] = "admin@nabz.test"
 
 _TMP_DB = Path(tempfile.gettempdir()) / f"nabz_test_{uuid.uuid4().hex}.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{_TMP_DB}"

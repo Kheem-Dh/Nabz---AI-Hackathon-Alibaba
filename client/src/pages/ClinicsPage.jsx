@@ -22,7 +22,7 @@ export default function ClinicsPage() {
   const [loading, setLoading] = useState(true)
   const [refreshingLocation, setRefreshingLocation] = useState(false)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (freshCoords = null) => {
     setLoading(true)
     setError('')
     try {
@@ -34,9 +34,10 @@ export default function ClinicsPage() {
         limit: 12,
       }
       if (filterType) params.type = filterType
-      if (geo.coords) {
-        params.latitude = geo.coords.latitude
-        params.longitude = geo.coords.longitude
+      const origin = freshCoords || geo.coords
+      if (origin) {
+        params.latitude = origin.latitude
+        params.longitude = origin.longitude
       }
       const resp = await getNearbyFacilities(params)
       setData(resp)
@@ -66,7 +67,7 @@ export default function ClinicsPage() {
         longitude: coords.longitude,
         manual: false,
       })
-      // load() will re-run via the geo.coords dependency
+      await load(coords)
     } catch (e) {
       setError(e.message || 'location-failed')
     } finally {
@@ -184,16 +185,28 @@ export default function ClinicsPage() {
           </div>
         ))}
         {!loading && facilities.length === 0 && (
-          <div className="notice">
-            <span>
+          <div className="clinic-empty card">
+            <span className="clinic-empty-icon">⌖</span>
+            <strong>
               No{' '}
               {category === 'blood_bank'
                 ? 'blood-donation'
                 : category === 'pharmacy'
                 ? 'pharmacy'
                 : 'clinical'}{' '}
-              facilities found for this location yet.
-            </span>
+              facilities are verified in the Nabz directory for this city yet.
+            </strong>
+            <p>Search live map results around <b>{label}</b> while we expand the verified directory.</p>
+            <a
+              className="btn btn-primary"
+              target="_blank"
+              rel="noreferrer"
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                `${category === 'pharmacy' ? 'pharmacies' : category === 'blood_bank' ? 'blood banks' : 'clinics and hospitals'} near ${label}`,
+              )}`}
+            >
+              Open nearby results in Maps ↗
+            </a>
           </div>
         )}
       </div>

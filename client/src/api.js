@@ -100,8 +100,14 @@ function validateClientUpload(file) {
 export const registerAccount = (full_name, phone, password, email) =>
   jsonReq('/api/auth/register', 'POST', { full_name, phone, password, email: email || null })
 
-export const loginAccount = (phone, password) =>
-  jsonReq('/api/auth/login', 'POST', { phone, password })
+export const loginAccount = (identifier, password) =>
+  jsonReq('/api/auth/login', 'POST', { identifier, password })
+
+export const requestPasswordReset = (identifier) =>
+  jsonReq('/api/auth/password-reset/request', 'POST', { identifier })
+
+export const confirmPasswordReset = (identifier, code, new_password) =>
+  jsonReq('/api/auth/password-reset/confirm', 'POST', { identifier, code, new_password })
 
 export const getMe = () => jsonReq('/api/auth/me', 'GET')
 
@@ -238,6 +244,7 @@ export const confirmLocation = (data) =>
 export const getMyLocation = () => jsonReq('/api/location/me', 'GET')
 
 export const listKnownCities = () => jsonReq('/api/location/cities', 'GET')
+export const listLocationRegions = () => jsonReq('/api/location/regions', 'GET')
 
 export function getNearbyFacilities({ urgency = 'DOCTOR_24H', latitude, longitude, limit = 6, type } = {}) {
   const params = new URLSearchParams({ urgency, limit: String(limit) })
@@ -263,6 +270,17 @@ export async function getClinics(city, province) {
 
 export const getHealth = () => jsonReq('/api/health', 'GET')
 export const getHealthDetail = () => jsonReq('/api/health/detail', 'GET')
+
+// --- Private product analytics ----------------------------------------------
+
+export const trackUsage = (payload) =>
+  jsonReq('/api/analytics/heartbeat', 'POST', payload)
+
+export const getAdminOverview = (days = 14) =>
+  jsonReq(`/api/admin/overview?days=${encodeURIComponent(days)}`, 'GET')
+
+export const getAdminLogs = (errorsOnly = false, limit = 80) =>
+  jsonReq(`/api/admin/logs?errors_only=${errorsOnly ? 'true' : 'false'}&limit=${encodeURIComponent(limit)}`, 'GET')
 
 export const loadHassanDemo = () => jsonReq('/api/demo/hassan', 'POST')
 

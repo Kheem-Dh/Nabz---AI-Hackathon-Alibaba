@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from db import get_db
-from facilities_data import CITY_CENTERS
+from facilities_data import CITY_CENTERS, CITY_DIRECTORY, CITY_PROVINCES
 from models_db import Account, LocationPreference
 from schemas import (
     LocationConfirmRequest,
@@ -70,7 +70,7 @@ def _offline_reverse(lat: float, lon: float) -> LocationLabel:
     return LocationLabel(
         label=f"{city_name}, Pakistan",
         city=city_name,
-        province=None,
+        province=CITY_PROVINCES.get(best[0]),
         country="Pakistan",
         latitude=lat,
         longitude=lon,
@@ -157,14 +157,30 @@ def _to_out(pref: LocationPreference) -> LocationPreferenceOut:
 def list_known_cities() -> list[dict]:
     """Return the curated Pakistan city list used to validate manual entry."""
     out: list[dict] = []
-    for slug, (lat, lon) in sorted(CITY_CENTERS.items()):
+    for name, province, lat, lon in sorted(CITY_DIRECTORY, key=lambda row: (row[1], row[0])):
+        slug = name.lower()
         out.append({
             "slug": slug,
-            "name": slug.title(),
+            "name": name,
+            "province": province,
             "latitude": lat,
             "longitude": lon,
         })
     return out
+
+
+@router.get("/regions", response_model=list[dict])
+def list_regions() -> list[dict]:
+    """Province/territory groups for the dependent manual city picker."""
+    grouped: dict[str, list[dict]] = {}
+    for name, province, lat, lon in CITY_DIRECTORY:
+        grouped.setdefault(province, []).append({
+            "slug": name.lower(), "name": name, "latitude": lat, "longitude": lon,
+        })
+    return [
+        {"name": province, "cities": sorted(cities, key=lambda city: city["name"])}
+        for province, cities in sorted(grouped.items())
+    ]
 
 
 @router.post("/confirm", response_model=LocationPreferenceOut)
@@ -182,8 +198,17 @@ def confirm(
                 status_code=400,
                 detail={
                     "code": "unknown_city",
-                    "message": "That city is not on our list. Use current location or pick from the list.",
-                    "known_cities": [k.title() for k in sorted(CITY_CENTERS.keys())],
+                "message": "That city is not on our list. Use current location or pick from the list.",
+                    "known_cities": [name for name, _province, _lat, _lon in CITY_DIRECTORY],
+                },
+            )
+        expected_province = CITY_PROVINCES[payload.city.strip().lower()]
+        if not payload.province or payload.province.strip().lower() != expected_province.lower():
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "province_city_mismatch",
+                    "message": "Select a city from the chosen province or territory.",
                 },
             )
 

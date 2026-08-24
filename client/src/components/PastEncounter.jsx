@@ -1,7 +1,7 @@
 import TriageResult from './TriageResult'
 import EncounterChat from './EncounterChat'
 
-export default function PastEncounter({ encounter, loading, onNew, onRetry }) {
+export default function PastEncounter({ encounter, loading, onNew, onRetry, profileId }) {
   if (loading) {
     return <div className="center-state"><div className="spinner" /><p>Opening conversation…</p></div>
   }
@@ -25,7 +25,7 @@ export default function PastEncounter({ encounter, loading, onNew, onRetry }) {
           onRetry={encounter.result.response_source === 'ai_unavailable' ? onRetry : undefined}
           ttsSupported={false}
           chatSlot={encounter.turns?.length > 0
-            ? <EncounterChat sessionId={encounter.id} initialTurns={encounter.turns} />
+            ? <EncounterChat sessionId={encounter.id} profileId={profileId} initialTurns={encounter.turns} />
             : null}
         />
       ) : (

@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLocationPref } from '../context/LocationContext'
 import { useProfiles } from '../context/ProfileContext'
-import { useGeolocation } from '../hooks/useGeolocation'
-import { resolveLocation } from '../api'
 
 const ONBOARDED_KEY = 'nabz_onboarded'
 
@@ -37,14 +35,9 @@ export default function OnboardingPage() {
   const navigate = useNavigate()
   const { account } = useAuth()
   const { active } = useProfiles()
-  const { preference, confirm } = useLocationPref()
-  const geo = useGeolocation()
+  const { preference } = useLocationPref()
 
   const [step, setStep] = useState(0)
-  const [manualCity, setManualCity] = useState('')
-  const [manualProvince, setManualProvince] = useState('')
-  const [locError, setLocError] = useState('')
-  const [saving, setSaving] = useState(false)
 
   const steps = [
     { title: 'Welcome to Nabz', kicker: '01 · Getting started' },
@@ -52,51 +45,6 @@ export default function OnboardingPage() {
     { title: 'How Nabz works', kicker: '03 · Safety first' },
     { title: 'Ready when you are', kicker: '04 · Start a triage' },
   ]
-
-  async function useCurrentLocation() {
-    setLocError('')
-    setSaving(true)
-    try {
-      const coords = await geo.detect()
-      const label = await resolveLocation(coords.latitude, coords.longitude, coords.accuracy_m)
-      await confirm({
-        label: label.label,
-        city: label.city || null,
-        district: label.district || null,
-        province: label.province || null,
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        manual: false,
-      })
-      setStep(2)
-    } catch (e) {
-      setLocError(e?.message || 'Could not read location. You can pick a city instead.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function saveManualCity() {
-    if (!manualCity.trim()) return
-    setLocError('')
-    setSaving(true)
-    try {
-      const label = manualProvince
-        ? `${manualCity.trim()}, ${manualProvince.trim()}, Pakistan`
-        : `${manualCity.trim()}, Pakistan`
-      await confirm({
-        label,
-        city: manualCity.trim(),
-        province: manualProvince.trim() || null,
-        manual: true,
-      })
-      setStep(2)
-    } catch (e) {
-      setLocError(e?.message || 'Could not save this location.')
-    } finally {
-      setSaving(false)
-    }
-  }
 
   function finish() {
     if (account?.id) markOnboarded(account.id)
@@ -140,53 +88,12 @@ export default function OnboardingPage() {
 
         {step === 1 && (
           <div className="onboard-body">
-            <p className="onboard-lead">
-              We use your location <strong>only</strong> to show nearby clinics and hospitals.
-              Precise coordinates aren't retained; only your confirmed city/area is saved.
-            </p>
-            {preference?.label && (
-              <div className="notice notice-info">
-                Currently saved: <strong>{preference.label}</strong>.
-              </div>
-            )}
-            <div className="onboard-loc-row">
-              <button
-                className="btn btn-primary btn-hero"
-                onClick={useCurrentLocation}
-                disabled={saving || geo.status === 'detecting'}
-              >
-                {saving || geo.status === 'detecting' ? 'Detecting…' : '📍 Use my current location'}
-              </button>
+            <p className="onboard-lead">Your care location was confirmed before this tour so nearby results are ready from the first assessment.</p>
+            <div className="notice notice-info location-confirmed-onboard">
+              <strong>⌖ {preference?.label}</strong>
+              <span>{preference?.permission_state === 'granted' ? 'Using current-location coordinates' : 'Using your selected city centre'}</span>
             </div>
-            <div className="loc-divider"><span>or pick a city manually</span></div>
-            <div className="form-row">
-              <label className="form-label" htmlFor="ob-city">City</label>
-              <input
-                id="ob-city"
-                className="form-input"
-                placeholder="e.g. Islamabad"
-                value={manualCity}
-                onChange={(e) => setManualCity(e.target.value)}
-              />
-            </div>
-            <div className="form-row">
-              <label className="form-label" htmlFor="ob-prov">Province</label>
-              <input
-                id="ob-prov"
-                className="form-input"
-                placeholder="e.g. Punjab"
-                value={manualProvince}
-                onChange={(e) => setManualProvince(e.target.value)}
-              />
-            </div>
-            <button
-              className="btn btn-outline"
-              onClick={saveManualCity}
-              disabled={!manualCity.trim() || saving}
-            >
-              Save city
-            </button>
-            {locError && <div className="form-error" style={{ marginTop: 6 }}>{locError}</div>}
+            <button className="btn btn-outline" onClick={() => navigate('/location')}>Change location</button>
           </div>
         )}
 

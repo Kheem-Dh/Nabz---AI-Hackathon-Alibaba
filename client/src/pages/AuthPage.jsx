@@ -46,8 +46,14 @@ export default function AuthPage() {
     } else if (!password) {
       next.password = 'Enter your password.'
     }
-    const phoneErr = validatePkPhone(phone)
-    if (phoneErr) next.phone = phoneErr
+    if (mode === 'register' || !phone.includes('@')) {
+      const phoneErr = validatePkPhone(phone)
+      if (phoneErr) next.phone = phoneErr
+    } else {
+      const emailErr = validateEmail(phone)
+      if (!phone.trim()) next.phone = 'Enter your phone number or email.'
+      else if (emailErr) next.phone = emailErr
+    }
     return next
   }
 
@@ -61,18 +67,22 @@ export default function AuthPage() {
 
     setBusy(true)
     try {
-      const normalisedPhone = normalizePkPhone(phone)
+      const normalisedIdentifier = phone.includes('@')
+        ? phone.trim().toLowerCase()
+        : normalizePkPhone(phone)
       if (mode === 'register') {
-        await register(fullName.trim(), normalisedPhone, password, email.trim() || null)
+        await register(fullName.trim(), normalisedIdentifier, password, email.trim() || null)
       } else {
-        await login(normalisedPhone, password)
+        await login(normalisedIdentifier, password)
       }
     } catch (err) {
       const msg =
         err.status === 401
           ? 'Wrong phone or password.'
           : err.status === 409
-          ? 'This phone is already registered — try logging in.'
+          ? err.detail === 'email_already_registered'
+            ? 'This email is already registered — try logging in.'
+            : 'This phone is already registered — try logging in.'
           : err.message || 'Something went wrong.'
       setError(msg)
     } finally {
@@ -122,6 +132,9 @@ export default function AuthPage() {
             </div>
           )}
           {error && <div className="form-error">{error}</div>}
+          {requestedMode === 'login' && new URLSearchParams(location.search).get('reset') === 'done' && (
+            <div className="notice notice-ok">Password updated. Log in with your new password.</div>
+          )}
 
           <form onSubmit={submit} noValidate>
             {mode === 'register' && (
@@ -144,7 +157,8 @@ export default function AuthPage() {
             )}
             <div className={`field ${errors.phone ? 'has-error' : ''}`}>
               <label htmlFor="phone">
-                <span className="ur urdu">فون نمبر</span> Phone number
+                <span className="ur urdu">{mode === 'register' ? 'فون نمبر' : 'فون یا ای میل'}</span>{' '}
+                {mode === 'register' ? 'Phone number' : 'Phone number or email'}
               </label>
               <input
                 id="phone"
@@ -152,15 +166,17 @@ export default function AuthPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 onBlur={() => setErrors((es) => ({ ...es, phone: validatePkPhone(phone) }))}
-                placeholder="03XX-XXXXXXX"
-                inputMode="tel"
+                placeholder={mode === 'register' ? '03XX-XXXXXXX' : '03XX-XXXXXXX or you@example.com'}
+                inputMode={mode === 'register' ? 'tel' : 'email'}
                 autoComplete="tel"
                 required
               />
               {errors.phone && <div className="field-error">{errors.phone}</div>}
               {!errors.phone && (
                 <div className="field-hint">
-                  Pakistan format: 03XX-XXXXXXX or +923XXXXXXXXX.
+                  {mode === 'register'
+                    ? 'Pakistan format: 03XX-XXXXXXX or +923XXXXXXXXX.'
+                    : 'Use your registered phone number or email address.'}
                 </div>
               )}
             </div>
@@ -216,6 +232,12 @@ export default function AuthPage() {
               {errors.password && <div className="field-error">{errors.password}</div>}
               {!errors.password && passwordHelp && <div className="field-hint">{passwordHelp}</div>}
             </div>
+
+            {mode === 'login' && (
+              <button type="button" className="forgot-link" onClick={() => navigate('/forgot-password')}>
+                Forgot password?
+              </button>
+            )}
 
             <button className="btn btn-primary" disabled={busy}>
               {busy ? '…' : mode === 'register' ? 'اکاؤنٹ بنائیں · Create account' : 'لاگ اِن · Login'}

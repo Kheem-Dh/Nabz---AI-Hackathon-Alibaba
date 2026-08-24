@@ -111,3 +111,66 @@ def test_email_otp_requires_email_on_account(client):
 
 def test_request_otp_requires_auth(client):
     assert client.post("/api/auth/request-otp", json={"channel": "phone"}).status_code == 401
+
+
+def test_email_login_duplicate_email_and_typo_validation(client):
+    email = f"login_{uuid.uuid4().hex[:8]}@example.com"
+    _headers, _account, _phone = _register(client, email=email)
+
+    login = client.post(
+        "/api/auth/login", json={"identifier": email.upper(), "password": "secret123"}
+    )
+    assert login.status_code == 200, login.text
+
+    duplicate = client.post(
+        "/api/auth/register",
+        json={
+            "full_name": "Duplicate Email",
+            "phone": f"03{uuid.uuid4().int % 10**9:09d}",
+            "password": "secret123",
+            "email": email.upper(),
+        },
+    )
+    assert duplicate.status_code == 409
+    assert duplicate.json()["detail"] == "email_already_registered"
+
+    typo = client.post(
+        "/api/auth/register",
+        json={
+            "full_name": "Typo Email",
+            "phone": f"03{uuid.uuid4().int % 10**9:09d}",
+            "password": "secret123",
+            "email": "faiza@example.combnn",
+        },
+    )
+    assert typo.status_code == 422
+
+
+def test_password_reset_with_email(client):
+    email = f"reset_{uuid.uuid4().hex[:8]}@example.com"
+    _headers, _account, _phone = _register(client, email=email)
+
+    requested = client.post(
+        "/api/auth/password-reset/request", json={"identifier": email}
+    )
+    assert requested.status_code == 200, requested.text
+    code = requested.json()["dev_code"]
+    assert code and len(code) == 6
+
+    reset = client.post(
+        "/api/auth/password-reset/confirm",
+        json={"identifier": email, "code": code, "new_password": "newpass123"},
+    )
+    assert reset.status_code == 200, reset.text
+    assert reset.json() == {"reset": True}
+    assert client.post(
+        "/api/auth/login", json={"identifier": email, "password": "newpass123"}
+    ).status_code == 200
+
+
+def test_password_reset_does_not_reveal_unknown_account(client):
+    requested = client.post(
+        "/api/auth/password-reset/request", json={"identifier": "missing@example.com"}
+    )
+    assert requested.status_code == 200
+    assert requested.json()["dev_code"] is None

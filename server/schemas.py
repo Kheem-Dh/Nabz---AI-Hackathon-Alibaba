@@ -5,7 +5,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class TriageLevel(str, Enum):
@@ -35,14 +35,64 @@ class RegisterRequest(BaseModel):
         v = v.strip().lower()
         if not v:
             return None
-        if "@" not in v or "." not in v.split("@")[-1]:
+        import re
+
+        if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[a-z]{2,24}", v):
+            raise ValueError("invalid email address")
+        # Catch common pasted/typed suffix mistakes such as gmail.combnn.
+        if re.search(r"\.(?:com|net|org|edu|gov|pk)[a-z]{2,}$", v):
             raise ValueError("invalid email address")
         return v
 
 
 class LoginRequest(BaseModel):
-    phone: str = Field(..., min_length=6, max_length=32)
+    identifier: str = Field(
+        ...,
+        min_length=5,
+        max_length=160,
+        validation_alias=AliasChoices("identifier", "phone", "email"),
+    )
     password: str = Field(..., min_length=1, max_length=128)
+
+    @field_validator("identifier")
+    @classmethod
+    def _clean_identifier(cls, value: str) -> str:
+        return value.strip().lower()
+
+
+class PasswordResetRequest(BaseModel):
+    identifier: str = Field(..., min_length=5, max_length=160)
+
+    @field_validator("identifier")
+    @classmethod
+    def _clean_identifier(cls, value: str) -> str:
+        return value.strip().lower()
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    identifier: str = Field(..., min_length=5, max_length=160)
+    code: str = Field(..., min_length=6, max_length=6)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+    @field_validator("identifier")
+    @classmethod
+    def _clean_reset_identifier(cls, value: str) -> str:
+        return value.strip().lower()
+
+    @field_validator("code")
+    @classmethod
+    def _reset_code_digits(cls, value: str) -> str:
+        value = value.strip()
+        if not value.isdigit():
+            raise ValueError("code must be digits")
+        return value
+
+    @field_validator("new_password")
+    @classmethod
+    def _strong_reset_password(cls, value: str) -> str:
+        if not any(ch.isalpha() for ch in value) or not any(ch.isdigit() for ch in value):
+            raise ValueError("password must include a letter and a number")
+        return value
 
 
 class AccountOut(BaseModel):
@@ -52,6 +102,7 @@ class AccountOut(BaseModel):
     email: Optional[str] = None
     phone_verified: bool = False
     email_verified: bool = False
+    is_admin: bool = False
 
 
 class AuthResponse(BaseModel):

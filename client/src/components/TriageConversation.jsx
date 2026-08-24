@@ -522,7 +522,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           onNew={reset}
           ttsSupported={tts.supported}
           onRetry={turn.response_source === 'ai_unavailable' ? retryAssessment : undefined}
-          chatSlot={['live_ai', 'test_model'].includes(turn.response_source) ? <EncounterChat sessionId={sessionId} /> : null}
+          chatSlot={['live_ai', 'test_model'].includes(turn.response_source) ? <EncounterChat sessionId={sessionId} profileId={profile.id} /> : null}
         />
       </div>
     )

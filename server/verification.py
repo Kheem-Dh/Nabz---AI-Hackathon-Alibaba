@@ -36,6 +36,7 @@ CODE_TTL_SECONDS = 10 * 60      # a code is valid for 10 minutes
 RESEND_COOLDOWN_SECONDS = 30    # min gap between sends on one channel
 MAX_ATTEMPTS = 5                # wrong-guess ceiling before a code is burned
 VALID_CHANNELS = {"phone", "email"}
+RESET_CHANNEL = "reset"
 
 
 def _secret() -> str:
@@ -254,6 +255,118 @@ def verify_code(db: Session, account: Account, channel: str, code: str) -> None:
     else:
         account.email_verified = True
         account.email_verified_at = now
+    db.commit()
+
+
+def _account_for_identifier(db: Session, identifier: str) -> Account | None:
+    from sqlalchemy import func, or_
+
+    identifier = identifier.strip().lower()
+    return (
+        db.query(Account)
+        .filter(or_(Account.phone == identifier, func.lower(Account.email) == identifier))
+        .first()
+    )
+
+
+def request_password_reset(db: Session, identifier: str) -> dict:
+    """Issue a reset OTP with an enumeration-safe response."""
+    account = _account_for_identifier(db, identifier)
+    generic = {
+        "channel": "email" if "@" in identifier else "phone",
+        "sent": True,
+        "already_verified": False,
+        "expires_in_seconds": CODE_TTL_SECONDS,
+        "message": "If an account matches, a six-digit reset code has been sent.",
+        "dev_code": None,
+    }
+    if account is None:
+        return generic
+
+    destination = account.email if "@" in identifier else account.phone
+    delivery_channel = "email" if "@" in identifier else "phone"
+    if not destination:
+        return generic
+
+    latest = (
+        db.query(VerificationCode)
+        .filter(
+            VerificationCode.account_id == account.id,
+            VerificationCode.channel == RESET_CHANNEL,
+        )
+        .order_by(VerificationCode.created_at.desc())
+        .first()
+    )
+    if latest is not None:
+        age = (_now() - _as_naive(latest.created_at)).total_seconds()
+        if not latest.consumed and age < RESEND_COOLDOWN_SECONDS:
+            return generic
+
+    db.query(VerificationCode).filter(
+        VerificationCode.account_id == account.id,
+        VerificationCode.channel == RESET_CHANNEL,
+        VerificationCode.consumed == False,  # noqa: E712
+    ).update({"consumed": True})
+
+    code = _generate_code()
+    db.add(VerificationCode(
+        account_id=account.id,
+        channel=RESET_CHANNEL,
+        destination=destination,
+        code_hash=_hash_code(account.id, RESET_CHANNEL, code),
+        expires_at=_now() + timedelta(seconds=CODE_TTL_SECONDS),
+        attempts=0,
+        consumed=False,
+    ))
+    db.commit()
+    delivered = _deliver(delivery_channel, destination, code)
+    is_production = os.getenv("APP_ENV", "development").strip().lower() == "production"
+    if not delivered:
+        logger.info("[DEV PASSWORD RESET] %s → %s : %s", delivery_channel, destination, code)
+    return {
+        **generic,
+        # "sent" means the enumeration-safe reset request was accepted. Do
+        # not expose account/provider state through this public endpoint.
+        "sent": True,
+        "message": generic["message"],
+        "dev_code": code if not delivered and not is_production else None,
+    }
+
+
+def reset_password(db: Session, identifier: str, code: str, new_password: str) -> None:
+    """Consume a reset OTP and replace the password hash."""
+    from security import hash_password
+
+    account = _account_for_identifier(db, identifier)
+    if account is None:
+        raise HTTPException(status_code=400, detail="invalid_or_expired_reset_code")
+    record = (
+        db.query(VerificationCode)
+        .filter(
+            VerificationCode.account_id == account.id,
+            VerificationCode.channel == RESET_CHANNEL,
+            VerificationCode.consumed == False,  # noqa: E712
+        )
+        .order_by(VerificationCode.created_at.desc())
+        .first()
+    )
+    if record is None or _now() > _as_naive(record.expires_at):
+        if record is not None:
+            record.consumed = True
+            db.commit()
+        raise HTTPException(status_code=400, detail="invalid_or_expired_reset_code")
+    if record.attempts >= MAX_ATTEMPTS:
+        record.consumed = True
+        db.commit()
+        raise HTTPException(status_code=429, detail="too_many_attempts")
+    if not hmac.compare_digest(
+        _hash_code(account.id, RESET_CHANNEL, code.strip()), record.code_hash
+    ):
+        record.attempts += 1
+        db.commit()
+        raise HTTPException(status_code=400, detail="invalid_or_expired_reset_code")
+    record.consumed = True
+    account.password_hash = hash_password(new_password)
     db.commit()
 
 

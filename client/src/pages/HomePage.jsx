@@ -182,6 +182,7 @@ export default function HomePage() {
             loading={detailLoading}
             onNew={newAssessment}
             onRetry={retrySavedAssessment}
+            profileId={active.id}
           />
         ) : (
           <TriageConversation

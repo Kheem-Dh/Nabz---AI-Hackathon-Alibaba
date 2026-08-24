@@ -33,6 +33,7 @@ logging.basicConfig(
 
 # Import after load_dotenv so modules read env at import time correctly.
 from auth import router as auth_router  # noqa: E402
+from analytics import router as analytics_router  # noqa: E402
 from chat_attach import router as chat_attach_router  # noqa: E402
 from clinics import get_clinics  # noqa: E402
 from db import init_db  # noqa: E402
@@ -236,6 +237,7 @@ def create_app(settings: RuntimeSettings | None = None) -> FastAPI:
     )
 
     application.include_router(auth_router)
+    application.include_router(analytics_router)
     application.include_router(profiles_router)
     application.include_router(location_router)
     application.include_router(facilities_router)

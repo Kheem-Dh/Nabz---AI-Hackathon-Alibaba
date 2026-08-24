@@ -22,6 +22,8 @@ import DocumentsPage from './pages/DocumentsPage'
 import OnboardingPage, { hasOnboarded } from './pages/OnboardingPage'
 import CompleteProfilePage from './pages/CompleteProfilePage'
 import LandingPage from './pages/LandingPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import AdminDashboardPage from './pages/AdminDashboardPage'
 import { stopAllSpeech } from './hooks/useTextToSpeech'
 
 function Loading() {
@@ -51,6 +53,7 @@ export default function App() {
 
   if (loading) return <Loading />
   if (!account) {
+    if (location.pathname.startsWith('/forgot-password')) return <ForgotPasswordPage />
     if (location.pathname.startsWith('/auth')) return <AuthPage />
     if (location.pathname.startsWith('/privacy')) {
       return <div className="public-legal"><PrivacyPage /></div>
@@ -79,26 +82,13 @@ export default function App() {
   // First-run gate (winning plan §3): location before anything else.
   // The location screen itself is always accessible so users can update it.
   const isPrintRoute = location.pathname.startsWith('/summary')
+  const isAdminRoute = location.pathname.startsWith('/admin')
   const onLocationScreen = location.pathname.startsWith('/location')
   const onOnboarding = location.pathname.startsWith('/onboarding')
 
-  // Onboarding gate — one guided walk-through per account, dismissible via Skip.
-  const needsOnboarding = account && !hasOnboarded(account.id)
-  if (needsOnboarding && !onOnboarding) {
-    return (
-      <div className="app-shell">
-        <div className="app-container">
-          <TopBar minimal />
-          <main className="app-main">
-            <OnboardingPage />
-          </main>
-          <Disclaimer />
-        </div>
-      </div>
-    )
-  }
-
-  if (!preference && !onLocationScreen) {
+  // Location permission is the first signed-in step. Manual province/city is
+  // offered only from that screen if GPS is unavailable or declined.
+  if (!preference && !onLocationScreen && !isAdminRoute) {
     return (
       <div className="app-shell">
         <div className="app-container">
@@ -112,12 +102,28 @@ export default function App() {
     )
   }
 
+  // Onboarding gate — one guided walk-through per account, dismissible via Skip.
+  const needsOnboarding = account && !hasOnboarded(account.id)
+  if (needsOnboarding && !onOnboarding && !onLocationScreen && !isAdminRoute) {
+    return (
+      <div className="app-shell">
+        <div className="app-container">
+          <TopBar minimal />
+          <main className="app-main">
+            <OnboardingPage />
+          </main>
+          <Disclaimer />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app-shell">
       <div className="app-container">
         {!isPrintRoute && <TopBar />}
-        {!isPrintRoute && !onLocationScreen && <VerifyBanner />}
-        <main className="app-main">
+        {!isPrintRoute && !onLocationScreen && !isAdminRoute && <VerifyBanner />}
+        <main className={`app-main ${isAdminRoute ? 'admin-main' : ''}`}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/location" element={<LocationSetupPage />} />
@@ -133,10 +139,11 @@ export default function App() {
             <Route path="/clinics" element={<ClinicsPage />} />
             <Route path="/summary/:id" element={<SummaryPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
-        {!isPrintRoute && (
+        {!isPrintRoute && !isAdminRoute && (
           <>
             <Disclaimer />
             <BottomNav />
@@ -148,7 +155,7 @@ export default function App() {
 }
 
 function TopBar({ minimal = false }) {
-  const { logout } = useAuth()
+  const { account, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const navClass = (path) => location.pathname === path ? 'active' : ''
@@ -167,6 +174,7 @@ function TopBar({ minimal = false }) {
             <button className={navClass('/')} onClick={() => navigate('/')}>Workspace</button>
             <button className={navClass('/vault')} onClick={() => navigate('/vault')}>Medical Vault</button>
             <button className={navClass('/clinics')} onClick={() => navigate('/clinics')}>Find care</button>
+            {account?.is_admin && <button className={navClass('/admin')} onClick={() => navigate('/admin')}>Admin</button>}
           </nav>
         )}
         <div className="row">

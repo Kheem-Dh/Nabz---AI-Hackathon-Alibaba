@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGeolocation } from '../hooks/useGeolocation'
 import { useLocationPref } from '../context/LocationContext'
-import { listKnownCities } from '../api'
+import { listLocationRegions } from '../api'
 
 // Screen 00 in the winning plan: location-first onboarding.
 // This is the first thing a signed-in user sees if no LocationPreference is set.
@@ -18,16 +18,18 @@ export default function LocationSetupPage({ redirectTo = '/' }) {
   const { resolve, confirm } = useLocationPref()
 
   const [resolved, setResolved] = useState(null)
-  const [cities, setCities] = useState([])
+  const [regions, setRegions] = useState([])
+  const [manualOpen, setManualOpen] = useState(false)
+  const [manualProvince, setManualProvince] = useState('')
   const [manualCity, setManualCity] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [autoTried, setAutoTried] = useState(false)
 
   useEffect(() => {
-    listKnownCities()
-      .then(setCities)
-      .catch(() => setCities([]))
+    listLocationRegions()
+      .then(setRegions)
+      .catch(() => setRegions([]))
   }, [])
 
   // Auto-detect on open when the browser already has geolocation permission,
@@ -64,6 +66,7 @@ export default function LocationSetupPage({ redirectTo = '/' }) {
       setResolved(label)
     } catch (e) {
       setError(e.message || 'location-failed')
+      if (e.message === 'denied') setManualOpen(true)
     }
   }
 
@@ -93,13 +96,14 @@ export default function LocationSetupPage({ redirectTo = '/' }) {
     setSaving(true)
     setError(null)
     try {
-      const selected = cities.find((c) => c.slug === manualCity)
+      const region = regions.find((item) => item.name === manualProvince)
+      const selected = region?.cities.find((c) => c.slug === manualCity)
       const cityName = selected ? selected.name : manualCity
-      const label = `${cityName}, Pakistan`
+      const label = `${cityName}, ${manualProvince}, Pakistan`
       await confirm({
         label,
         city: cityName,
-        province: null,
+        province: manualProvince,
         latitude: selected?.latitude ?? null,
         longitude: selected?.longitude ?? null,
         manual: true,
@@ -112,17 +116,20 @@ export default function LocationSetupPage({ redirectTo = '/' }) {
     }
   }
 
+  const manualCities = regions.find((item) => item.name === manualProvince)?.cities || []
+
   return (
     <div className="page">
-      <div className="loc-hero">
-        <div className="loc-hero-icon" aria-hidden="true">📍</div>
+      <div className="loc-hero location-permission-hero">
+        <div className="loc-hero-icon" aria-hidden="true">⌖</div>
+        <span className="location-step-kicker">STEP 1 · CURRENT LOCATION</span>
         <h1 className="loc-hero-title urdu">آپ کہاں ہیں؟</h1>
         <p className="loc-hero-title-en">Where are you now?</p>
         <p className="loc-hero-sub urdu">
           قریبی ہسپتال اور کلینک دکھانے کے لیے آپ کی موجودہ جگہ درکار ہے۔
         </p>
         <p className="loc-hero-sub-en">
-          We use your current location only to show nearby hospitals and clinics.
+          Allow location to rank nearby clinics, hospitals and pharmacies accurately.
         </p>
       </div>
 
@@ -189,14 +196,35 @@ export default function LocationSetupPage({ redirectTo = '/' }) {
         </div>
       )}
 
-      <div className="loc-divider">
-        <span>{'یا · or'}</span>
-      </div>
+      {!resolved && !manualOpen && (
+        <button className="location-manual-link" onClick={() => setManualOpen(true)}>
+          Can’t share location? Choose province and city manually
+        </button>
+      )}
 
-      <div className="card">
+      {!resolved && manualOpen && <div className="card location-manual-card">
         <div className="section-title" style={{ marginBottom: 6 }}>
-          <span className="ur urdu">شہر منتخب کریں</span>
-          <span className="en">Pick your city from the list</span>
+          <span className="ur urdu">صوبہ اور شہر منتخب کریں</span>
+          <span className="en">Choose your province or territory, then your city</span>
+        </div>
+        <div className="form-row">
+          <label className="form-label" htmlFor="province">
+            <span className="urdu">صوبہ</span> · Province / territory
+          </label>
+          <select
+            id="province"
+            className="form-input"
+            value={manualProvince}
+            onChange={(event) => {
+              setManualProvince(event.target.value)
+              setManualCity('')
+            }}
+          >
+            <option value="">— Select province / territory —</option>
+            {regions.map((region) => (
+              <option key={region.name} value={region.name}>{region.name}</option>
+            ))}
+          </select>
         </div>
         <div className="form-row">
           <label className="form-label" htmlFor="city">
@@ -206,10 +234,11 @@ export default function LocationSetupPage({ redirectTo = '/' }) {
             id="city"
             className="form-input"
             value={manualCity}
-            onChange={(e) => setManualCity(e.target.value)}
+            disabled={!manualProvince}
+            onChange={(event) => setManualCity(event.target.value)}
           >
-            <option value="">— Select a city —</option>
-            {cities.map((c) => (
+            <option value="">— {manualProvince ? 'Select a city' : 'Choose province first'} —</option>
+            {manualCities.map((c) => (
               <option key={c.slug} value={c.slug}>{c.name}</option>
             ))}
           </select>
@@ -217,15 +246,19 @@ export default function LocationSetupPage({ redirectTo = '/' }) {
         <button
           className="btn btn-primary"
           onClick={handleManualSave}
-          disabled={!manualCity || saving}
+          disabled={!manualProvince || !manualCity || saving}
         >
           <span className="urdu">محفوظ کریں</span> · Save
         </button>
         <p className="hero-hint-en" style={{ marginTop: 8 }}>
-          Only cities Nabz covers appear here. If yours isn't listed, use "current location"
-          — Nabz will still find the closest facilities.
+          GPS gives the most accurate nearby results. Manual selection uses the selected city centre.
         </p>
-      </div>
+        {geo.status !== 'denied' && (
+          <button className="location-retry-gps" onClick={() => { setManualOpen(false); handleDetect() }}>
+            ← Try current location again
+          </button>
+        )}
+      </div>}
     </div>
   )
 }

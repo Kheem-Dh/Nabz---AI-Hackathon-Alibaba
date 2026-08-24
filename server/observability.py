@@ -14,6 +14,11 @@ from starlette.datastructures import MutableHeaders
 logger = logging.getLogger("nabz.requests")
 _SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
 _NUMERIC_PATH_SEGMENT = re.compile(r"(?<=/)\d+(?=/|$)")
+_PERSIST_EXCLUDED = {
+    "/api/analytics/heartbeat",
+    "/api/health/live",
+    "/api/health/ready",
+}
 
 
 def _request_id(scope: dict[str, Any]) -> str:
@@ -79,6 +84,7 @@ class RequestTelemetryMiddleware:
             raise
         finally:
             elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
+            safe_path = _safe_path(scope)
             level = logging.ERROR if failed or status_code >= 500 else logging.INFO
             logger.log(
                 level,
@@ -88,7 +94,7 @@ class RequestTelemetryMiddleware:
                         "request_id": request_id,
                         "environment": self.environment,
                         "method": scope.get("method", ""),
-                        "path": _safe_path(scope),
+                        "path": safe_path,
                         "status": status_code,
                         "latency_ms": elapsed_ms,
                         "error": failed or status_code >= 500,
@@ -96,3 +102,44 @@ class RequestTelemetryMiddleware:
                     separators=(",", ":"),
                 ),
             )
+            if safe_path not in _PERSIST_EXCLUDED:
+                self._persist_request(scope, request_id, safe_path, status_code, elapsed_ms)
+
+    @staticmethod
+    def _persist_request(
+        scope: dict[str, Any],
+        request_id: str,
+        path: str,
+        status_code: int,
+        latency_ms: float,
+    ) -> None:
+        """Best-effort DB logging that can never break the user request."""
+        try:
+            from db import SessionLocal
+            from models_db import RequestLog
+            from security import decode_token
+
+            account_id = None
+            for key, value in scope.get("headers", []):
+                if key.lower() == b"authorization":
+                    supplied = value.decode("latin-1").strip()
+                    if supplied.lower().startswith("bearer "):
+                        try:
+                            account_id = decode_token(supplied.split(" ", 1)[1].strip())
+                        except Exception:
+                            account_id = None
+                    break
+            with SessionLocal() as db:
+                db.add(
+                    RequestLog(
+                        request_id=request_id,
+                        account_id=account_id,
+                        method=str(scope.get("method", ""))[:12],
+                        path=path[:180],
+                        status_code=status_code,
+                        latency_ms=latency_ms,
+                    )
+                )
+                db.commit()
+        except Exception:
+            logger.exception("Unable to persist privacy-safe request telemetry")

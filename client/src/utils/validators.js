@@ -40,6 +40,11 @@ export function validateEmail(value) {
   const v = (value || '').trim()
   if (!v) return null // optional
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return 'Enter a valid email address.'
+  // Catch common pasted/typed endings such as gmail.combnn while still
+  // allowing normal country-code and modern TLDs.
+  if (/\.(?:com|net|org|edu|gov|pk)[a-z]{2,}$/i.test(v)) {
+    return 'Check the email ending (for example .com or .com.pk).'
+  }
   return null
 }
 

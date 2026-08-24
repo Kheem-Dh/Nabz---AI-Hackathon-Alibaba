@@ -5,6 +5,7 @@ import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext'
 import { LocationProvider } from './context/LocationContext'
 import { ProfileProvider } from './context/ProfileContext'
+import AnalyticsTracker from './components/AnalyticsTracker'
 import './styles.css'
 
 // PWA: register the service worker in production builds so Nabz can be
@@ -21,6 +22,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
+        <AnalyticsTracker />
         <LocationProvider>
           <ProfileProvider>
             <App />

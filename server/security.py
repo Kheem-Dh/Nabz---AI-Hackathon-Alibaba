@@ -66,3 +66,27 @@ def get_current_account(
     if not account:
         raise HTTPException(status_code=401, detail="account_not_found")
     return account
+
+
+def _admin_identifiers() -> set[str]:
+    """Configured owner emails/phones; empty means nobody has admin access."""
+    return {
+        item.strip().lower()
+        for item in os.getenv("NABZ_ADMIN_IDENTIFIERS", "").split(",")
+        if item.strip()
+    }
+
+
+def is_admin_account(account: Account) -> bool:
+    allowed = _admin_identifiers()
+    candidates = {account.phone.strip().lower()}
+    if account.email:
+        candidates.add(account.email.strip().lower())
+    return bool(allowed.intersection(candidates))
+
+
+def require_admin(account: Account = Depends(get_current_account)) -> Account:
+    """Enforce owner access at the API boundary, independent of the web UI."""
+    if not is_admin_account(account):
+        raise HTTPException(status_code=403, detail="admin_access_required")
+    return account

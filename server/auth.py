@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from db import get_db
@@ -13,10 +14,18 @@ from schemas import (
     OtpRequest,
     OtpSendResponse,
     OtpVerifyRequest,
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
     RegisterRequest,
 )
-from security import get_current_account, hash_password, issue_token, verify_password
-from verification import request_code, verify_code
+from security import (
+    get_current_account,
+    hash_password,
+    is_admin_account,
+    issue_token,
+    verify_password,
+)
+from verification import request_code, request_password_reset, reset_password, verify_code
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -29,14 +38,23 @@ def _account_out(account: Account) -> AccountOut:
         email=account.email,
         phone_verified=bool(account.phone_verified),
         email_verified=bool(account.email_verified),
+        is_admin=is_admin_account(account),
     )
 
 
 @router.post("/register", response_model=AuthResponse)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> AuthResponse:
-    existing = db.query(Account).filter(Account.phone == payload.phone).first()
-    if existing:
+    existing_phone = db.query(Account).filter(Account.phone == payload.phone).first()
+    if existing_phone:
         raise HTTPException(status_code=409, detail="phone_already_registered")
+    if payload.email:
+        existing_email = (
+            db.query(Account)
+            .filter(func.lower(Account.email) == payload.email.lower())
+            .first()
+        )
+        if existing_email:
+            raise HTTPException(status_code=409, detail="email_already_registered")
 
     account = Account(
         full_name=payload.full_name.strip(),
@@ -63,10 +81,38 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> AuthRes
 
 @router.post("/login", response_model=AuthResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)) -> AuthResponse:
-    account = db.query(Account).filter(Account.phone == payload.phone.strip()).first()
+    identifier = payload.identifier.strip().lower()
+    account = (
+        db.query(Account)
+        .filter(
+            or_(
+                Account.phone == identifier,
+                func.lower(Account.email) == identifier,
+            )
+        )
+        .first()
+    )
     if not account or not verify_password(payload.password, account.password_hash):
         raise HTTPException(status_code=401, detail="invalid_credentials")
     return AuthResponse(token=issue_token(account.id), account=_account_out(account))
+
+
+@router.post("/password-reset/request", response_model=OtpSendResponse)
+def password_reset_request(
+    payload: PasswordResetRequest,
+    db: Session = Depends(get_db),
+) -> OtpSendResponse:
+    """Send a reset code without revealing whether an account exists."""
+    return OtpSendResponse(**request_password_reset(db, payload.identifier))
+
+
+@router.post("/password-reset/confirm")
+def password_reset_confirm(
+    payload: PasswordResetConfirmRequest,
+    db: Session = Depends(get_db),
+) -> dict[str, bool]:
+    reset_password(db, payload.identifier, payload.code, payload.new_password)
+    return {"reset": True}
 
 
 @router.get("/me", response_model=AccountOut)

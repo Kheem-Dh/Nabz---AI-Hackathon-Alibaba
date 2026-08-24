@@ -569,20 +569,88 @@ PHARMACIES: list[dict] = [
 ALL_FACILITIES: list[dict] = FACILITIES + BLOOD_BANKS + PHARMACIES
 
 
-# Coarse city centers used when the account only stored a city (no coords).
+# Province-aware city directory used by the manual location fallback.  The
+# browser always asks for GPS first; this list covers district headquarters and
+# major urban centres when permission is declined or unavailable.
+CITY_DIRECTORY: list[tuple[str, str, float, float]] = [
+    # Federal Capital
+    ("Islamabad", "Federal Capital", 33.6844, 73.0479),
+    # Punjab
+    ("Lahore", "Punjab", 31.5497, 74.3436), ("Rawalpindi", "Punjab", 33.5651, 73.0169),
+    ("Faisalabad", "Punjab", 31.4504, 73.1350), ("Multan", "Punjab", 30.1575, 71.5249),
+    ("Gujranwala", "Punjab", 32.1877, 74.1945), ("Sialkot", "Punjab", 32.4945, 74.5229),
+    ("Bahawalpur", "Punjab", 29.3956, 71.6836), ("Sargodha", "Punjab", 32.0836, 72.6711),
+    ("Sheikhupura", "Punjab", 31.7167, 73.9850), ("Rahim Yar Khan", "Punjab", 28.4212, 70.2989),
+    ("Jhang", "Punjab", 31.2681, 72.3181), ("Dera Ghazi Khan", "Punjab", 30.0561, 70.6348),
+    ("Gujrat", "Punjab", 32.5731, 74.1005), ("Sahiwal", "Punjab", 30.6682, 73.1114),
+    ("Kasur", "Punjab", 31.1165, 74.4494), ("Okara", "Punjab", 30.8138, 73.4534),
+    ("Chakwal", "Punjab", 32.9328, 72.8585), ("Jhelum", "Punjab", 32.9405, 73.7276),
+    ("Attock", "Punjab", 33.7667, 72.3598), ("Mianwali", "Punjab", 32.5854, 71.5436),
+    ("Bhakkar", "Punjab", 31.6269, 71.0647), ("Layyah", "Punjab", 30.9693, 70.9428),
+    ("Muzaffargarh", "Punjab", 30.0736, 71.1805), ("Rajanpur", "Punjab", 29.1041, 70.3297),
+    ("Bahawalnagar", "Punjab", 29.9987, 73.2536), ("Khanewal", "Punjab", 30.3017, 71.9321),
+    ("Vehari", "Punjab", 30.0452, 72.3489), ("Pakpattan", "Punjab", 30.3410, 73.3866),
+    ("Nankana Sahib", "Punjab", 31.4492, 73.7126), ("Hafizabad", "Punjab", 32.0709, 73.6880),
+    ("Mandi Bahauddin", "Punjab", 32.5870, 73.4912), ("Narowal", "Punjab", 32.1019, 74.8730),
+    ("Chiniot", "Punjab", 31.7200, 72.9789), ("Toba Tek Singh", "Punjab", 30.9743, 72.4827),
+    ("Lodhran", "Punjab", 29.5405, 71.6336), ("Murree", "Punjab", 33.9070, 73.3943),
+    ("Talagang", "Punjab", 32.9297, 72.4158), ("Wazirabad", "Punjab", 32.4458, 74.1159),
+    # Sindh
+    ("Karachi", "Sindh", 24.8607, 67.0011), ("Hyderabad", "Sindh", 25.3960, 68.3578),
+    ("Sukkur", "Sindh", 27.7052, 68.8574), ("Larkana", "Sindh", 27.5590, 68.2120),
+    ("Mirpur Khas", "Sindh", 25.5269, 69.0111), ("Nawabshah", "Sindh", 26.2442, 68.4100),
+    ("Jacobabad", "Sindh", 28.2810, 68.4388), ("Shikarpur", "Sindh", 27.9556, 68.6382),
+    ("Khairpur", "Sindh", 27.5295, 68.7592), ("Thatta", "Sindh", 24.7475, 67.9235),
+    ("Badin", "Sindh", 24.6558, 68.8384), ("Dadu", "Sindh", 26.7303, 67.7769),
+    ("Jamshoro", "Sindh", 25.4283, 68.2822), ("Ghotki", "Sindh", 28.0060, 69.3150),
+    ("Kashmore", "Sindh", 28.4326, 69.5836), ("Sanghar", "Sindh", 26.0466, 68.9492),
+    ("Tando Allahyar", "Sindh", 25.4605, 68.7175), ("Tando Muhammad Khan", "Sindh", 25.1239, 68.5368),
+    ("Matiari", "Sindh", 25.5971, 68.4467), ("Umerkot", "Sindh", 25.3616, 69.7362),
+    ("Mithi", "Sindh", 24.7370, 69.7970), ("Sujawal", "Sindh", 24.6042, 68.0776),
+    ("Naushahro Feroze", "Sindh", 26.8401, 68.1227), ("Qambar", "Sindh", 27.5918, 68.0084),
+    # Khyber Pakhtunkhwa
+    ("Peshawar", "Khyber Pakhtunkhwa", 34.0151, 71.5249), ("Mardan", "Khyber Pakhtunkhwa", 34.1989, 72.0231),
+    ("Abbottabad", "Khyber Pakhtunkhwa", 34.1688, 73.2215), ("Mingora", "Khyber Pakhtunkhwa", 34.7717, 72.3602),
+    ("Kohat", "Khyber Pakhtunkhwa", 33.5834, 71.4332), ("Bannu", "Khyber Pakhtunkhwa", 32.9861, 70.6042),
+    ("Dera Ismail Khan", "Khyber Pakhtunkhwa", 31.8315, 70.9017), ("Nowshera", "Khyber Pakhtunkhwa", 34.0159, 71.9812),
+    ("Charsadda", "Khyber Pakhtunkhwa", 34.1494, 71.7428), ("Mansehra", "Khyber Pakhtunkhwa", 34.3302, 73.1968),
+    ("Haripur", "Khyber Pakhtunkhwa", 33.9946, 72.9106), ("Swabi", "Khyber Pakhtunkhwa", 34.1202, 72.4698),
+    ("Batkhela", "Khyber Pakhtunkhwa", 34.6178, 71.9725), ("Chitral", "Khyber Pakhtunkhwa", 35.8518, 71.7864),
+    ("Timergara", "Khyber Pakhtunkhwa", 34.8281, 71.8420), ("Upper Dir", "Khyber Pakhtunkhwa", 35.2074, 71.8768),
+    ("Batagram", "Khyber Pakhtunkhwa", 34.6796, 73.0233), ("Alpuri", "Khyber Pakhtunkhwa", 34.9206, 72.6322),
+    ("Daggar", "Khyber Pakhtunkhwa", 34.5100, 72.4844), ("Hangu", "Khyber Pakhtunkhwa", 33.5281, 71.0572),
+    ("Karak", "Khyber Pakhtunkhwa", 33.1163, 71.0956), ("Lakki Marwat", "Khyber Pakhtunkhwa", 32.6079, 70.9114),
+    ("Tank", "Khyber Pakhtunkhwa", 32.2217, 70.3793), ("Dasu", "Khyber Pakhtunkhwa", 35.2917, 73.2906),
+    # Balochistan
+    ("Quetta", "Balochistan", 30.1798, 66.9750), ("Gwadar", "Balochistan", 25.1264, 62.3225),
+    ("Turbat", "Balochistan", 26.0023, 63.0500), ("Khuzdar", "Balochistan", 27.8119, 66.6100),
+    ("Chaman", "Balochistan", 30.9236, 66.4512), ("Sibi", "Balochistan", 29.5430, 67.8773),
+    ("Zhob", "Balochistan", 31.3408, 69.4493), ("Loralai", "Balochistan", 30.3705, 68.5979),
+    ("Dera Murad Jamali", "Balochistan", 28.5466, 68.2231), ("Dera Allah Yar", "Balochistan", 28.3735, 68.3508),
+    ("Hub", "Balochistan", 25.0673, 66.9170), ("Uthal", "Balochistan", 25.8072, 66.6219),
+    ("Kalat", "Balochistan", 29.0225, 66.5916), ("Mastung", "Balochistan", 29.7997, 66.8455),
+    ("Pishin", "Balochistan", 30.5818, 66.9941), ("Kharan", "Balochistan", 28.5846, 65.4150),
+    ("Nushki", "Balochistan", 29.5542, 66.0215), ("Ziarat", "Balochistan", 30.3814, 67.7258),
+    ("Barkhan", "Balochistan", 29.8977, 69.5256), ("Kohlu", "Balochistan", 29.8965, 69.2532),
+    ("Awaran", "Balochistan", 26.4568, 65.2314), ("Panjgur", "Balochistan", 26.9719, 64.0946),
+    ("Qila Saifullah", "Balochistan", 30.7008, 68.3598),
+    # Gilgit-Baltistan
+    ("Gilgit", "Gilgit-Baltistan", 35.9208, 74.3144), ("Skardu", "Gilgit-Baltistan", 35.2971, 75.6333),
+    ("Aliabad", "Gilgit-Baltistan", 36.3079, 74.6177), ("Chilas", "Gilgit-Baltistan", 35.4206, 74.0967),
+    ("Gahkuch", "Gilgit-Baltistan", 36.1768, 73.7638), ("Khaplu", "Gilgit-Baltistan", 35.1404, 76.3370),
+    ("Astore", "Gilgit-Baltistan", 35.3668, 74.8560), ("Shigar", "Gilgit-Baltistan", 35.4269, 75.7398),
+    # Azad Jammu and Kashmir
+    ("Muzaffarabad", "Azad Jammu and Kashmir", 34.3600, 73.4711), ("Mirpur", "Azad Jammu and Kashmir", 33.1484, 73.7519),
+    ("Kotli", "Azad Jammu and Kashmir", 33.5184, 73.9022), ("Rawalakot", "Azad Jammu and Kashmir", 33.8578, 73.7604),
+    ("Bagh", "Azad Jammu and Kashmir", 33.9811, 73.7761), ("Bhimber", "Azad Jammu and Kashmir", 32.9747, 74.0786),
+    ("Athmuqam", "Azad Jammu and Kashmir", 34.5717, 73.8972), ("Hattian Bala", "Azad Jammu and Kashmir", 34.1691, 73.7432),
+    ("Forward Kahuta", "Azad Jammu and Kashmir", 33.7707, 73.6022),
+]
+
 CITY_CENTERS: dict[str, tuple[float, float]] = {
-    "karachi": (24.8607, 67.0011),
-    "lahore": (31.5497, 74.3436),
-    "islamabad": (33.6844, 73.0479),
-    "rawalpindi": (33.5651, 73.0169),
-    "peshawar": (34.0151, 71.5249),
-    "abbottabad": (34.1688, 73.2215),
-    "mardan": (34.1989, 72.0231),
-    "quetta": (30.1798, 66.9750),
-    "multan": (30.1575, 71.5249),
-    "faisalabad": (31.4504, 73.1350),
-    "hyderabad": (25.3960, 68.3578),
-    "sukkur": (27.7052, 68.8574),
-    "gilgit": (35.9208, 74.3144),
-    "muzaffarabad": (34.3600, 73.4711),
+    name.lower(): (latitude, longitude)
+    for name, _province, latitude, longitude in CITY_DIRECTORY
+}
+CITY_PROVINCES: dict[str, str] = {
+    name.lower(): province for name, province, _latitude, _longitude in CITY_DIRECTORY
 }
