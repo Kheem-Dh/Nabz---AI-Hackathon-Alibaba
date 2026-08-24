@@ -19,6 +19,7 @@ import PrivacyPage from './pages/PrivacyPage'
 import VerifyPage from './pages/VerifyPage'
 import VerifyBanner from './components/VerifyBanner'
 import DocumentsPage from './pages/DocumentsPage'
+import OnboardingPage, { hasOnboarded } from './pages/OnboardingPage'
 import { stopAllSpeech } from './hooks/useTextToSpeech'
 
 function Loading() {
@@ -49,6 +50,23 @@ export default function App() {
   // The location screen itself is always accessible so users can update it.
   const isPrintRoute = location.pathname.startsWith('/summary')
   const onLocationScreen = location.pathname.startsWith('/location')
+  const onOnboarding = location.pathname.startsWith('/onboarding')
+
+  // Onboarding gate — one guided walk-through per account, dismissible via Skip.
+  const needsOnboarding = account && !hasOnboarded(account.id)
+  if (needsOnboarding && !onOnboarding) {
+    return (
+      <div className="app-shell">
+        <div className="app-container">
+          <TopBar minimal />
+          <main className="app-main">
+            <OnboardingPage />
+          </main>
+          <Disclaimer />
+        </div>
+      </div>
+    )
+  }
 
   if (!preference && !onLocationScreen) {
     return (
@@ -73,6 +91,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/location" element={<LocationSetupPage />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/verify" element={<VerifyPage />} />
             <Route path="/vault" element={<VaultPage />} />
             <Route path="/profile/new" element={<ProfileEditPage mode="create" />} />

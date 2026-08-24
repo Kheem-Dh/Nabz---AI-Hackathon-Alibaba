@@ -264,6 +264,92 @@ export const getHealthDetail = () => jsonReq('/api/health/detail', 'GET')
 
 export const loadHassanDemo = () => jsonReq('/api/demo/hassan', 'POST')
 
+// --- SSE streaming triage ---------------------------------------------------
+//
+// Streams milestone progress events from the backend while the model runs.
+// Returns an object with .cancel() to abort in flight; callers get called
+// back for progress events and the final turn.
+//
+// Usage:
+//   const stream = triageStreamStart(profileId, text, {
+//     onProgress: (evt) => ...,
+//     onTurn: (turn) => ...,
+//     onError: (err) => ...,
+//   })
+//   stream.cancel()   // abort at any time
+export function triageStreamStart(profile_id, text, handlers = {}) {
+  return _openTriageStream('/api/triage/stream/start', { profile_id, text }, handlers)
+}
+
+export function triageStreamAnswer(session_id, text, handlers = {}) {
+  return _openTriageStream('/api/triage/stream/answer', { session_id, text }, handlers)
+}
+
+function _openTriageStream(path, body, { onProgress, onTurn, onError } = {}) {
+  const ctrl = new AbortController()
+  const url = `${API_BASE}${path}`
+  const promise = (async () => {
+    let resp
+    try {
+      resp = await fetch(url, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json', Accept: 'text/event-stream' }),
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      })
+    } catch (err) {
+      if (err.name !== 'AbortError') onError && onError(err)
+      return
+    }
+    if (!resp.ok || !resp.body) {
+      const detail = await resp.text().catch(() => '')
+      onError && onError(new Error(`stream_failed:${resp.status}:${detail}`))
+      return
+    }
+    const reader = resp.body.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let buf = ''
+    try {
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        let idx
+        while ((idx = buf.indexOf('\n\n')) !== -1) {
+          const raw = buf.slice(0, idx)
+          buf = buf.slice(idx + 2)
+          const evt = _parseSseEvent(raw)
+          if (!evt) continue
+          if (evt.event === 'turn') {
+            try { onTurn && onTurn(JSON.parse(evt.data)) } catch (e) { onError && onError(e) }
+          } else if (evt.event === 'error') {
+            try { onError && onError(new Error(JSON.parse(evt.data).message || 'stream_error')) }
+            catch { onError && onError(new Error('stream_error')) }
+          } else {
+            try { onProgress && onProgress({ event: evt.event, ...JSON.parse(evt.data) }) }
+            catch { onProgress && onProgress({ event: evt.event, raw: evt.data }) }
+          }
+        }
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') onError && onError(err)
+    }
+  })()
+  return { cancel: () => ctrl.abort(), done: promise }
+}
+
+function _parseSseEvent(block) {
+  const lines = block.split('\n')
+  let event = 'message'
+  const dataLines = []
+  for (const line of lines) {
+    if (line.startsWith('event:')) event = line.slice(6).trim()
+    else if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''))
+  }
+  if (dataLines.length === 0) return null
+  return { event, data: dataLines.join('\n') }
+}
+
 export async function attachChatImage(profileId, file) {
   validateClientUpload(file)
   const form = new FormData()

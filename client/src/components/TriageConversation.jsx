@@ -11,6 +11,8 @@ import {
   triageAnswer,
   triageImage,
   triageStart,
+  triageStreamAnswer,
+  triageStreamStart,
 } from '../api'
 
 // Full conversational triage lifecycle for the active profile.
@@ -40,6 +42,8 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   const requestControllerRef = useRef(null)
   const lastRequestRef = useRef(null)
   const [waitSeconds, setWaitSeconds] = useState(0)
+  const [streamStage, setStreamStage] = useState(null) // {stage, message, latency_ms?}
+  const streamCtrlRef = useRef(null)
 
   const processing = ['starting', 'thinking', 'analyzing-image'].includes(phase)
   useEffect(() => {
@@ -108,44 +112,101 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speech.listening, speech.transcript, phase])
 
+  function _cancelStream() {
+    try { streamCtrlRef.current?.cancel() } catch { /* ignore */ }
+    streamCtrlRef.current = null
+    setStreamStage(null)
+  }
+
   async function doStart(text) {
     if (!text || !text.trim()) return
     setPhase('starting')
     setError('')
+    setStreamStage({ stage: 'queued', message: 'Sending…' })
     lastRequestRef.current = { kind: 'start', text: text.trim() }
-    const controller = beginRequest()
-    try {
-      const t = await triageStart(profile.id, text.trim(), controller.signal)
-      setSessionId(t.session_id)
-      setTurn(t)
-      setPhase(t.type === 'result' ? 'result' : 'question')
-      onSessionChanged?.(t)
-    } catch (e) {
-      setError(e.message || 'Could not reach the triage service.')
-      setPhase(e.name === 'AbortError' && !e.timedOut ? 'idle' : 'error')
-    } finally {
-      endRequest(controller)
-    }
+    _cancelStream()
+    return new Promise((resolve) => {
+      streamCtrlRef.current = triageStreamStart(profile.id, text.trim(), {
+        onProgress: (evt) => setStreamStage(evt),
+        onTurn: (t) => {
+          setSessionId(t.session_id)
+          setTurn(t)
+          setPhase(t.type === 'result' ? 'result' : 'question')
+          setStreamStage(null)
+          onSessionChanged?.(t)
+          resolve()
+        },
+        onError: async (err) => {
+          if (err?.name === 'AbortError') {
+            setStreamStage(null)
+            setPhase('idle')
+            resolve()
+            return
+          }
+          // Fallback to non-streaming JSON on any SSE failure so demos never freeze.
+          const controller = beginRequest()
+          try {
+            const t = await triageStart(profile.id, text.trim(), controller.signal)
+            setSessionId(t.session_id)
+            setTurn(t)
+            setPhase(t.type === 'result' ? 'result' : 'question')
+            onSessionChanged?.(t)
+          } catch (e) {
+            setError(e.message || 'Could not reach the triage service.')
+            setPhase(e.name === 'AbortError' && !e.timedOut ? 'idle' : 'error')
+          } finally {
+            endRequest(controller)
+            setStreamStage(null)
+            resolve()
+          }
+        },
+      })
+    })
   }
 
   async function doAnswer(text) {
     if (!text || !text.trim()) return
     setPhase('thinking')
     setError('')
+    setStreamStage({ stage: 'queued', message: 'Sending…' })
     lastRequestRef.current = { kind: 'answer', text: text.trim() }
-    const controller = beginRequest()
-    try {
-      const t = await triageAnswer(sessionId, text.trim(), controller.signal)
-      setTurn(t)
-      setPhase(t.type === 'result' ? 'result' : 'question')
-      setTyped('')
-      onSessionChanged?.(t)
-    } catch (e) {
-      setError(e.message || 'Could not send your answer.')
-      setPhase(e.name === 'AbortError' && !e.timedOut ? 'question' : 'error')
-    } finally {
-      endRequest(controller)
-    }
+    _cancelStream()
+    return new Promise((resolve) => {
+      streamCtrlRef.current = triageStreamAnswer(sessionId, text.trim(), {
+        onProgress: (evt) => setStreamStage(evt),
+        onTurn: (t) => {
+          setTurn(t)
+          setPhase(t.type === 'result' ? 'result' : 'question')
+          setTyped('')
+          setStreamStage(null)
+          onSessionChanged?.(t)
+          resolve()
+        },
+        onError: async (err) => {
+          if (err?.name === 'AbortError') {
+            setStreamStage(null)
+            setPhase('question')
+            resolve()
+            return
+          }
+          const controller = beginRequest()
+          try {
+            const t = await triageAnswer(sessionId, text.trim(), controller.signal)
+            setTurn(t)
+            setPhase(t.type === 'result' ? 'result' : 'question')
+            setTyped('')
+            onSessionChanged?.(t)
+          } catch (e) {
+            setError(e.message || 'Could not send your answer.')
+            setPhase(e.name === 'AbortError' && !e.timedOut ? 'question' : 'error')
+          } finally {
+            endRequest(controller)
+            setStreamStage(null)
+            resolve()
+          }
+        },
+      })
+    })
   }
 
   async function retryAssessment() {
@@ -391,7 +452,12 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
 
   // --- Starting / thinking spinners --------------------------------------
   if (phase === 'starting' || phase === 'thinking' || phase === 'analyzing-image') {
-    const progressStep = waitSeconds < 6 ? 0 : waitSeconds < 18 ? 1 : 2
+    // Prefer real SSE stages when available; fall back to the time-based ramp
+    // so the non-streaming JSON path still shows motion.
+    const stageOrder = ['queued', 'safety_check', 'context', 'reasoning', 'structuring', 'complete']
+    const streamIdx = streamStage ? stageOrder.indexOf(streamStage.stage) : -1
+    const rampIdx = waitSeconds < 3 ? 1 : waitSeconds < 8 ? 2 : waitSeconds < 18 ? 3 : 4
+    const active = streamIdx >= 0 ? streamIdx : rampIdx
     return (
       <div className="assessment-thinking" role="status" aria-live="polite">
         <div className="thinking-mark"><div className="spinner" /></div>
@@ -400,19 +466,28 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           {phase === 'analyzing-image' ? 'تصویر کا محتاط جائزہ لیا جا رہا ہے…' : 'نبض آپ کی معلومات کا جائزہ لے رہا ہے…'}
         </p>
         <p className="cs-en">
-          {phase === 'analyzing-image'
+          {streamStage?.message || (phase === 'analyzing-image'
             ? 'Reviewing the image alongside your conversation and Vault context.'
-            : 'Reviewing your conversation, safety signals, and relevant Vault context.'}
+            : 'Reviewing your conversation, safety signals, and relevant Vault context.')}
         </p>
         <div className="thinking-steps" aria-hidden="true">
-          <span className={progressStep > 0 ? 'done' : 'active'}>Transcript</span>
+          <span className={active > 0 ? 'done' : 'active'}>Queued</span>
           <i />
-          <span className={progressStep > 1 ? 'done' : progressStep === 1 ? 'active' : ''}>Safety check</span>
+          <span className={active > 1 ? 'done' : active === 1 ? 'active' : ''}>Safety check</span>
           <i />
-          <span className={progressStep === 2 ? 'active' : ''}>Clinical response</span>
+          <span className={active > 2 ? 'done' : active === 2 ? 'active' : ''}>Vault context</span>
+          <i />
+          <span className={active > 3 ? 'done' : active === 3 ? 'active' : ''}>Reasoning</span>
+          <i />
+          <span className={active >= 4 ? 'active' : ''}>Clinical response</span>
         </div>
-        <p className="muted" aria-live="off">{waitSeconds}s elapsed · your transcript is preserved</p>
-        <button className="btn btn-outline" onClick={cancelPending}>Cancel request</button>
+        <p className="muted" aria-live="off">
+          {waitSeconds}s elapsed · your transcript is preserved
+          {streamStage?.latency_ms ? ` · turn latency ${Math.round(streamStage.latency_ms)}ms` : ''}
+        </p>
+        <button className="btn btn-outline" onClick={() => { _cancelStream(); cancelPending() }}>
+          Cancel request
+        </button>
       </div>
     )
   }
