@@ -911,16 +911,23 @@ def _mental_health_result(
     profile: dict[str, Any], session_id: int, turns: list[dict], *, immediate: bool,
 ) -> TriageTurn:
     name = _bounded_text(profile.get("display_name") or "آپ", 80)
+    # Umang Pakistan (Rozan) — a real, free, confidential mental-health
+    # helpline. Included so a distressed user has a specific line to call
+    # for a supportive conversation, not just the emergency services.
+    umang_ur = "امنگ پاکستان (روزن) کی مفت اور خفیہ ذہنی صحت لائن: 0311-7786264 (روزانہ)"
+    umang_en = "Umang Pakistan (Rozan), a free confidential mental-health line: 0311-7786264 (daily)."
     if immediate:
         advice_urdu = (
             f"{name}، مجھے افسوس ہے کہ آپ اس تکلیف سے گزر رہے ہیں۔ ابھی اکیلے نہ رہیں۔ "
             "فوری طور پر کسی قابلِ اعتماد شخص کو اپنے پاس بلائیں، نقصان پہنچانے والی چیزوں سے "
-            "فاصلہ کریں اگر محفوظ ہو، اور ریسکیو 1122، پولیس 15، یا قریبی ایمرجنسی سے رابطہ کریں۔"
+            "فاصلہ کریں اگر محفوظ ہو، اور ریسکیو 1122، پولیس 15، یا قریبی ایمرجنسی سے رابطہ کریں۔ "
+            f"{umang_ur}."
         )
         advice_english = (
             f"{name}, I am sorry you are going through this. Do not stay alone right now. "
             "Ask a trusted person to stay with you, move away from anything you could use to "
-            "hurt yourself if it is safe, and contact Rescue 1122, Police 15, or the nearest emergency department now."
+            "hurt yourself if it is safe, and contact Rescue 1122, Police 15, or the nearest emergency department now. "
+            f"{umang_en}"
         )
         level = TriageLevel.EMERGENCY
         follow_up = "Immediate in-person safety assessment is needed now."
@@ -929,12 +936,14 @@ def _mental_health_result(
         advice_urdu = (
             f"{name}، آپ کی بات اہم ہے اور آپ کو یہ اکیلے برداشت نہیں کرنا چاہیے۔ آج ہی کسی "
             "قابلِ اعتماد شخص کو بتائیں اور ذہنی صحت کے ماہر یا ڈاکٹر سے جلد رابطہ کریں۔ اگر خود کو "
-            "نقصان پہنچانے کا خیال یا خطرہ بڑھے تو فوراً 1122، 15، یا قریبی ایمرجنسی جائیں۔"
+            "نقصان پہنچانے کا خیال یا خطرہ بڑھے تو فوراً 1122، 15، یا قریبی ایمرجنسی جائیں۔ "
+            f"{umang_ur}."
         )
         advice_english = (
             f"{name}, what you are experiencing matters and you should not carry it alone. Tell a "
             "trusted person today and arrange prompt support from a mental-health professional or clinician. "
-            "If thoughts of self-harm appear or safety becomes uncertain, call 1122 or 15 or go to the nearest emergency department."
+            "If thoughts of self-harm appear or safety becomes uncertain, call 1122 or 15 or go to the nearest emergency department. "
+            f"{umang_en}"
         )
         level = TriageLevel.DOCTOR_24H
         follow_up = "Arrange mental-health or primary-care support today."
@@ -951,10 +960,14 @@ def _mental_health_result(
         suggestions_urdu=[
             "کسی قابلِ اعتماد شخص کو ابھی بتائیں اور رابطے میں رہیں۔",
             "شراب یا نشہ آور چیزوں سے پرہیز کریں اور تنہا نہ رہیں اگر خطرہ بڑھے۔",
+            "امنگ پاکستان مفت ذہنی صحت لائن پر بات کریں: 0311-7786264۔",
+            "کاغذ پر جذبات لکھیں یا آہستہ گہری سانسیں لیں جب تک مدد نہ پہنچے۔",
         ],
         suggestions_english=[
             "Tell a trusted person now and stay connected with them.",
             "Avoid alcohol or drugs and do not remain alone if safety worsens.",
+            "Call Umang Pakistan (Rozan) free confidential line: 0311-7786264.",
+            "Write feelings on paper or use slow deep breathing while waiting for support.",
         ],
         doctor_handoff_english=(
             "Mental-health safety protocol activated. Assess suicidal intent, plan, means, recent self-harm, psychosis, abuse, substance use, protective factors, and immediate supervision."

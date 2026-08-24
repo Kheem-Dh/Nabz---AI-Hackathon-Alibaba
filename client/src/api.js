@@ -237,6 +237,8 @@ export const confirmLocation = (data) =>
 
 export const getMyLocation = () => jsonReq('/api/location/me', 'GET')
 
+export const listKnownCities = () => jsonReq('/api/location/cities', 'GET')
+
 export function getNearbyFacilities({ urgency = 'DOCTOR_24H', latitude, longitude, limit = 6, type } = {}) {
   const params = new URLSearchParams({ urgency, limit: String(limit) })
   if (latitude != null) params.set('latitude', String(latitude))

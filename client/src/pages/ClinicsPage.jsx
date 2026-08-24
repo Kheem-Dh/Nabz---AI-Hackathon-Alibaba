@@ -10,6 +10,7 @@ import { useLocationPref } from '../context/LocationContext'
 const CATEGORIES = [
   { key: 'clinical', label: 'Clinics & hospitals', urdu: 'کلینک اور ہسپتال' },
   { key: 'blood_bank', label: 'Blood donation', urdu: 'خون کے عطیہ کے مراکز' },
+  { key: 'pharmacy', label: 'Pharmacies', urdu: 'میڈیکل اسٹور' },
 ]
 
 export default function ClinicsPage() {
@@ -25,7 +26,7 @@ export default function ClinicsPage() {
     setLoading(true)
     setError('')
     try {
-      const filterType = category === 'blood_bank' ? 'blood_bank' : undefined
+      const filterType = category === 'clinical' ? undefined : category
       // If the browser has already granted geolocation we use fresh coords;
       // otherwise the saved preference (with city-centre fallback) is used.
       const params = {
@@ -145,6 +146,8 @@ export default function ClinicsPage() {
             <span className="c-ico">
               {f.type === 'blood_bank'
                 ? '🩸'
+                : f.type === 'pharmacy'
+                ? '💊'
                 : f.emergency_capable
                 ? '🏥'
                 : f.type === 'clinic'
@@ -182,7 +185,15 @@ export default function ClinicsPage() {
         ))}
         {!loading && facilities.length === 0 && (
           <div className="notice">
-            <span>No {category === 'blood_bank' ? 'blood-donation' : 'clinical'} facilities found for this location yet.</span>
+            <span>
+              No{' '}
+              {category === 'blood_bank'
+                ? 'blood-donation'
+                : category === 'pharmacy'
+                ? 'pharmacy'
+                : 'clinical'}{' '}
+              facilities found for this location yet.
+            </span>
           </div>
         )}
       </div>

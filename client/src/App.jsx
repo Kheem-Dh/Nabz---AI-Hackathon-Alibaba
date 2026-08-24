@@ -20,6 +20,7 @@ import VerifyPage from './pages/VerifyPage'
 import VerifyBanner from './components/VerifyBanner'
 import DocumentsPage from './pages/DocumentsPage'
 import OnboardingPage, { hasOnboarded } from './pages/OnboardingPage'
+import CompleteProfilePage from './pages/CompleteProfilePage'
 import { stopAllSpeech } from './hooks/useTextToSpeech'
 
 function Loading() {
@@ -32,7 +33,7 @@ function Loading() {
 }
 
 export default function App() {
-  const { account, loading } = useAuth()
+  const { account, loading, pendingRegistration } = useAuth()
   const { preference, loading: locLoading } = useLocationPref()
   const location = useLocation()
 
@@ -44,6 +45,23 @@ export default function App() {
 
   if (loading) return <Loading />
   if (!account) return <AuthPage />
+
+  // Just-registered accounts must complete the detailed profile form before
+  // anything else — no auto-drop into the app.
+  if (pendingRegistration) {
+    return (
+      <div className="app-shell">
+        <div className="app-container">
+          <TopBar minimal />
+          <main className="app-main">
+            <CompleteProfilePage />
+          </main>
+          <Disclaimer />
+        </div>
+      </div>
+    )
+  }
+
   if (locLoading) return <Loading />
 
   // First-run gate (winning plan §3): location before anything else.

@@ -3976,3 +3976,90 @@ textarea.input {
   display: flex; justify-content: space-between; align-items: center;
   margin-top: 18px;
 }
+
+/* ============================================================
+   Registration + validation polish (2026-08-25)
+   ============================================================ */
+
+.notice-ok {
+  background: var(--teal-light, #e6f6f3);
+  color: var(--teal-dark, #0b7d6e);
+  padding: 10px 14px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.field.has-error .input { border-color: #d64545; }
+.field-error {
+  color: #a13a00;
+  font-size: 12px;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.field-hint {
+  color: var(--muted, #6b7c79);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.pw-row {
+  position: relative;
+  display: flex; align-items: center;
+}
+.pw-row .input { flex: 1; padding-right: 40px; }
+.pw-toggle {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; font-size: 16px; cursor: pointer;
+  color: var(--muted, #6b7c79);
+  padding: 4px 6px;
+}
+
+/* Complete-profile page (web-first, responsive) */
+.complete-profile-page { padding: 24px 16px 48px; }
+.complete-profile-card {
+  max-width: 780px; margin: 0 auto;
+  background: #fff;
+  border: 1px solid var(--border, #e3ecea);
+  border-radius: 22px;
+  padding: 28px;
+  box-shadow: 0 12px 40px rgba(15,31,28,0.10);
+}
+.complete-profile-lead {
+  color: var(--muted, #6b7c79); font-size: 13.5px; margin: 4px 0 18px;
+  line-height: 1.6;
+}
+.complete-profile-actions {
+  display: flex; flex-direction: column; align-items: stretch; gap: 6px;
+  margin-top: 18px; padding-top: 14px;
+  border-top: 1px solid var(--border, #e3ecea);
+}
+.complete-profile-note { color: var(--muted, #6b7c79); font-size: 12px; margin: 0; text-align: center; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+
+/* Onboarding footer: Skip on the left, Back+Next paired on the right, wraps
+   to full-width stacked buttons under 480px so nothing gets squished. */
+.onboard-foot { flex-wrap: wrap; gap: 10px; }
+.onboard-foot .btn { min-width: 120px; }
+@media (max-width: 520px) {
+  .onboard-foot {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .onboard-foot > div { display: flex; gap: 8px; }
+  .onboard-foot > div .btn { flex: 1; }
+  .onboard-foot > .btn { width: 100%; }
+}
+
+/* Home encounter sidebar: hide the "AI status" debug pill on narrow screens
+   so the family sidebar reads cleanly (matches the mobile screenshot issue). */
+@media (max-width: 899px) {
+  .encounter-sidebar .service-status,
+  .encounter-sidebar .service-badge,
+  .encounter-sidebar .ai-status {
+    display: none !important;
+  }
+}

@@ -153,12 +153,40 @@ def _to_out(pref: LocationPreference) -> LocationPreferenceOut:
     )
 
 
+@router.get("/cities", response_model=list[dict])
+def list_known_cities() -> list[dict]:
+    """Return the curated Pakistan city list used to validate manual entry."""
+    out: list[dict] = []
+    for slug, (lat, lon) in sorted(CITY_CENTERS.items()):
+        out.append({
+            "slug": slug,
+            "name": slug.title(),
+            "latitude": lat,
+            "longitude": lon,
+        })
+    return out
+
+
 @router.post("/confirm", response_model=LocationPreferenceOut)
 def confirm(
     payload: LocationConfirmRequest,
     account: Account = Depends(get_current_account),
     db: Session = Depends(get_db),
 ) -> LocationPreferenceOut:
+    # Server-side validation for manual entries (winning-plan item #5): the
+    # city MUST match a known Pakistan city. A GPS-confirmed entry (manual=false)
+    # is trusted because reverse-geocode already produced the label.
+    if payload.manual:
+        if not payload.city or payload.city.strip().lower() not in CITY_CENTERS:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "unknown_city",
+                    "message": "That city is not on our list. Use current location or pick from the list.",
+                    "known_cities": [k.title() for k in sorted(CITY_CENTERS.keys())],
+                },
+            )
+
     pref = (
         db.query(LocationPreference)
         .filter(LocationPreference.account_id == account.id)
@@ -172,8 +200,18 @@ def confirm(
     pref.city = payload.city
     pref.district = payload.district
     pref.province = payload.province
-    pref.latitude = payload.latitude
-    pref.longitude = payload.longitude
+    # If a manual city matches a known centre and no coords were provided,
+    # fill from the city centre so /api/facilities/nearby has an origin.
+    if payload.manual and payload.city and payload.latitude is None and payload.longitude is None:
+        center = CITY_CENTERS.get(payload.city.strip().lower())
+        if center:
+            pref.latitude, pref.longitude = center
+        else:
+            pref.latitude = payload.latitude
+            pref.longitude = payload.longitude
+    else:
+        pref.latitude = payload.latitude
+        pref.longitude = payload.longitude
     pref.permission_state = "manual" if payload.manual else "granted"
     pref.last_confirmed_at = datetime.now(timezone.utc)
     pref.manual = payload.manual
