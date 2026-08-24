@@ -29,7 +29,6 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from models_db import Account, VerificationCode
-from triage import is_mock_mode
 
 logger = logging.getLogger("nabz.verification")
 
@@ -182,12 +181,14 @@ def request_code(db: Session, account: Account, channel: str) -> dict:
     db.add(record)
     db.commit()
 
-    mock = is_mock_mode()
-    delivered = False if mock else _deliver(channel, destination, code)
+    # Delivery is independent of the AI's MOCK_MODE: if a provider is configured
+    # for this channel we really send, even when the DashScope key is absent.
+    # `_deliver` returns False when no provider is configured or the send fails.
+    delivered = _deliver(channel, destination, code)
 
-    if mock or not delivered:
-        # No real provider — surface the code so the flow is still usable, and
-        # log it. dev_code is ONLY returned when we could not really deliver.
+    if not delivered:
+        # No provider (or send failed) — surface the code so the flow is still
+        # usable, and log it. dev_code is ONLY returned when we couldn't deliver.
         logger.info("[DEV OTP] %s → %s : %s", channel, destination, code)
 
     masked = _mask(destination, channel)
