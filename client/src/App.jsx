@@ -21,13 +21,19 @@ import VerifyBanner from './components/VerifyBanner'
 import DocumentsPage from './pages/DocumentsPage'
 import OnboardingPage, { hasOnboarded } from './pages/OnboardingPage'
 import CompleteProfilePage from './pages/CompleteProfilePage'
+import LandingPage from './pages/LandingPage'
 import { stopAllSpeech } from './hooks/useTextToSpeech'
 
 function Loading() {
   return (
-    <div className="center-state" style={{ minHeight: '100vh', justifyContent: 'center' }}>
-      <div className="spinner" />
-      <p className="cs-ur urdu">لوڈ ہو رہا ہے…</p>
+    <div className="boot-screen">
+      <div className="boot-brand">
+        <span className="brand-ur">نبض</span>
+        <span>NABZ</span>
+      </div>
+      <div className="boot-pulse" aria-hidden="true"><i /><i /><i /></div>
+      <p className="urdu">آپ کی محفوظ ہیلتھ اسپیس تیار ہو رہی ہے</p>
+      <span>Preparing your health workspace…</span>
     </div>
   )
 }
@@ -44,7 +50,13 @@ export default function App() {
   }, [location.pathname])
 
   if (loading) return <Loading />
-  if (!account) return <AuthPage />
+  if (!account) {
+    if (location.pathname.startsWith('/auth')) return <AuthPage />
+    if (location.pathname.startsWith('/privacy')) {
+      return <div className="public-legal"><PrivacyPage /></div>
+    }
+    return <LandingPage />
+  }
 
   // Just-registered accounts must complete the detailed profile form before
   // anything else — no auto-drop into the app.

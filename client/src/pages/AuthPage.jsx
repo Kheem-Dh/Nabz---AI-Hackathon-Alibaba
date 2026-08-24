@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   normalizePkPhone,
@@ -9,8 +10,11 @@ import {
 } from '../utils/validators'
 
 export default function AuthPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
   const { login, register, consumePostSignupNotice } = useAuth()
-  const [mode, setMode] = useState('login')
+  const requestedMode = new URLSearchParams(location.search).get('mode')
+  const [mode, setMode] = useState(requestedMode === 'register' ? 'register' : 'login')
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
@@ -83,9 +87,17 @@ export default function AuthPage() {
     <div className="auth-wrap">
       <div className="auth-card">
         <div className="auth-hero">
+          <button className="auth-back" onClick={() => navigate('/')} aria-label="Back to Nabz home">← Back to home</button>
           <div className="brand-ur">نبض</div>
           <div className="tag-ur urdu">آپ کی آواز، آپ کی صحت</div>
           <div className="tag-en">NABZ · Your voice, your health</div>
+          <div className="auth-value">
+            <h1>Your family health space</h1>
+            <p>Talk through symptoms, keep medical records organised and find appropriate care nearby.</p>
+            <div><span>✓</span> Urdu, Roman Urdu and English</div>
+            <div><span>✓</span> Separate history for every family member</div>
+            <div><span>✓</span> Reports, prescriptions and medicines together</div>
+          </div>
         </div>
 
         <div className="auth-panel">
