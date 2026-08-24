@@ -11,9 +11,10 @@ import TriageConversation from '../components/TriageConversation'
 import PatientDashboard from '../components/PatientDashboard'
 import EncounterSidebar from '../components/EncounterSidebar'
 import PastEncounter from '../components/PastEncounter'
+import FamilySidebar from '../components/FamilySidebar'
 
 export default function HomePage() {
-  const { active, loading } = useProfiles()
+  const { active, loading, selectProfile } = useProfiles()
   const navigate = useNavigate()
   const [sessions, setSessions] = useState([])
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -42,6 +43,16 @@ export default function HomePage() {
     loadHistory()
     getHealthDetail().then(setService).catch(() => setService({ unavailable: true }))
   }, [loadHistory])
+
+  useEffect(() => {
+    // A family profile is a separate patient workspace. Never leave another
+    // member's saved encounter or in-progress chat visible after switching.
+    setSelectedId(null)
+    setSelectedEncounter(null)
+    setResumeTurn(null)
+    setWorkspaceError('')
+    setConversationKey((value) => value + 1)
+  }, [active?.id])
 
   async function selectEncounter(id) {
     setResumeTurn(null)
@@ -113,8 +124,17 @@ export default function HomePage() {
     )
   }
 
+  async function openFamilySession(profileId, session) {
+    if (profileId !== active.id) selectProfile(profileId)
+    if (session?.id) await selectEncounter(session.id)
+  }
+
   return (
     <div className="page home-page desktop-health-workspace">
+      <FamilySidebar
+        historyRefreshKey={sessions.map((session) => `${session.id}:${session.updated_at}`).join('|')}
+        onOpenSession={openFamilySession}
+      />
       <EncounterSidebar
         patient={active}
         sessions={sessions}

@@ -202,3 +202,15 @@ export const getHealth = () => jsonReq('/api/health', 'GET')
 export const getHealthDetail = () => jsonReq('/api/health/detail', 'GET')
 
 export const loadHassanDemo = () => jsonReq('/api/demo/hassan', 'POST')
+
+export async function attachChatImage(profileId, file) {
+  const form = new FormData()
+  form.append('profile_id', String(profileId))
+  form.append('file', file)
+  const resp = await fetch(`${API_BASE}/api/chat/attach`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: form,
+  })
+  return handle(resp)
+}

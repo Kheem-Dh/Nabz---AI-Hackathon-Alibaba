@@ -25,7 +25,7 @@ from schemas import (
 )
 from security import get_current_account
 from triage import is_mock_mode
-from vision import analyze_image
+from vision import analyze_image, validate_upload
 
 router = APIRouter(prefix="/api", tags=["prescription"])
 
@@ -158,8 +158,9 @@ async def extract_prescription(
     profile = _owned_profile(db, account, profile_id)
 
     payload = await file.read()
-    if not payload:
-        raise HTTPException(status_code=400, detail="empty_upload")
+    mime, err = validate_upload(payload, file.filename or "rx", file.content_type)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
 
     if is_mock_mode():
         data = _mock_prescription()
@@ -170,7 +171,11 @@ async def extract_prescription(
             "Do not invent anything. Flag low-confidence fields."
         )
         data, _raw = analyze_image(
-            payload, file.filename or "rx.jpg", _RX_SYSTEM_PROMPT, user_prompt
+            payload,
+            file.filename or "rx",
+            _RX_SYSTEM_PROMPT,
+            user_prompt,
+            content_type=mime,
         )
         if not data:
             data = {

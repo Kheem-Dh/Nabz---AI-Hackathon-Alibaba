@@ -204,6 +204,46 @@ def test_triage_history_is_named_dated_and_account_scoped(client, auth):
     ).status_code == 404
 
 
+def test_family_members_have_separate_chat_histories(client, auth):
+    headers, _account, self_id = auth
+    mother = client.post(
+        "/api/profiles",
+        headers=headers,
+        json={"display_name": "Ammi", "relation": "Mother", "age": 58},
+    ).json()
+    son = client.post(
+        "/api/profiles",
+        headers=headers,
+        json={"display_name": "Ali", "relation": "Son", "age": 16},
+    ).json()
+
+    self_session = client.post(
+        "/api/triage/start",
+        headers=headers,
+        json={"profile_id": self_id, "text": "self headache"},
+    ).json()["session_id"]
+    mother_session = client.post(
+        "/api/triage/start",
+        headers=headers,
+        json={"profile_id": mother["id"], "text": "mother knee pain"},
+    ).json()["session_id"]
+
+    self_history = client.get(
+        f"/api/triage/history?profile_id={self_id}", headers=headers,
+    ).json()
+    mother_history = client.get(
+        f"/api/triage/history?profile_id={mother['id']}", headers=headers,
+    ).json()
+    son_history = client.get(
+        f"/api/triage/history?profile_id={son['id']}", headers=headers,
+    ).json()
+
+    assert [item["id"] for item in self_history] == [self_session]
+    assert [item["id"] for item in mother_history] == [mother_session]
+    assert son_history == []
+    assert mother_history[0]["profile_id"] == mother["id"]
+
+
 def test_ai_timeout_session_remains_retryable(client, auth, monkeypatch):
     import sessions
     from fake_ai_provider import fake_ai_turn

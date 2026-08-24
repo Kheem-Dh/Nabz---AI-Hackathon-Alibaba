@@ -16,7 +16,7 @@ from schemas import LabReportOut, LabValue
 from security import get_current_account
 from storage import content_type_for_filename, store_upload
 from triage import is_mock_mode
-from vision import analyze_image
+from vision import analyze_image, validate_upload
 
 router = APIRouter(prefix="/api", tags=["labreport"])
 
@@ -103,11 +103,12 @@ async def upload_labreport(
         raise HTTPException(status_code=404, detail="profile_not_found")
 
     payload = await file.read()
-    if not payload:
-        raise HTTPException(status_code=400, detail="empty_upload")
+    mime, err = validate_upload(payload, file.filename or "lab", file.content_type)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
     try:
         image_ref = store_upload(
-            profile.id, payload, file.filename or "lab.jpg", prefix="lab"
+            profile.id, payload, file.filename or "lab", prefix="lab"
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -120,7 +121,13 @@ async def upload_labreport(
             f"The active patient's name is: {profile.display_name}. "
             "Address them by name in the Urdu explanation."
         )
-        data, raw = analyze_image(payload, file.filename or "lab.jpg", _LAB_SYSTEM_PROMPT, user_prompt)
+        data, raw = analyze_image(
+            payload,
+            file.filename or "lab",
+            _LAB_SYSTEM_PROMPT,
+            user_prompt,
+            content_type=mime,
+        )
         if not data:
             # Vision failure -> polite explanation, no fabricated values.
             fallback = {

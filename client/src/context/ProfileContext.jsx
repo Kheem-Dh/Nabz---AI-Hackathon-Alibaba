@@ -9,22 +9,28 @@ export function ProfileProvider({ children }) {
   const [activeId, setActiveId] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (preferredId = null) => {
     if (!account) {
       setProfiles([])
+      setActiveId(null)
       return []
     }
     setLoading(true)
     try {
       const list = await listProfiles()
-      // Nabz is a private, single-patient workspace. Family/demo profiles may
-      // remain in older databases, but they are never exposed in the signed-in
-      // user's workspace or allowed to become the active patient.
-      const self = list.find((p) => p.is_self) || list[0]
-      const ownProfiles = self ? [self] : []
-      setProfiles(ownProfiles)
-      setActiveId(self?.id || null)
-      return ownProfiles
+      const nextProfiles = Array.isArray(list) ? list : []
+      const preferred = Number(preferredId)
+      const self = nextProfiles.find((p) => p.is_self) || nextProfiles[0]
+
+      setProfiles(nextProfiles)
+      setActiveId((current) => {
+        if (preferredId != null && nextProfiles.some((p) => p.id === preferred)) {
+          return preferred
+        }
+        if (nextProfiles.some((p) => p.id === current)) return current
+        return self?.id || null
+      })
+      return nextProfiles
     } finally {
       setLoading(false)
     }
@@ -35,8 +41,8 @@ export function ProfileProvider({ children }) {
   }, [refresh])
 
   const selectProfile = useCallback((id) => {
-    const self = profiles.find((p) => p.is_self) || profiles[0]
-    if (self && Number(id) === self.id) setActiveId(self.id)
+    const selected = profiles.find((p) => p.id === Number(id))
+    if (selected) setActiveId(selected.id)
   }, [profiles])
 
   const active = profiles.find((p) => p.id === activeId) || null

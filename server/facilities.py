@@ -20,7 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from db import get_db
-from facilities_data import CITY_CENTERS, FACILITIES
+from facilities_data import ALL_FACILITIES, CITY_CENTERS, FACILITIES
 from location import _haversine_km  # small helper, re-used
 from models_db import Account, LocationPreference
 from schemas import (
@@ -106,6 +106,7 @@ def nearby(
     latitude: Optional[float] = Query(default=None, ge=-90, le=90),
     longitude: Optional[float] = Query(default=None, ge=-180, le=180),
     limit: int = Query(default=6, ge=1, le=20),
+    type: Optional[str] = Query(default=None, description="Filter: hospital | clinic | bhu | blood_bank"),
     account: Account = Depends(get_current_account),
     db: Session = Depends(get_db),
 ) -> NearbyFacilitiesResponse:
@@ -123,6 +124,16 @@ def nearby(
 
     if origin is None and not pref:
         raise HTTPException(status_code=400, detail="no_location_available")
+
+    # Choose source dataset. Blood banks are the only "type" that pulls from
+    # ALL_FACILITIES (which includes them); otherwise the clinical set only.
+    if type and type.strip().lower() == "blood_bank":
+        source_dataset = [f for f in ALL_FACILITIES if f["type"] == "blood_bank"]
+    elif type:
+        wanted = type.strip().lower()
+        source_dataset = [f for f in ALL_FACILITIES if f["type"] == wanted]
+    else:
+        source_dataset = FACILITIES
 
     if origin is None:
         # No coordinates and no city center match → return unranked list but keep
@@ -147,7 +158,7 @@ def nearby(
                 emergency_capable=bool(f.get("emergency_capable")),
                 hours=f.get("hours"),
             )
-            for f in FACILITIES[:limit]
+            for f in source_dataset[:limit]
         ]
         return NearbyFacilitiesResponse(
             location=LocationLabel(
@@ -164,7 +175,7 @@ def nearby(
     olat, olon, _origin_kind = origin
 
     ranked = []
-    for f in FACILITIES:
+    for f in source_dataset:
         dist = None
         if f.get("latitude") is not None and f.get("longitude") is not None:
             dist = round(_haversine_km(olat, olon, f["latitude"], f["longitude"]), 1)

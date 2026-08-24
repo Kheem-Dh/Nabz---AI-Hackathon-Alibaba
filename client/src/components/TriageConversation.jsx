@@ -29,6 +29,19 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   const submittedRef = useRef(false)
   const [reviewText, setReviewText] = useState('')
   const [reviewOrigin, setReviewOrigin] = useState(null) // 'start' | 'answer'
+  const [attaching, setAttaching] = useState(false)
+  const [attachError, setAttachError] = useState('')
+
+  // Stop mic + TTS the moment we reach a terminal state so the microphone
+  // indicator never stays on after the assistant has answered.
+  useEffect(() => {
+    if (phase === 'result' || phase === 'error' || phase === 'idle') {
+      try { speech.stop() } catch { /* ignore */ }
+      try { speech.reset() } catch { /* ignore */ }
+      submittedRef.current = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase])
 
   // Auto-speak each new assistant turn once.
   useEffect(() => {
@@ -482,9 +495,43 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
             {answeringByVoice && speech.listening ? '⏹' : '🎤'}
           </button>
         )}
+          <label
+            className={`mini-mic attach-mic ${attaching ? 'busy' : ''}`}
+            title="Attach a photo (rash, injury, report)"
+            aria-label="Attach a photo"
+          >
+            {attaching ? '⋯' : '📎'}
+            <input
+              type="file"
+              accept="image/*,application/pdf"
+              style={{ display: 'none' }}
+              onChange={async (e) => {
+                const f = e.target.files && e.target.files[0]
+                if (!f || !sessionId) return
+                setAttachError('')
+                setAttaching(true)
+                try {
+                  const { attachChatImage } = await import('../api')
+                  const res = await attachChatImage(profile.id, f)
+                  const description = (res && res.description) || ''
+                  if (description) {
+                    await doAnswer(`[Photo attached] ${description}`)
+                  } else {
+                    setAttachError('Could not describe this photo. Try a clearer image.')
+                  }
+                } catch (err) {
+                  setAttachError(err?.message || 'Attach failed')
+                } finally {
+                  setAttaching(false)
+                  e.target.value = ''
+                }
+              }}
+            />
+          </label>
           <span>Answer naturally</span>
           <button className="composer-send" onClick={() => doAnswer(typed)} disabled={!typed.trim() || answeringByVoice} aria-label="Send">↑</button>
         </footer>
+        {attachError && <div className="notice notice-warn" style={{marginTop:6, fontSize:12}}>{attachError}</div>}
       </div>}
 
       <AnalysisPanel analysis={turn.analysis} />

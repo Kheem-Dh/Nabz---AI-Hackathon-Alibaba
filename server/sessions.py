@@ -26,8 +26,11 @@ from vision import analyze_image
 
 router = APIRouter(prefix="/api/triage", tags=["triage"])
 
-_CLINICAL_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
-_CLINICAL_IMAGE_MAX_BYTES = 10 * 1024 * 1024
+_CLINICAL_IMAGE_SUFFIXES = {
+    ".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif",
+    ".bmp", ".tif", ".tiff", ".pdf",
+}
+_CLINICAL_IMAGE_MAX_BYTES = 25 * 1024 * 1024
 
 _CLINICAL_IMAGE_SYSTEM_PROMPT = r"""
 You are the visual-observation component of a cautious clinical intake system.

@@ -32,6 +32,7 @@ logging.basicConfig(
 
 # Import after load_dotenv so modules read env at import time correctly.
 from auth import router as auth_router  # noqa: E402
+from chat_attach import router as chat_attach_router  # noqa: E402
 from clinics import get_clinics  # noqa: E402
 from db import init_db  # noqa: E402
 from dashboard import router as dashboard_router  # noqa: E402
@@ -98,6 +99,7 @@ app.include_router(profiles_router)
 app.include_router(location_router)
 app.include_router(facilities_router)
 app.include_router(triage_router)
+app.include_router(chat_attach_router)
 app.include_router(labreport_router)
 app.include_router(prescription_router)
 app.include_router(summary_router)
