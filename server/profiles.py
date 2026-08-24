@@ -1,6 +1,7 @@
 """Profile (family vault) CRUD."""
 from __future__ import annotations
 
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
@@ -21,6 +22,12 @@ def _to_out(profile: Profile) -> ProfileOut:
         age=profile.age,
         gender=profile.gender,
         blood_group=profile.blood_group,
+        date_of_birth=profile.date_of_birth,
+        weight_kg=profile.weight_kg,
+        bp_systolic=profile.bp_systolic,
+        bp_diastolic=profile.bp_diastolic,
+        bp_recorded_at=profile.bp_recorded_at,
+        vitals_history=list(profile.vitals_history or []),
         chronic_conditions=list(profile.chronic_conditions or []),
         allergies=list(profile.allergies or []),
         notes=profile.notes,
@@ -31,6 +38,26 @@ def _to_out(profile: Profile) -> ProfileOut:
             for e in sorted(profile.timeline, key=lambda x: x.created_at, reverse=True)
         ],
     )
+
+
+def _age_on(dob: date) -> int:
+    today = date.today()
+    return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+
+def _vitals_history(payload: ProfileIn, existing: list[dict] | None = None) -> list[dict]:
+    history = list(existing or [])
+    if payload.bp_systolic is None or payload.bp_diastolic is None:
+        return history
+    recorded = payload.bp_recorded_at or date.today()
+    reading = {
+        "systolic": payload.bp_systolic,
+        "diastolic": payload.bp_diastolic,
+        "recorded_at": recorded.isoformat(),
+    }
+    if reading not in history:
+        history.append(reading)
+    return history[-50:]
 
 
 def _load_owned(db: Session, account: Account, profile_id: int) -> Profile:
@@ -67,11 +94,19 @@ def create_profile(
         age=payload.age,
         gender=payload.gender,
         blood_group=payload.blood_group,
+        date_of_birth=payload.date_of_birth,
+        weight_kg=payload.weight_kg,
+        bp_systolic=payload.bp_systolic,
+        bp_diastolic=payload.bp_diastolic,
+        bp_recorded_at=(payload.bp_recorded_at or date.today()) if payload.bp_systolic else None,
+        vitals_history=_vitals_history(payload),
         chronic_conditions=list(payload.chronic_conditions or []),
         allergies=list(payload.allergies or []),
         notes=payload.notes,
         is_self=False,
     )
+    if payload.date_of_birth:
+        profile.age = _age_on(payload.date_of_birth)
     db.add(profile)
     db.commit()
     db.refresh(profile)
@@ -100,6 +135,15 @@ def update_profile(
     profile.age = payload.age
     profile.gender = payload.gender
     profile.blood_group = payload.blood_group
+    profile.date_of_birth = payload.date_of_birth
+    profile.age = _age_on(payload.date_of_birth) if payload.date_of_birth else payload.age
+    profile.weight_kg = payload.weight_kg
+    profile.bp_systolic = payload.bp_systolic
+    profile.bp_diastolic = payload.bp_diastolic
+    profile.bp_recorded_at = (
+        payload.bp_recorded_at or date.today()
+    ) if payload.bp_systolic is not None else None
+    profile.vitals_history = _vitals_history(payload, profile.vitals_history)
     profile.chronic_conditions = list(payload.chronic_conditions or [])
     profile.allergies = list(payload.allergies or [])
     profile.notes = payload.notes

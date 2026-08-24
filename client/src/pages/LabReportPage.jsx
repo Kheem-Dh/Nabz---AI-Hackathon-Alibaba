@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getProfile, uploadLabReport } from '../api'
+import { confirmLabReport, getProfile, uploadLabReport } from '../api'
 import ConsentCheckbox from '../components/ConsentCheckbox'
 import { useTextToSpeech } from '../hooks/useTextToSpeech'
 
@@ -31,6 +31,20 @@ export default function LabReportPage() {
       if (out.explanation_urdu) tts.speak(out.explanation_urdu)
     } catch (e) {
       setError(e.message || 'Could not read the report.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function confirmAndSave() {
+    if (!file || !result) return
+    setBusy(true)
+    setError('')
+    try {
+      const saved = await confirmLabReport(id, file, result)
+      setResult(saved)
+    } catch (e) {
+      setError(e.message || 'Could not save this report.')
     } finally {
       setBusy(false)
     }
@@ -67,8 +81,8 @@ export default function LabReportPage() {
             {busy ? 'پڑھ رہے ہیں…' : '🔍 رپورٹ پڑھیں · Read report'}
           </button>
           <p className="muted" style={{ fontSize: 12 }}>
-            Nabz explains values in plain Urdu and flags out-of-range results. It never diagnoses —
-            always discuss with your doctor.
+            Maximum 25 MB. Nabz explains values in plain Urdu and flags out-of-range results.
+            Nothing enters the Vault until you review and confirm it.
           </p>
         </div>
       )}
@@ -135,12 +149,18 @@ export default function LabReportPage() {
           </div>
 
           <div className="btn-row">
-            <button className="btn btn-outline" onClick={() => setResult(null)}>
+            <button className="btn btn-outline" disabled={busy} onClick={() => setResult(null)}>
               دوبارہ · Another
             </button>
-            <button className="btn btn-primary" onClick={() => navigate(`/profile/${id}`)}>
-              والٹ میں محفوظ · Saved to vault
-            </button>
+            {result.saved ? (
+              <button className="btn btn-primary" onClick={() => navigate(`/profile/${id}`)}>
+                والٹ دیکھیں · View saved record
+              </button>
+            ) : (
+              <button className="btn btn-primary" disabled={busy} onClick={confirmAndSave}>
+                {busy ? 'Saving…' : 'Review complete · Confirm and save'}
+              </button>
+            )}
           </div>
         </div>
       )}

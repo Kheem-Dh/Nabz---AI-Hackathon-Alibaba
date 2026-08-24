@@ -1,12 +1,13 @@
 """ORM models for Nabz — accounts, profiles, timeline, meds, sessions, uploads."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+    Date,
     Float,
     ForeignKey,
     Integer,
@@ -91,6 +92,12 @@ class Profile(Base):
     age: Mapped[int | None] = mapped_column(Integer)
     gender: Mapped[str | None] = mapped_column(String(16))
     blood_group: Mapped[str | None] = mapped_column(String(8))
+    date_of_birth: Mapped[date | None] = mapped_column(Date)
+    weight_kg: Mapped[float | None] = mapped_column(Float)
+    bp_systolic: Mapped[int | None] = mapped_column(Integer)
+    bp_diastolic: Mapped[int | None] = mapped_column(Integer)
+    bp_recorded_at: Mapped[date | None] = mapped_column(Date)
+    vitals_history: Mapped[list[dict]] = mapped_column(JSON, default=list)
     chronic_conditions: Mapped[list[str]] = mapped_column(JSON, default=list)
     allergies: Mapped[list[str]] = mapped_column(JSON, default=list)
     notes: Mapped[str | None] = mapped_column(Text)

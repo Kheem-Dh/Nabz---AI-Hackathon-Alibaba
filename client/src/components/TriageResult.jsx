@@ -51,9 +51,22 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
           )}
         </div>
       )}
+      {turn.response_source === 'safety_protocol' && (
+        <div className="notice notice-warn mental-safety-notice" role="alert">
+          <strong>You deserve immediate human support · آپ اکیلے نہیں ہیں</strong>
+          <span>Stay with a trusted person. If you may not remain safe, call Rescue 1122, Police 15, or go to the nearest emergency department now.</span>
+          <div className="btn-row">
+            <a className="btn btn-primary" href="tel:1122">Call 1122</a>
+            <a className="btn btn-outline" href="tel:15">Call 15</a>
+          </div>
+        </div>
+      )}
       <div className={`result-card ${cfg.className}`} role="status">
         {turn.response_source === 'live_ai' && (
           <div className="ai-source-badge live_ai">✦ Live AI · transcript + patient Vault</div>
+        )}
+        {turn.response_source === 'safety_protocol' && (
+          <div className="ai-source-badge safety_protocol">Safety protocol · no AI dependency</div>
         )}
         <div className="result-icon" aria-hidden="true">
           {cfg.icon}

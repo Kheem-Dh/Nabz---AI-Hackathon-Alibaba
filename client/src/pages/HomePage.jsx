@@ -164,14 +164,14 @@ export default function HomePage() {
 
         {!service?.unavailable && service?.ai_configured === false && (
           <div className="notice notice-warn service-warning">
-            <strong>Live AI needs configuration.</strong>
-            Add the DashScope key to <code>server/.env</code>, then restart the backend.
+            <strong>Clinical assessment is temporarily unavailable.</strong>
+            Your Vault remains available. Please try again shortly or contact a clinician if you need help now.
           </div>
         )}
         {service?.unavailable && (
           <div className="notice notice-warn service-warning">
-            <strong>Nabz backend is offline.</strong>
-            Start the server on port 8000, then refresh this page to receive a live assessment.
+            <strong>Nabz cannot connect right now.</strong>
+            Check your connection and try again. For severe or rapidly worsening symptoms, seek urgent care.
           </div>
         )}
         {workspaceError && <div className="form-error">{workspaceError}</div>}

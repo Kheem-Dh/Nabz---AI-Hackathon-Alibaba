@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import time
 from pathlib import Path
 from typing import Any
 
@@ -22,9 +24,10 @@ from schemas import (
 )
 from security import get_current_account
 from triage import next_turn, qwen_followup_chat
-from vision import analyze_image
+from vision import analyze_image, validate_upload
 
 router = APIRouter(prefix="/api/triage", tags=["triage"])
+logger = logging.getLogger("nabz.sessions")
 
 _CLINICAL_IMAGE_SUFFIXES = {
     ".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif",
@@ -113,6 +116,18 @@ def _profile_payload(profile: Profile) -> dict[str, Any]:
         "age": profile.age,
         "gender": profile.gender,
         "blood_group": profile.blood_group,
+        "date_of_birth": profile.date_of_birth.isoformat() if profile.date_of_birth else None,
+        "weight_kg": profile.weight_kg,
+        "blood_pressure": (
+            {
+                "systolic": profile.bp_systolic,
+                "diastolic": profile.bp_diastolic,
+                "recorded_at": profile.bp_recorded_at.isoformat() if profile.bp_recorded_at else None,
+            }
+            if profile.bp_systolic is not None and profile.bp_diastolic is not None
+            else None
+        ),
+        "recent_vitals": list(profile.vitals_history or [])[-5:],
         "chronic_conditions": list(profile.chronic_conditions or []),
         "allergies": list(profile.allergies or []),
         "notes": profile.notes,
@@ -200,6 +215,7 @@ def _record_result(db: Session, session: TriageSession, profile: Profile, turn: 
 
 
 def _turn_from_session(db: Session, session: TriageSession, profile: Profile) -> TriageTurn:
+    started = time.perf_counter()
     turn = next_turn(
         _profile_payload(profile),
         session_id=session.id,
@@ -241,6 +257,19 @@ def _turn_from_session(db: Session, session: TriageSession, profile: Profile) ->
             session.result_payload = turn.model_dump(mode="json")
         else:
             _record_result(db, session, profile, turn)
+    latency_ms = round((time.perf_counter() - started) * 1000)
+    session.analysis = {
+        **(session.analysis or {}),
+        "_telemetry": {
+            "latency_ms": latency_ms,
+            "response_source": turn.response_source,
+            "turn_type": turn.type,
+        },
+    }
+    logger.info(
+        "triage_turn session_id=%s profile_id=%s latency_ms=%s source=%s type=%s",
+        session.id, profile.id, latency_ms, turn.response_source, turn.type,
+    )
     db.add(session)
     db.commit()
     db.refresh(session)
@@ -373,6 +402,9 @@ async def answer_with_clinical_image(
         raise HTTPException(status_code=400, detail="empty_upload")
     if len(image_bytes) > _CLINICAL_IMAGE_MAX_BYTES:
         raise HTTPException(status_code=413, detail="clinical_image_too_large")
+    mime, upload_error = validate_upload(image_bytes, filename, file.content_type)
+    if upload_error:
+        raise HTTPException(status_code=422, detail=upload_error)
 
     requested = turns[-1].get("image_request") or {}
     user_prompt = (
@@ -389,7 +421,11 @@ async def answer_with_clinical_image(
         )
     )
     vision_data, _raw = analyze_image(
-        image_bytes, filename, _CLINICAL_IMAGE_SYSTEM_PROMPT, user_prompt,
+        image_bytes,
+        filename,
+        _CLINICAL_IMAGE_SYSTEM_PROMPT,
+        user_prompt,
+        content_type=mime,
     )
     observations = _bounded_image_analysis(vision_data)
     if not observations["summary_english"]:

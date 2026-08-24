@@ -1,7 +1,7 @@
 """Pydantic v2 request/response schemas for Nabz."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from typing import Any, Optional
 
@@ -102,9 +102,39 @@ class ProfileIn(BaseModel):
     age: Optional[int] = Field(default=None, ge=0, le=130)
     gender: Optional[str] = Field(default=None, max_length=16)
     blood_group: Optional[str] = Field(default=None, max_length=8)
+    date_of_birth: Optional[date] = None
+    weight_kg: Optional[float] = Field(default=None, ge=1, le=500)
+    bp_systolic: Optional[int] = Field(default=None, ge=50, le=300)
+    bp_diastolic: Optional[int] = Field(default=None, ge=30, le=200)
+    bp_recorded_at: Optional[date] = None
     chronic_conditions: list[str] = Field(default_factory=list)
     allergies: list[str] = Field(default_factory=list)
     notes: Optional[str] = None
+
+    @field_validator("blood_group")
+    @classmethod
+    def _valid_blood_group(cls, value: Optional[str]) -> Optional[str]:
+        if value is None or not value.strip():
+            return None
+        normalized = value.strip().upper()
+        if normalized not in {"A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"}:
+            raise ValueError("invalid blood group")
+        return normalized
+
+    @field_validator("date_of_birth")
+    @classmethod
+    def _valid_dob(cls, value: Optional[date]) -> Optional[date]:
+        if value and (value > date.today() or value.year < 1895):
+            raise ValueError("invalid date of birth")
+        return value
+
+    @model_validator(mode="after")
+    def _complete_bp(self) -> "ProfileIn":
+        if (self.bp_systolic is None) != (self.bp_diastolic is None):
+            raise ValueError("both systolic and diastolic blood pressure are required")
+        if self.bp_systolic is not None and self.bp_systolic <= self.bp_diastolic:
+            raise ValueError("systolic blood pressure must exceed diastolic")
+        return self
 
 
 class MedicineOut(BaseModel):
@@ -167,6 +197,11 @@ class DashboardOut(BaseModel):
     age: Optional[int] = None
     gender: Optional[str] = None
     blood_group: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    weight_kg: Optional[float] = None
+    bp_systolic: Optional[int] = None
+    bp_diastolic: Optional[int] = None
+    bp_recorded_at: Optional[date] = None
     profile_notes: Optional[str] = None
     chronic_conditions: list[str] = Field(default_factory=list)
     allergies: list[str] = Field(default_factory=list)
@@ -190,6 +225,12 @@ class ProfileOut(BaseModel):
     age: Optional[int] = None
     gender: Optional[str] = None
     blood_group: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    weight_kg: Optional[float] = None
+    bp_systolic: Optional[int] = None
+    bp_diastolic: Optional[int] = None
+    bp_recorded_at: Optional[date] = None
+    vitals_history: list[dict[str, Any]] = Field(default_factory=list)
     chronic_conditions: list[str] = Field(default_factory=list)
     allergies: list[str] = Field(default_factory=list)
     notes: Optional[str] = None
@@ -496,16 +537,16 @@ class TriageSessionDetail(TriageSessionListItem):
 # --- Labs / prescriptions ----------------------------------------------------
 
 class LabValue(BaseModel):
-    name: str
-    value: str
-    unit: Optional[str] = None
-    normal_range: Optional[str] = None
+    name: str = Field(..., min_length=1, max_length=160)
+    value: str = Field(..., max_length=120)
+    unit: Optional[str] = Field(default=None, max_length=80)
+    normal_range: Optional[str] = Field(default=None, max_length=120)
     flag: Optional[str] = None  # "low" | "high" | "normal"
 
 
 class LabReportOut(BaseModel):
     profile_id: int
-    report_title: str
+    report_title: str = Field(default="Lab Report", min_length=1, max_length=200)
     lab_name: Optional[str] = None
     report_date: Optional[str] = None
     values: list[LabValue] = Field(default_factory=list)
@@ -513,6 +554,7 @@ class LabReportOut(BaseModel):
     explanation_urdu: str
     explanation_english: str
     mock: bool = False
+    saved: bool = False
 
 
 class ExtractedMedicine(BaseModel):

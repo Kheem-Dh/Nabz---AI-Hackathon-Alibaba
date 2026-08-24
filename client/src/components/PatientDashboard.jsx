@@ -60,6 +60,16 @@ export default function PatientDashboard({ profile, onOpenVault, onOpenSummary }
       <p className="pd-summary-ur urdu">{dashboard.summary_urdu}</p>
       <p className="pd-summary-en">{dashboard.summary_english}</p>
 
+      {(dashboard.date_of_birth || dashboard.weight_kg || dashboard.bp_systolic) && (
+        <div className="profile-vitals-summary">
+          {dashboard.date_of_birth && <span>DOB <strong>{dashboard.date_of_birth}</strong></span>}
+          {dashboard.weight_kg && <span>Weight <strong>{dashboard.weight_kg} kg</strong></span>}
+          {dashboard.bp_systolic && dashboard.bp_diastolic && (
+            <span>BP <strong>{dashboard.bp_systolic}/{dashboard.bp_diastolic}</strong>{dashboard.bp_recorded_at ? ` · ${dashboard.bp_recorded_at}` : ''}</span>
+          )}
+        </div>
+      )}
+
       {error && <div className="form-error">{error}</div>}
 
       <div className="pd-stats">

@@ -7,6 +7,7 @@ prescription structured shapes, prescription confirm, summary, clinics (8).
 from __future__ import annotations
 
 import io
+import json
 
 VALID_LEVELS = {"EMERGENCY", "DOCTOR_24H", "HOME_CARE"}
 
@@ -112,6 +113,43 @@ def test_profile_crud(client, auth):
     deleted = client.delete(f"/api/profiles/{pid}", headers=headers)
     assert deleted.status_code == 204
     assert client.get(f"/api/profiles/{pid}", headers=headers).status_code == 404
+
+
+def test_profile_clinical_context_is_validated_and_exposed(client, auth):
+    headers, _account, _self = auth
+    created = client.post(
+        "/api/profiles",
+        headers=headers,
+        json={
+            "display_name": "Clinical Context",
+            "relation": "Mother",
+            "date_of_birth": "1980-04-10",
+            "blood_group": "o+",
+            "weight_kg": 68.5,
+            "bp_systolic": 128,
+            "bp_diastolic": 82,
+            "bp_recorded_at": "2026-08-24",
+        },
+    )
+    assert created.status_code == 201, created.text
+    profile = created.json()
+    assert profile["blood_group"] == "O+"
+    assert profile["date_of_birth"] == "1980-04-10"
+    assert profile["weight_kg"] == 68.5
+    assert profile["bp_systolic"] == 128
+    assert profile["vitals_history"][-1] == {
+        "systolic": 128, "diastolic": 82, "recorded_at": "2026-08-24",
+    }
+    dashboard = client.get(f"/api/dashboard/{profile['id']}", headers=headers).json()
+    assert dashboard["date_of_birth"] == "1980-04-10"
+    assert dashboard["bp_diastolic"] == 82
+
+    invalid = client.post(
+        "/api/profiles",
+        headers=headers,
+        json={"display_name": "Bad vitals", "blood_group": "random", "bp_systolic": 120},
+    )
+    assert invalid.status_code == 422
 
 
 def test_cannot_delete_self_profile(client, auth):
@@ -309,7 +347,7 @@ def test_ai_requested_image_is_observed_and_added_to_same_transcript(client, aut
         return fake_ai_turn(profile, session_id, turns)
 
     monkeypatch.setattr(sessions, "next_turn", image_request_then_continue)
-    monkeypatch.setattr(sessions, "analyze_image", lambda *_args: ({
+    monkeypatch.setattr(sessions, "analyze_image", lambda *_args, **_kwargs: ({
         "quality_acceptable": True,
         "quality_notes": "Well lit",
         "objective_observations": ["Flat red area with a defined border"],
@@ -427,6 +465,30 @@ def test_suicidal_input_is_emergency(client, auth):
     )
     assert start.json()["type"] == "result"
     assert start.json()["level"] == "EMERGENCY"
+    assert start.json()["response_source"] == "safety_protocol"
+    assert "trusted" in start.json()["advice_english"].lower()
+
+
+def test_mental_distress_gets_safety_check_then_prompt_support(client, auth):
+    headers, _account, self_id = auth
+    start = client.post(
+        "/api/triage/start",
+        headers=headers,
+        json={"profile_id": self_id, "text": "I feel depressed and hopeless"},
+    ).json()
+    assert start["type"] == "question"
+    assert start["question_goal"] == "mental_health_immediate_safety"
+    assert start["response_source"] == "safety_protocol"
+
+    safe = client.post(
+        "/api/triage/answer",
+        headers=headers,
+        json={"session_id": start["session_id"], "text": "No, I am safe right now"},
+    ).json()
+    assert safe["type"] == "result"
+    assert safe["level"] == "DOCTOR_24H"
+    assert safe["response_source"] == "safety_protocol"
+    assert safe["medication_options"] == []
 
 
 def test_triage_personalizes_by_name(client, auth):
@@ -462,6 +524,24 @@ def test_labreport_structured_shape(client, auth):
     # Mock flags Haemoglobin/Iron as out-of-range.
     assert any(v["flag"] == "low" for v in body["flagged"])
     assert body["mock"] is True
+    assert body["saved"] is False
+    assert not any(
+        item["document_type"] == "lab"
+        for item in client.get(f"/api/documents?profile_id={self_id}", headers=headers).json()
+    )
+
+    confirmed = client.post(
+        "/api/labreport/confirm",
+        headers=headers,
+        data={"profile_id": str(self_id), "report_json": json.dumps(body)},
+        files={"file": ("cbc.png", io.BytesIO(_png_bytes()), "image/png")},
+    )
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["saved"] is True
+    assert any(
+        item["document_type"] == "lab"
+        for item in client.get(f"/api/documents?profile_id={self_id}", headers=headers).json()
+    )
 
 
 # --- Prescription ------------------------------------------------------------

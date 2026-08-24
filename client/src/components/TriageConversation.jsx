@@ -5,7 +5,13 @@ import TriageResult from './TriageResult'
 import EncounterChat from './EncounterChat'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import { useTextToSpeech } from '../hooks/useTextToSpeech'
-import { triageStart, triageAnswer, triageImage, retryTriageAssessment } from '../api'
+import {
+  attachChatImage,
+  retryTriageAssessment,
+  triageAnswer,
+  triageImage,
+  triageStart,
+} from '../api'
 
 // Full conversational triage lifecycle for the active profile.
 // Phases: idle -> (starting) -> question <-> answering -> result | error
@@ -31,6 +37,37 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   const [reviewOrigin, setReviewOrigin] = useState(null) // 'start' | 'answer'
   const [attaching, setAttaching] = useState(false)
   const [attachError, setAttachError] = useState('')
+  const requestControllerRef = useRef(null)
+  const lastRequestRef = useRef(null)
+  const [waitSeconds, setWaitSeconds] = useState(0)
+
+  const processing = ['starting', 'thinking', 'analyzing-image'].includes(phase)
+  useEffect(() => {
+    if (!processing) {
+      setWaitSeconds(0)
+      return undefined
+    }
+    const started = Date.now()
+    const timer = window.setInterval(() => {
+      setWaitSeconds(Math.floor((Date.now() - started) / 1000))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [processing])
+
+  function beginRequest() {
+    requestControllerRef.current?.abort()
+    const controller = new AbortController()
+    requestControllerRef.current = controller
+    return controller
+  }
+
+  function endRequest(controller) {
+    if (requestControllerRef.current === controller) requestControllerRef.current = null
+  }
+
+  function cancelPending() {
+    requestControllerRef.current?.abort()
+  }
 
   // Stop mic + TTS the moment we reach a terminal state so the microphone
   // indicator never stays on after the assistant has answered.
@@ -75,15 +112,19 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     if (!text || !text.trim()) return
     setPhase('starting')
     setError('')
+    lastRequestRef.current = { kind: 'start', text: text.trim() }
+    const controller = beginRequest()
     try {
-      const t = await triageStart(profile.id, text.trim())
+      const t = await triageStart(profile.id, text.trim(), controller.signal)
       setSessionId(t.session_id)
       setTurn(t)
       setPhase(t.type === 'result' ? 'result' : 'question')
       onSessionChanged?.(t)
     } catch (e) {
       setError(e.message || 'Could not reach the triage service.')
-      setPhase('error')
+      setPhase(e.name === 'AbortError' && !e.timedOut ? 'idle' : 'error')
+    } finally {
+      endRequest(controller)
     }
   }
 
@@ -91,15 +132,19 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     if (!text || !text.trim()) return
     setPhase('thinking')
     setError('')
+    lastRequestRef.current = { kind: 'answer', text: text.trim() }
+    const controller = beginRequest()
     try {
-      const t = await triageAnswer(sessionId, text.trim())
+      const t = await triageAnswer(sessionId, text.trim(), controller.signal)
       setTurn(t)
       setPhase(t.type === 'result' ? 'result' : 'question')
       setTyped('')
       onSessionChanged?.(t)
     } catch (e) {
       setError(e.message || 'Could not send your answer.')
-      setPhase('error')
+      setPhase(e.name === 'AbortError' && !e.timedOut ? 'question' : 'error')
+    } finally {
+      endRequest(controller)
     }
   }
 
@@ -107,14 +152,22 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     if (!sessionId) return
     setPhase('thinking')
     setError('')
+    lastRequestRef.current = { kind: 'retry' }
+    const controller = beginRequest()
     try {
-      const t = await retryTriageAssessment(sessionId)
+      const t = await retryTriageAssessment(sessionId, controller.signal)
       setTurn(t)
       setPhase(t.type === 'result' ? 'result' : 'question')
       onSessionChanged?.(t)
     } catch (e) {
       setError(e.message || 'Could not retry the live AI assessment.')
-      setPhase('error')
+      setPhase(
+        e.name === 'AbortError' && !e.timedOut
+          ? turn?.type === 'result' ? 'result' : turn ? 'question' : 'idle'
+          : 'error',
+      )
+    } finally {
+      endRequest(controller)
     }
   }
 
@@ -129,8 +182,10 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     tts.cancel()
     setPhase('analyzing-image')
     setError('')
+    lastRequestRef.current = { kind: 'image' }
+    const controller = beginRequest()
     try {
-      const t = await triageImage(sessionId, clinicalImage)
+      const t = await triageImage(sessionId, clinicalImage, controller.signal)
       selectClinicalImage(null)
       setTurn(t)
       setPhase(t.type === 'result' ? 'result' : 'question')
@@ -138,7 +193,18 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     } catch (e) {
       setError(e.message || 'Could not analyze this image. You can skip it and continue.')
       setPhase('question')
+    } finally {
+      endRequest(controller)
     }
+  }
+
+  function retryLastRequest() {
+    const last = lastRequestRef.current
+    if (!last) return reset()
+    if (last.kind === 'start') doStart(last.text)
+    else if (last.kind === 'answer') doAnswer(last.text)
+    else if (last.kind === 'retry') retryAssessment()
+    else if (last.kind === 'image') submitClinicalImage()
   }
 
   function skipClinicalImage() {
@@ -153,6 +219,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     tts.cancel()
     tts.prime()
     submittedRef.current = false
+    requestControllerRef.current?.abort()
     speech.start()
     setPhase('listening')
   }
@@ -196,6 +263,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   if (phase === 'idle') {
     return (
       <div className="hero-card">
+        {error && <div className="notice notice-warn">{error}</div>}
         <div className="hero-greet-ur urdu">
           {profile.display_name}، آپ کیسا محسوس کر رہے ہیں؟
         </div>
@@ -323,6 +391,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
 
   // --- Starting / thinking spinners --------------------------------------
   if (phase === 'starting' || phase === 'thinking' || phase === 'analyzing-image') {
+    const progressStep = waitSeconds < 6 ? 0 : waitSeconds < 18 ? 1 : 2
     return (
       <div className="assessment-thinking" role="status" aria-live="polite">
         <div className="thinking-mark"><div className="spinner" /></div>
@@ -336,12 +405,14 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
             : 'Reviewing your conversation, safety signals, and relevant Vault context.'}
         </p>
         <div className="thinking-steps" aria-hidden="true">
-          <span className="done">Transcript</span>
+          <span className={progressStep > 0 ? 'done' : 'active'}>Transcript</span>
           <i />
-          <span className="active">Safety check</span>
+          <span className={progressStep > 1 ? 'done' : progressStep === 1 ? 'active' : ''}>Safety check</span>
           <i />
-          <span>Next question</span>
+          <span className={progressStep === 2 ? 'active' : ''}>Clinical response</span>
         </div>
+        <p className="muted" aria-live="off">{waitSeconds}s elapsed · your transcript is preserved</p>
+        <button className="btn btn-outline" onClick={cancelPending}>Cancel request</button>
       </div>
     )
   }
@@ -356,6 +427,9 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
         <div className="btn-row" style={{ width: '100%' }}>
           <button className="btn btn-outline" onClick={reset}>
             نئی بات · Restart
+          </button>
+          <button className="btn btn-primary" onClick={retryLastRequest}>
+            Retry · دوبارہ کوشش کریں
           </button>
         </div>
       </div>
@@ -373,7 +447,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           onNew={reset}
           ttsSupported={tts.supported}
           onRetry={turn.response_source === 'ai_unavailable' ? retryAssessment : undefined}
-          chatSlot={turn.response_source !== 'ai_unavailable' ? <EncounterChat sessionId={sessionId} /> : null}
+          chatSlot={['live_ai', 'test_model'].includes(turn.response_source) ? <EncounterChat sessionId={sessionId} /> : null}
         />
       </div>
     )
@@ -383,11 +457,14 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   const answeringByVoice = phase === 'answering-voice'
   return (
     <div className="conv">
+      {error && <div className="notice notice-warn">{error}</div>}
       <div className="q-card">
         <div className="q-card-meta">
           <div className={`ai-source-badge ${turn.response_source || 'live_ai'}`}>
             {turn.response_source === 'live_ai'
               ? '✦ Live AI · transcript + patient Vault'
+              : turn.response_source === 'safety_protocol'
+                ? 'Safety protocol · immediate human support'
               : turn.response_source === 'ai_unavailable'
                 ? 'AI assessment unavailable'
                 : 'Test model'}
@@ -511,7 +588,6 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
                 setAttachError('')
                 setAttaching(true)
                 try {
-                  const { attachChatImage } = await import('../api')
                   const res = await attachChatImage(profile.id, f)
                   const description = (res && res.description) || ''
                   if (description) {

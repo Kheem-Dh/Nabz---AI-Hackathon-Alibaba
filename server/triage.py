@@ -189,6 +189,10 @@ def _profile_context(profile: dict[str, Any]) -> dict[str, Any]:
         "display_name": _bounded_text(profile.get("display_name") or "the patient", 80),
         "relation": _bounded_text(profile.get("relation"), 40) or None,
         "age": profile.get("age"),
+        "date_of_birth": _bounded_text(profile.get("date_of_birth"), 20) or None,
+        "weight_kg": profile.get("weight_kg"),
+        "blood_pressure": profile.get("blood_pressure"),
+        "recent_vitals": (profile.get("recent_vitals") or [])[-5:],
         "gender": _bounded_text(profile.get("gender"), 20) or None,
         "blood_group": _bounded_text(profile.get("blood_group"), 12) or None,
         "chronic_conditions": _short_string_list(profile.get("chronic_conditions"), 12, 120),
@@ -878,6 +882,156 @@ _FACILITY_INTENT_BY_LEVEL = {
     TriageLevel.HOME_CARE: "optional",
 }
 
+_IMMEDIATE_MENTAL_HEALTH_PATTERNS = (
+    "suicid", "kill myself", "end my life", "hurt myself", "self harm",
+    "self-harm", "overdose", "want to die", "خودکشی", "خود کو مار",
+    "جان دینا", "khudkushi", "khud ko mar", "jaan dena", "marna chahta",
+    "marna chahti", "apne aap ko nuksan",
+)
+_MENTAL_DISTRESS_PATTERNS = (
+    "depress", "hopeless", "can't cope", "cannot cope", "panic attack",
+    "severe anxiety", "hearing voices", "voices tell me", "being abused",
+    "domestic violence", "مایوس", "ڈپریشن", "گھبراہٹ", "آوازیں سن",
+    "na umeed", "bohat pareshan", "ghabrahat", "zehni dabao",
+)
+_AFFIRMATIVE_SAFETY_ANSWERS = (
+    "yes", "ہاں", "haan", "han", "plan", "means", "weapon", "pills",
+    "not sure", "پتہ نہیں", "نہیں معلوم", "maybe", "shayad",
+)
+_NEGATIVE_SAFETY_ANSWERS = ("no", "نہیں", "nahi", "nahin", "safe", "محفوظ")
+
+
+def _user_text(turns: list[dict]) -> str:
+    return " ".join(
+        str(turn.get("text") or "").lower()
+        for turn in turns if turn.get("role") == "user"
+    )
+
+
+def _mental_health_result(
+    profile: dict[str, Any], session_id: int, turns: list[dict], *, immediate: bool,
+) -> TriageTurn:
+    name = _bounded_text(profile.get("display_name") or "آپ", 80)
+    if immediate:
+        advice_urdu = (
+            f"{name}، مجھے افسوس ہے کہ آپ اس تکلیف سے گزر رہے ہیں۔ ابھی اکیلے نہ رہیں۔ "
+            "فوری طور پر کسی قابلِ اعتماد شخص کو اپنے پاس بلائیں، نقصان پہنچانے والی چیزوں سے "
+            "فاصلہ کریں اگر محفوظ ہو، اور ریسکیو 1122، پولیس 15، یا قریبی ایمرجنسی سے رابطہ کریں۔"
+        )
+        advice_english = (
+            f"{name}, I am sorry you are going through this. Do not stay alone right now. "
+            "Ask a trusted person to stay with you, move away from anything you could use to "
+            "hurt yourself if it is safe, and contact Rescue 1122, Police 15, or the nearest emergency department now."
+        )
+        level = TriageLevel.EMERGENCY
+        follow_up = "Immediate in-person safety assessment is needed now."
+        escalation = ["Any intention, plan, access to means, recent attempt, or inability to stay safe"]
+    else:
+        advice_urdu = (
+            f"{name}، آپ کی بات اہم ہے اور آپ کو یہ اکیلے برداشت نہیں کرنا چاہیے۔ آج ہی کسی "
+            "قابلِ اعتماد شخص کو بتائیں اور ذہنی صحت کے ماہر یا ڈاکٹر سے جلد رابطہ کریں۔ اگر خود کو "
+            "نقصان پہنچانے کا خیال یا خطرہ بڑھے تو فوراً 1122، 15، یا قریبی ایمرجنسی جائیں۔"
+        )
+        advice_english = (
+            f"{name}, what you are experiencing matters and you should not carry it alone. Tell a "
+            "trusted person today and arrange prompt support from a mental-health professional or clinician. "
+            "If thoughts of self-harm appear or safety becomes uncertain, call 1122 or 15 or go to the nearest emergency department."
+        )
+        level = TriageLevel.DOCTOR_24H
+        follow_up = "Arrange mental-health or primary-care support today."
+        escalation = ["New self-harm thoughts, a plan, access to means, severe confusion, or inability to stay safe"]
+    return TriageTurn(
+        type="result", session_id=session_id, patient_name=name,
+        encounter_title="Mental-health safety support",
+        level=level, advice_urdu=advice_urdu, advice_english=advice_english,
+        reason_english=(
+            "The conversation contains a mental-health safety signal requiring immediate protective action."
+            if immediate else
+            "The person denied immediate danger but described significant mental distress needing prompt human support."
+        ),
+        suggestions_urdu=[
+            "کسی قابلِ اعتماد شخص کو ابھی بتائیں اور رابطے میں رہیں۔",
+            "شراب یا نشہ آور چیزوں سے پرہیز کریں اور تنہا نہ رہیں اگر خطرہ بڑھے۔",
+        ],
+        suggestions_english=[
+            "Tell a trusted person now and stay connected with them.",
+            "Avoid alcohol or drugs and do not remain alone if safety worsens.",
+        ],
+        doctor_handoff_english=(
+            "Mental-health safety protocol activated. Assess suicidal intent, plan, means, recent self-harm, psychosis, abuse, substance use, protective factors, and immediate supervision."
+        ),
+        red_flags_present=["Mental-health safety concern"],
+        escalation_signs=escalation,
+        medication_options=[],
+        medication_plan=MedicationPlan(
+            status="EMERGENCY_NO_MEDICATION" if immediate else "NO_DRUG_OPTION",
+            basis_english="Medication is not proposed by this safety protocol.",
+            medication_steps=[],
+            non_drug_steps_english=["Stay with a trusted person", "Seek human clinical support"],
+            non_drug_steps_urdu=["قابلِ اعتماد شخص کے ساتھ رہیں", "طبی مدد حاصل کریں"],
+            monitoring_and_escalation=escalation,
+            follow_up=follow_up,
+            disclaimer="Nabz cannot provide crisis counselling or replace an in-person safety assessment.",
+        ),
+        analysis=TriageAnalysis(
+            still_checking_urdu="فوری حفاظت اور انسانی مدد",
+            still_checking_english="Immediate safety and human support",
+            confidence=1.0, questions_asked=_count_questions(turns),
+        ),
+        response_source="safety_protocol", mock=False,
+    )
+
+
+def _mental_health_turn(
+    profile: dict[str, Any], session_id: int, turns: list[dict],
+) -> TriageTurn | None:
+    transcript = _user_text(turns)
+    if any(pattern in transcript for pattern in _IMMEDIATE_MENTAL_HEALTH_PATTERNS):
+        return _mental_health_result(profile, session_id, turns, immediate=True)
+    distress = any(pattern in transcript for pattern in _MENTAL_DISTRESS_PATTERNS)
+    safety_question_asked = any(
+        turn.get("question_goal") == "mental_health_immediate_safety"
+        for turn in turns if turn.get("role") == "assistant"
+    )
+    if not distress and not safety_question_asked:
+        return None
+    if safety_question_asked:
+        latest = next(
+            (str(turn.get("text") or "").lower() for turn in reversed(turns) if turn.get("role") == "user"),
+            "",
+        )
+        denied = any(answer in latest for answer in _NEGATIVE_SAFETY_ANSWERS)
+        danger = any(answer in latest for answer in _AFFIRMATIVE_SAFETY_ANSWERS)
+        return _mental_health_result(
+            profile, session_id, turns, immediate=danger or not denied,
+        )
+    name = _bounded_text(profile.get("display_name") or "آپ", 80)
+    return TriageTurn(
+        type="question", session_id=session_id, patient_name=name,
+        encounter_title="Mental-health safety check",
+        question_urdu=(
+            f"{name}، آپ کی حفاظت سب سے اہم ہے۔ کیا ابھی آپ کو خود کو نقصان پہنچانے کا خیال، منصوبہ، "
+            "یا ایسی چیز تک رسائی ہے جس سے آپ خود کو نقصان پہنچا سکتے ہیں؟"
+        ),
+        question_english=(
+            f"{name}, your safety matters most. Are you currently thinking about harming yourself, "
+            "do you have a plan, or access to something you could use?"
+        ),
+        quick_replies=[
+            QuickReply(urdu="ہاں یا منصوبہ ہے", english="Yes, or I have a plan/means"),
+            QuickReply(urdu="نہیں، ابھی محفوظ ہوں", english="No, I am safe right now"),
+            QuickReply(urdu="پتہ نہیں", english="I am not sure"),
+        ],
+        question_goal="mental_health_immediate_safety",
+        why_this_matters="This determines whether immediate emergency help and supervision are needed.",
+        analysis=TriageAnalysis(
+            still_checking_urdu="فوری حفاظت",
+            still_checking_english="Immediate safety",
+            confidence=0.5, questions_asked=_count_questions(turns),
+        ),
+        response_source="safety_protocol", mock=False,
+    )
+
 
 def _attach_facility_intent(turn: TriageTurn) -> TriageTurn:
     if turn.type == "result" and turn.level and not turn.facility_intent:
@@ -887,7 +1041,10 @@ def _attach_facility_intent(turn: TriageTurn) -> TriageTurn:
 
 def next_turn(profile: dict[str, Any], session_id: int, turns: list[dict]) -> TriageTurn:
     """Use the injected model double in tests; otherwise always use live AI."""
-    if _turn_provider_override is not None:
+    safety_turn = _mental_health_turn(profile, session_id, turns)
+    if safety_turn is not None:
+        turn = safety_turn
+    elif _turn_provider_override is not None:
         turn = _turn_provider_override(profile, session_id, turns)
         if not turn.response_source:
             turn.response_source = "test_model"

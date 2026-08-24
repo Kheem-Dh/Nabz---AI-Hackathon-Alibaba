@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from db import get_db
@@ -16,6 +16,7 @@ from security import get_current_account
 from storage import (
     content_type_for_filename,
     delete_upload_ref,
+    presigned_download_url,
     resolve_upload_ref,
     store_upload,
 )
@@ -262,7 +263,11 @@ async def upload_document(
     payload = await file.read()
     try:
         stored_ref = store_upload(
-            profile.id, payload, file.filename or "document", prefix=normalized_type
+            profile.id,
+            payload,
+            file.filename or "document",
+            prefix=normalized_type,
+            content_type=file.content_type,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -315,7 +320,13 @@ async def attach_confirmed_prescription_source(
 
     payload = await file.read()
     try:
-        image_ref = store_upload(profile.id, payload, file.filename or "rx.jpg", prefix="rx")
+        image_ref = store_upload(
+            profile.id,
+            payload,
+            file.filename or "rx.jpg",
+            prefix="rx",
+            content_type=file.content_type,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     entry.payload = {
@@ -356,10 +367,15 @@ def get_document_file(
     entry_id: int,
     account: Account = Depends(get_current_account),
     db: Session = Depends(get_db),
-) -> FileResponse:
+) -> Response:
     entry, document = _owned_document(db, account, entry_id)
     payload = entry.payload or {}
     stored_ref = payload.get("stored_ref") or payload.get("image_ref")
+    remote_url = presigned_download_url(
+        str(stored_ref or ""), document.original_filename
+    )
+    if remote_url:
+        return RedirectResponse(remote_url, status_code=307)
     path = resolve_upload_ref(str(stored_ref or ""))
     if not path or not path.is_file():
         raise HTTPException(status_code=404, detail="document_file_not_found")

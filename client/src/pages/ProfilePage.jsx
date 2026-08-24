@@ -89,6 +89,13 @@ export default function ProfilePage() {
             <div className="v">{(profile.chronic_conditions || []).length || '—'}</div>
           </div>
         </div>
+        <div className="profile-vitals-summary">
+          {profile.date_of_birth && <span>DOB <strong>{profile.date_of_birth}</strong></span>}
+          {profile.weight_kg && <span>Weight <strong>{profile.weight_kg} kg</strong></span>}
+          {profile.bp_systolic && profile.bp_diastolic && (
+            <span>Latest BP <strong>{profile.bp_systolic}/{profile.bp_diastolic}</strong>{profile.bp_recorded_at ? ` · ${profile.bp_recorded_at}` : ''}</span>
+          )}
+        </div>
       </div>
 
       <div className="btn-row">

@@ -108,7 +108,7 @@ export default function DocumentsPage() {
       <form className="card document-upload" onSubmit={onUpload}>
         <div className="section-title" style={{ margin: 0 }}>
           <span className="ur urdu">نئی دستاویز محفوظ کریں</span>
-          <span className="en">Upload a photo, scan, or PDF (maximum 15 MB)</span>
+          <span className="en">Upload a photo, scan, or PDF (maximum 25 MB)</span>
         </div>
         <div className="document-type-grid">
           {TYPES.map(([type, icon, urdu, english]) => (

@@ -497,6 +497,22 @@ def resolve_medication_candidates(
             conflicts_checked.append(
                 "No current medicines are recorded in the Vault; a pharmacist must still confirm interactions."
             )
+        weight = profile.get("weight_kg")
+        if weight is not None:
+            conflicts_checked.append(
+                f"Recorded weight is {weight} kg; use only the locally registered product label or clinician/pharmacist dosing."
+            )
+        else:
+            conflicts_checked.append(
+                "No current weight is recorded; weight-dependent dosing cannot be checked."
+            )
+        blood_pressure = profile.get("blood_pressure")
+        if isinstance(blood_pressure, dict) and blood_pressure.get("systolic"):
+            conflicts_checked.append(
+                "Latest recorded blood pressure: "
+                f"{blood_pressure.get('systolic')}/{blood_pressure.get('diastolic')} mmHg "
+                f"on {blood_pressure.get('recorded_at') or 'an unknown date'}; this is context, not a fresh measurement."
+            )
 
         option = MedicationOption(
             generic_name=generic.title() if generic.islower() else generic,

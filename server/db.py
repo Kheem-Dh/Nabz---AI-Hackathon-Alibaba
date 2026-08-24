@@ -54,6 +54,14 @@ _EXPECTED_COLUMNS: dict[str, dict[str, str]] = {
         "email_verified": "BOOLEAN NOT NULL DEFAULT 0",
         "email_verified_at": "DATETIME",
     },
+    "profiles": {
+        "date_of_birth": "DATE",
+        "weight_kg": "FLOAT",
+        "bp_systolic": "INTEGER",
+        "bp_diastolic": "INTEGER",
+        "bp_recorded_at": "DATE",
+        "vitals_history": "JSON NOT NULL DEFAULT '[]'",
+    },
 }
 
 

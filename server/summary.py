@@ -49,6 +49,16 @@ def summary(
         "age": profile.age,
         "gender": profile.gender,
         "blood_group": profile.blood_group,
+        "date_of_birth": profile.date_of_birth.isoformat() if profile.date_of_birth else None,
+        "weight_kg": profile.weight_kg,
+        "blood_pressure": (
+            f"{profile.bp_systolic}/{profile.bp_diastolic} mmHg"
+            if profile.bp_systolic is not None and profile.bp_diastolic is not None
+            else None
+        ),
+        "blood_pressure_recorded_at": (
+            profile.bp_recorded_at.isoformat() if profile.bp_recorded_at else None
+        ),
         "chronic_conditions": list(profile.chronic_conditions or []),
     }
 

@@ -95,6 +95,30 @@ def _guess_mime(filename: str, provided: str | None = None) -> str:
     return ""
 
 
+def _sniff_mime(payload: bytes) -> str:
+    """Identify supported formats from bytes instead of trusting metadata."""
+    head = payload[:32]
+    if head.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if head.startswith((b"GIF87a", b"GIF89a")):
+        return "image/gif"
+    if head.startswith(b"%PDF-"):
+        return "application/pdf"
+    if head.startswith(b"BM"):
+        return "image/bmp"
+    if head.startswith((b"II*\x00", b"MM\x00*")):
+        return "image/tiff"
+    if len(head) >= 12 and head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "image/webp"
+    if len(head) >= 12 and head[4:8] == b"ftyp":
+        brand = head[8:16].lower()
+        if any(marker in brand for marker in (b"heic", b"heif", b"heix", b"mif1", b"msf1")):
+            return "image/heic"
+    return ""
+
+
 def _pdf_to_png_pages(pdf_bytes: bytes, max_pages: int = MAX_PDF_PAGES_SENT) -> list[bytes]:
     """Render up to `max_pages` PDF pages to PNG bytes using PyMuPDF."""
     try:
@@ -128,11 +152,21 @@ def validate_upload(payload: bytes, filename: str, content_type: str | None) -> 
         return "", "empty_upload"
     if len(payload) > MAX_UPLOAD_BYTES:
         return "", f"file_too_large_max_{MAX_UPLOAD_BYTES // (1024 * 1024)}mb"
-    mime = _guess_mime(filename, content_type)
-    if not mime or mime not in ACCEPTED_MIMES:
-        display = mime or (content_type or "unknown")
+    declared = _guess_mime(filename, content_type)
+    detected = _sniff_mime(payload)
+    if not declared or declared not in ACCEPTED_MIMES:
+        display = declared or (content_type or "unknown")
         return "", f"unsupported_type:{display}"
-    return mime, None
+    if not detected:
+        return "", "file_signature_not_recognized"
+    compatible = declared == detected or {
+        declared, detected
+    } <= {"image/heic", "image/heif"} or {
+        declared, detected
+    } <= {"image/jpeg", "image/jpg"}
+    if not compatible:
+        return "", f"file_signature_mismatch:{declared}:{detected}"
+    return detected, None
 
 
 def _image_parts_from_upload(
