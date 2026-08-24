@@ -145,7 +145,7 @@ export default function LabReportPage() {
             <button className="btn btn-ghost mt-8" onClick={() => tts.speak(result.explanation_urdu)}>
               🔊 سنیں · Listen
             </button>
-            {result.mock && <span className="mock-badge">demo / mock mode</span>}
+            {import.meta.env.DEV && result.mock && <span className="mock-badge">demo / mock mode</span>}
           </div>
 
           <div className="btn-row">

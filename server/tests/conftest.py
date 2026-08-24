@@ -13,6 +13,8 @@ from pathlib import Path
 
 # --- Configure environment before any app import --------------------------
 os.environ["MOCK_MODE"] = "true"
+os.environ["APP_ENV"] = "test"
+os.environ["NABZ_ENABLE_DEMO"] = "true"
 os.environ.pop("DASHSCOPE_API_KEY", None)
 os.environ["JWT_SECRET"] = "test-secret-nabz"
 

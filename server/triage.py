@@ -91,8 +91,7 @@ def is_mock_mode() -> bool:
     key exists and returns an explicitly labelled unavailable response when it
     does not. ``MOCK_MODE`` remains for non-triage demo fixtures.
     """
-    explicit = os.getenv("MOCK_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
-    return explicit or not has_ai_credentials()
+    return os.getenv("MOCK_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def triage_engine_mode() -> str:

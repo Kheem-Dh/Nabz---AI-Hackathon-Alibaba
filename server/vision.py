@@ -255,7 +255,14 @@ def analyze_image(
     try:
         return json.loads(_strip_fences(raw)), raw
     except Exception as exc:  # noqa: BLE001
-        logger.error("Qwen-VL JSON parse failed (%s). Raw: %s", exc, raw)
+        # The model response can contain extracted medical information. Never
+        # copy it into production logs; the error type and payload length are
+        # sufficient for operational diagnosis.
+        logger.error(
+            "Qwen-VL JSON parse failed (error_type=%s payload_length=%d)",
+            type(exc).__name__,
+            len(raw),
+        )
         return None, raw
 
 

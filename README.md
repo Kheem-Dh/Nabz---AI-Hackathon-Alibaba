@@ -249,6 +249,7 @@ cp .env.example server/.env
 Set at least:
 
 ```env
+APP_ENV=development
 DASHSCOPE_API_KEY=your-key
 NABZ_TEXT_MODEL=qwen3.7-plus
 NABZ_TRIAGE_TIMEOUT_SECONDS=60
@@ -257,6 +258,7 @@ NABZ_DAILYMED_TIMEOUT_SECONDS=4
 NABZ_VL_MODEL=qwen3.7-plus
 JWT_SECRET=replace-with-a-long-random-secret
 MOCK_MODE=false
+NABZ_ENABLE_DEMO=false
 CORS_ORIGINS=http://localhost:5173,http://localhost:5174
 ```
 
@@ -326,6 +328,8 @@ All personal health routes require a valid login token.
 | `GET` | `/api/summary/{profile_id}` | Create the doctor handoff |
 | `GET` | `/api/facilities/nearby` | Find care appropriate to the urgency |
 | `GET` | `/api/health/detail` | Show backend and AI readiness |
+| `GET` | `/api/health/live` | Process liveness probe |
+| `GET` | `/api/health/ready` | Configuration, database, storage, and AI readiness |
 
 ---
 
@@ -371,10 +375,16 @@ See [TESTING.md](TESTING.md) for more test and demo checks.
 
 ## Production deployment
 
-The repository includes Docker images, an Nginx same-origin API proxy, health checks, and persistent storage configuration.
+The production stack is fail-closed: mock mode, demo APIs, and API documentation
+are disabled; a real AI key, explicit database URL, strong signing secret, and
+private S3/R2 storage are required before the API accepts traffic.
 
 ```bash
+cp .env.production.example .env.production
+# Replace every placeholder and configure the private bucket first.
+server/venv/bin/python scripts/check_production_config.py .env.production
 docker compose --env-file .env.production -f compose.prod.yaml up -d --build
+server/venv/bin/python scripts/production_smoke.py http://127.0.0.1
 ```
 
 Follow [docs/ALIBABA_CLOUD_DEPLOY.md](docs/ALIBABA_CLOUD_DEPLOY.md) for the Alibaba Cloud ECS setup, HTTPS, backups, and rollback steps.

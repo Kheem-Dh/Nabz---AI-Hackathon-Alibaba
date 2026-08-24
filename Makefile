@@ -2,7 +2,7 @@
 # Requires: server/venv created and deps installed, client deps installed.
 # On Windows, call the venv Python directly: server/venv/Scripts/python.exe
 
-.PHONY: help install server mock-server client test eval
+.PHONY: help install server mock-server client test eval production-config production-smoke
 
 help:
 	@echo "Nabz make targets:"
@@ -12,6 +12,8 @@ help:
 	@echo "  make client       Run Vite dev server on :5173"
 	@echo "  make test         Run pytest in mock mode"
 	@echo "  make eval         Run the safety eval (no server needed)"
+	@echo "  make production-config  Validate .env.production without showing secrets"
+	@echo "  make production-smoke  Verify a deployed production origin"
 
 install:
 	cd server && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
@@ -31,3 +33,9 @@ test:
 
 eval:
 	./server/venv/bin/python eval.py
+
+production-config:
+	./server/venv/bin/python scripts/check_production_config.py .env.production
+
+production-smoke:
+	./server/venv/bin/python scripts/production_smoke.py $(BASE_URL)

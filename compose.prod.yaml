@@ -6,20 +6,24 @@ services:
       context: ./server
     restart: unless-stopped
     environment:
-      DATABASE_URL: sqlite:////data/nabz.db
-      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      APP_ENV: production
+      MOCK_MODE: "false"
+      NABZ_ENABLE_DEMO: "false"
+      NABZ_ENABLE_API_DOCS: "false"
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:?Set DASHSCOPE_API_KEY in .env.production}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.production}
-      MOCK_MODE: ${MOCK_MODE:-true}
       NABZ_TEXT_MODEL: ${NABZ_TEXT_MODEL:-qwen3.7-plus}
       NABZ_VL_MODEL: ${NABZ_VL_MODEL:-qwen3.7-plus}
       NABZ_VL_OCR_FALLBACK: ${NABZ_VL_OCR_FALLBACK:-qwen-vl-ocr}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       NABZ_DISABLE_NOMINATIM: ${NABZ_DISABLE_NOMINATIM:-1}
-      NABZ_STORAGE_BACKEND: ${NABZ_STORAGE_BACKEND:-local}
-      NABZ_S3_BUCKET: ${NABZ_S3_BUCKET:-}
+      NABZ_STORAGE_BACKEND: ${NABZ_STORAGE_BACKEND:?Set NABZ_STORAGE_BACKEND=s3 in .env.production}
+      NABZ_S3_BUCKET: ${NABZ_S3_BUCKET:?Set NABZ_S3_BUCKET in .env.production}
       NABZ_S3_REGION: ${NABZ_S3_REGION:-}
       NABZ_S3_ENDPOINT_URL: ${NABZ_S3_ENDPOINT_URL:-}
       NABZ_S3_SSE: ${NABZ_S3_SSE:-AES256}
+      NABZ_READINESS_CHECK_S3: ${NABZ_READINESS_CHECK_S3:-true}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
@@ -27,7 +31,6 @@ services:
       - "8000"
     volumes:
       - nabz-data:/data
-      - nabz-uploads:/app/uploads
     healthcheck:
       test:
         - CMD
@@ -35,7 +38,7 @@ services:
         - -c
         - >-
           import urllib.request;
-          urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)
+          urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready', timeout=5)
       interval: 15s
       timeout: 5s
       retries: 5
@@ -63,4 +66,3 @@ services:
 
 volumes:
   nabz-data:
-  nabz-uploads:

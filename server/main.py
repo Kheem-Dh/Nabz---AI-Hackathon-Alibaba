@@ -17,8 +17,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi import APIRouter, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 # Resolve the backend environment relative to this file. Relying on the shell's
 # current directory caused a configured key in server/.env to be missed when
@@ -42,8 +43,14 @@ from facilities import router as facilities_router  # noqa: E402
 from labreport import router as labreport_router  # noqa: E402
 from location import router as location_router  # noqa: E402
 from medicine_evidence import router as medicine_evidence_router  # noqa: E402
+from observability import RequestTelemetryMiddleware  # noqa: E402
 from prescription import router as prescription_router  # noqa: E402
 from profiles import router as profiles_router  # noqa: E402
+from readiness import readiness_checks  # noqa: E402
+from runtime import (  # noqa: E402
+    RuntimeSettings,
+    validate_startup_configuration,
+)
 from schemas import Clinic, HealthResponse  # noqa: E402
 from sessions import router as triage_router  # noqa: E402
 from summary import router as summary_router  # noqa: E402
@@ -51,79 +58,80 @@ from triage import (  # noqa: E402
     get_model_name,
     get_request_timeout_seconds,
     has_ai_credentials,
-    is_mock_mode,
     triage_engine_mode,
 )
 from vision import get_vl_model  # noqa: E402
 
 logger = logging.getLogger("nabz")
+misc_router = APIRouter()
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    """Create tables (idempotent) and log the current mode at startup."""
+    """Validate the release contract before accepting any traffic."""
+    settings: RuntimeSettings = _app.state.runtime_settings
+    validate_startup_configuration(settings)
     init_db()
     logger.info(
-        "Nabz backend started (mock_mode=%s triage_engine=%s)",
-        is_mock_mode(),
+        "Nabz backend started (environment=%s mock_mode=%s demo_enabled=%s triage_engine=%s)",
+        settings.app_env,
+        settings.mock_mode,
+        settings.demo_enabled,
         triage_engine_mode(),
     )
     yield
 
 
-app = FastAPI(
-    title="Nabz API",
-    description="Voice-first, Urdu-first AI health companion for Pakistan.",
-    version="2.0.0",
-    lifespan=lifespan,
-)
-
-# The API key must never reach the frontend; the browser only talks to us.
-_ALLOWED_ORIGINS = os.getenv(
-    "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
-).split(",")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[o.strip() for o in _ALLOWED_ORIGINS if o.strip()],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# --- Routers -----------------------------------------------------------------
-
-app.include_router(auth_router)
-app.include_router(profiles_router)
-app.include_router(location_router)
-app.include_router(facilities_router)
-app.include_router(triage_router)
-app.include_router(chat_attach_router)
-app.include_router(labreport_router)
-app.include_router(prescription_router)
-app.include_router(summary_router)
-app.include_router(documents_router)
-app.include_router(dashboard_router)
-app.include_router(demo_router)
-app.include_router(medicine_evidence_router)
-
-
 # --- Misc endpoints ----------------------------------------------------------
 
 
-@app.get("/api/health", response_model=HealthResponse)
-def health() -> HealthResponse:
+@misc_router.get("/api/health", response_model=HealthResponse)
+def health(request: Request) -> HealthResponse:
     """Quick demo-day sanity check."""
-    return HealthResponse(status="ok", mock_mode=is_mock_mode())
+    settings: RuntimeSettings = request.app.state.runtime_settings
+    return HealthResponse(status="ok", mock_mode=settings.mock_mode)
 
 
-@app.get("/api/health/detail")
-def health_detail() -> dict:
+@misc_router.get("/api/health/live")
+def health_live(request: Request) -> dict[str, str]:
+    """Process liveness: this endpoint never calls external dependencies."""
+    settings: RuntimeSettings = request.app.state.runtime_settings
+    return {"status": "alive", "environment": settings.app_env}
+
+
+@misc_router.get("/api/health/ready")
+def health_ready(request: Request) -> Response:
+    """Readiness for routing traffic: configuration, DB, storage, and AI."""
+    settings: RuntimeSettings = request.app.state.runtime_settings
+    ready, checks = readiness_checks(settings)
+    payload = {
+        "status": "ready" if ready else "not_ready",
+        "environment": settings.app_env,
+        "checks": checks,
+    }
+    return JSONResponse(payload, status_code=200 if ready else 503)
+
+
+@misc_router.get("/api/health/detail")
+def health_detail(request: Request) -> dict:
     """Extended health card for the pre-demo hidden dev gesture."""
+    settings: RuntimeSettings = request.app.state.runtime_settings
+    if settings.is_production:
+        # The workspace only needs connectivity and AI availability. Do not
+        # expose provider names or operational tuning on the production edge.
+        return {
+            "status": "ok",
+            "environment": settings.app_env,
+            "mock_mode": False,
+            "demo_enabled": False,
+            "triage_engine": "live_ai",
+            "ai_configured": True,
+        }
     return {
         "status": "ok",
-        "mock_mode": is_mock_mode(),
+        "environment": settings.app_env,
+        "mock_mode": settings.mock_mode,
+        "demo_enabled": settings.demo_enabled,
         "triage_engine": triage_engine_mode(),
         "ai_configured": has_ai_credentials(),
         "text_model": get_model_name(),
@@ -138,7 +146,7 @@ def health_detail() -> dict:
     }
 
 
-@app.get("/api/clinics", response_model=list[Clinic])
+@misc_router.get("/api/clinics", response_model=list[Clinic])
 def clinics_endpoint(
     city: str | None = None, province: str | None = None
 ) -> list[Clinic]:
@@ -152,7 +160,7 @@ _TTS_CACHE_MAX = 32
 _TTS_LANG_MAP = {"ur": "ur", "hi": "hi", "en": "en"}
 
 
-@app.get("/api/tts")
+@misc_router.get("/api/tts")
 def tts_endpoint(
     text: str = Query(..., min_length=1, max_length=1000),
     lang: str = Query("ur"),
@@ -188,6 +196,60 @@ def tts_endpoint(
     )
 
 
-@app.get("/")
-def root() -> dict[str, str]:
-    return {"app": "Nabz", "docs": "/docs", "health": "/api/health"}
+@misc_router.get("/")
+def root(request: Request) -> dict[str, str]:
+    settings: RuntimeSettings = request.app.state.runtime_settings
+    payload = {"app": "Nabz", "health": "/api/health/live"}
+    if settings.api_docs_enabled:
+        payload["docs"] = "/docs"
+    return payload
+
+
+def create_app(settings: RuntimeSettings | None = None) -> FastAPI:
+    """Build an app whose public surface is fixed by its runtime environment."""
+    settings = settings or RuntimeSettings.from_env()
+    docs_url = "/docs" if settings.api_docs_enabled else None
+    redoc_url = "/redoc" if settings.api_docs_enabled else None
+    openapi_url = "/openapi.json" if settings.api_docs_enabled else None
+    application = FastAPI(
+        title="Nabz API",
+        description="Voice-first, Urdu-first AI health companion for Pakistan.",
+        version="2.0.0",
+        lifespan=lifespan,
+        docs_url=docs_url,
+        redoc_url=redoc_url,
+        openapi_url=openapi_url,
+    )
+    application.state.runtime_settings = settings
+
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(settings.cors_origins),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    application.add_middleware(
+        RequestTelemetryMiddleware,
+        environment=settings.app_env,
+    )
+
+    application.include_router(auth_router)
+    application.include_router(profiles_router)
+    application.include_router(location_router)
+    application.include_router(facilities_router)
+    application.include_router(triage_router)
+    application.include_router(chat_attach_router)
+    application.include_router(labreport_router)
+    application.include_router(prescription_router)
+    application.include_router(summary_router)
+    application.include_router(documents_router)
+    application.include_router(dashboard_router)
+    if settings.demo_enabled and not settings.is_production:
+        application.include_router(demo_router)
+    application.include_router(medicine_evidence_router)
+    application.include_router(misc_router)
+    return application
+
+
+app = create_app()

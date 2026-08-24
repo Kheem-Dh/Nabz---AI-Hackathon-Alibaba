@@ -101,7 +101,7 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
           </div>
         )}
 
-        {turn.response_source === 'test_model' && (
+        {import.meta.env.DEV && turn.response_source === 'test_model' && (
           <span className="mock-badge">test model · not shown in production</span>
         )}
       </div>

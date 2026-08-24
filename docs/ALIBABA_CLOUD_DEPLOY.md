@@ -1,10 +1,10 @@
 # Alibaba Cloud deployment
 
-This is the lowest-complexity demo deployment for Nabz: one small Alibaba
+This is the lowest-complexity production deployment for Nabz: one small Alibaba
 Cloud ECS instance running Docker Compose. Nginx serves the React build and
-proxies `/api/*` to FastAPI on the private Compose network. SQLite and
-prescription uploads live in named Docker volumes so container rebuilds do not
-erase them.
+proxies `/api/*` to FastAPI on the private Compose network. SQLite lives in a
+named Docker volume and medical uploads live in a private S3-compatible object
+storage bucket so container rebuilds do not erase them.
 
 ## Cost boundary
 
@@ -14,9 +14,8 @@ verification, a supported payment method, and no previous ECS or Simple
 Application Server purchase/trial. Stop or release the instance before the
 trial expires if you do not want pay-as-you-go charges.
 
-Function Compute can be cheaper when idle, but the current Nabz build uses
-SQLite and local prescription uploads. Deploying it there safely also requires
-persistent NAS/RDS and object storage, increasing both complexity and cost.
+Function Compute can be cheaper when idle, but the current single-node setup
+uses SQLite. Scaling beyond one API replica requires a managed SQL database.
 
 ## Inputs required from the owner
 
@@ -25,8 +24,9 @@ persistent NAS/RDS and object storage, increasing both complexity and cost.
 2. Confirmation that the account is eligible for the ECS free trial.
 3. Preferred region. Singapore is the default recommendation for Pakistan.
 4. A domain or subdomain for HTTPS, such as `demo.nabz.pk`.
-5. A production `DASHSCOPE_API_KEY`, or approval to deploy with
-   `MOCK_MODE=true` and zero AI credentials.
+5. A production `DASHSCOPE_API_KEY`.
+6. A private AWS S3 or Cloudflare R2 bucket and workload identity or access
+   credentials.
 
 Do not send secret values in chat or commit them. Enter them directly into the
 deployment host's `.env.production` file or the Alibaba Cloud secret manager.
@@ -49,34 +49,37 @@ cp .env.production.example .env.production
 openssl rand -hex 32
 ```
 
-Put the generated value in `.env.production` as `JWT_SECRET`. Set
-`MOCK_MODE=true` for the zero-credential demo, or set `MOCK_MODE=false` and
-enter the DashScope key directly on the host.
+Put the generated value in `.env.production` as `JWT_SECRET`. Replace the
+DashScope, database, bucket, region/endpoint, and credential placeholders.
+Production cannot start with mock mode, demo routes, local uploads, or a
+missing AI key. For an AWS-hosted bucket, prefer an instance role instead of
+static credentials. S3-compatible providers such as R2 require their endpoint
+and access credentials.
 
 ```bash
+server/venv/bin/python scripts/check_production_config.py .env.production
 docker compose --env-file .env.production -f compose.prod.yaml up -d --build
 docker compose --env-file .env.production -f compose.prod.yaml ps
-curl -fsS http://127.0.0.1/api/health
+server/venv/bin/python scripts/production_smoke.py http://127.0.0.1
 ```
 
 The frontend and API share one origin. Only Nginx is publicly exposed; port
-8000 remains inside the Compose network.
+8000 remains inside the Compose network. `/docs`, `/redoc`, `/openapi.json`,
+and `/api/demo/*` return 404 in production.
 
 ## Persistence and backup
 
-The `nabz-data` volume contains SQLite data and `nabz-uploads` contains saved
-prescription images. Back up both before replacing or deleting the ECS
-instance:
+The `nabz-data` volume contains SQLite data. Back it up before replacing or
+deleting the ECS instance:
 
 ```bash
 docker run --rm -v nabz_nabz-data:/source -v "$PWD":/backup alpine \
   tar czf /backup/nabz-data.tgz -C /source .
-docker run --rm -v nabz_nabz-uploads:/source -v "$PWD":/backup alpine \
-  tar czf /backup/nabz-uploads.tgz -C /source .
 ```
 
-These archives contain health information. Store them encrypted and do not
-commit them.
+Enable encryption, versioning, retention, and lifecycle rules on the private
+medical-document bucket. Database archives also contain health information;
+store them encrypted and never commit them.
 
 ## HTTPS is mandatory for the voice demo
 
