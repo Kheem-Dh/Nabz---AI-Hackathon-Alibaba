@@ -266,20 +266,47 @@ def analyze_image(
         return None, raw
 
 
-def describe_image(
+CLINICAL_CONCERN_FLAGS = {
+    "spreading_redness", "warmth", "swelling", "pus_or_drainage",
+    "open_wound_or_bleeding", "blistering", "necrosis", "hives",
+    "fever_source", "facial_involvement", "eye_involvement",
+    "insect_bite", "burn", "deformity_suggesting_fracture",
+    "not_a_clinical_image", "poor_image_quality",
+}
+
+
+def describe_image_structured(
     image_bytes: bytes,
     filename: str,
     content_type: str | None,
     profile_name: str,
-) -> str | None:
-    """Small helper used by the chat-attach flow: return a short, factual
-    English description of what is visibly present in the image / PDF."""
+) -> dict | None:
+    """Return a structured VL payload for chat-attach photos.
+
+    Shape:
+      {
+        "description_english": "...",
+        "description_urdu": "...",
+        "visible_features": ["red mark on right forearm", "coin-sized", ...],
+        "concern_flags": ["spreading_redness", "warmth"],   # subset of CLINICAL_CONCERN_FLAGS
+        "urgency_hint": "self_care" | "clinician_soon" | "urgent",
+        "not_a_clinical_image": bool,
+      }
+    Any model-invented flag not on the allowlist is dropped. Never a diagnosis.
+    """
     system = (
         "You are a careful medical visual assistant. Describe ONLY what is "
-        "visibly present in the image. Do NOT diagnose. Do NOT recommend a "
-        "medicine. If uncertain, say so. Return STRICT JSON of the form "
-        '{"description_english":"…","description_urdu":"…"} in 1–2 short '
-        "sentences per language."
+        "visibly present in the image. Do NOT diagnose. Do NOT name a disease. "
+        "Do NOT recommend a medicine. Return STRICT JSON with these keys:\n"
+        '  description_english (1-2 short sentences)\n'
+        '  description_urdu (1-2 short sentences, spoken Urdu)\n'
+        '  visible_features (short list of factual observations)\n'
+        '  concern_flags (subset of: '
+        + ", ".join(sorted(CLINICAL_CONCERN_FLAGS))
+        + ")\n"
+        '  urgency_hint (one of: self_care | clinician_soon | urgent)\n'
+        '  not_a_clinical_image (boolean; true if the photo is unrelated)\n'
+        "If the image quality is poor, add 'poor_image_quality' to concern_flags."
     )
     user = (
         f"The active patient is {profile_name}. Describe visible features "
@@ -290,5 +317,39 @@ def describe_image(
         return None
     en = str(data.get("description_english", "")).strip()
     ur = str(data.get("description_urdu", "")).strip()
+    features = [
+        str(f).strip()[:120] for f in (data.get("visible_features") or [])
+        if str(f).strip()
+    ][:8]
+    raw_flags = data.get("concern_flags") or []
+    concern_flags = [
+        str(f).strip() for f in raw_flags
+        if str(f).strip() in CLINICAL_CONCERN_FLAGS
+    ]
+    urgency = str(data.get("urgency_hint", "")).strip().lower()
+    if urgency not in {"self_care", "clinician_soon", "urgent"}:
+        urgency = "clinician_soon"
+    return {
+        "description_english": en or None,
+        "description_urdu": ur or None,
+        "visible_features": features,
+        "concern_flags": sorted(set(concern_flags)),
+        "urgency_hint": urgency,
+        "not_a_clinical_image": bool(data.get("not_a_clinical_image", False)),
+    }
+
+
+def describe_image(
+    image_bytes: bytes,
+    filename: str,
+    content_type: str | None,
+    profile_name: str,
+) -> str | None:
+    """Backwards-compat helper: return the bilingual caption only."""
+    payload = describe_image_structured(image_bytes, filename, content_type, profile_name)
+    if not payload:
+        return None
+    en = payload.get("description_english") or ""
+    ur = payload.get("description_urdu") or ""
     parts = [ur, en] if (ur or en) else []
     return " · ".join(p for p in parts if p) or None

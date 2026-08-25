@@ -3,7 +3,7 @@ import MicButton from './MicButton'
 import AnalysisPanel from './AnalysisPanel'
 import TriageResult from './TriageResult'
 import EncounterChat from './EncounterChat'
-import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
+import { useVoiceInput } from '../hooks/useVoiceInput'
 import { useTextToSpeech } from '../hooks/useTextToSpeech'
 import {
   attachChatImage,
@@ -31,7 +31,8 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
 
   // Winning plan §7: initial-complaint silence window is generous so a slow
   // Urdu narration is not cut off; follow-up answers can be shorter.
-  const speech = useSpeechRecognition({ lang: 'ur-PK', silenceMs: 8000 })
+  // Cloud STT preferred (Firefox/Safari/in-app browsers ok); webkit fallback.
+  const speech = useVoiceInput({ lang: 'ur-PK', silenceMs: 8000 })
   const tts = useTextToSpeech()
   const spokenRef = useRef(null)
   const submittedRef = useRef(false)
@@ -665,8 +666,16 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
                 try {
                   const res = await attachChatImage(profile.id, f)
                   const description = (res && res.description) || ''
-                  if (description) {
-                    await doAnswer(`[Photo attached] ${description}`)
+                  // Build a richer turn so the model sees concern_flags too.
+                  const flags = Array.isArray(res?.concern_flags) ? res.concern_flags : []
+                  const features = Array.isArray(res?.visible_features) ? res.visible_features : []
+                  const parts = [description]
+                  if (features.length) parts.push(`Visible: ${features.slice(0, 5).join('; ')}.`)
+                  if (flags.length) parts.push(`Concern flags: ${flags.join(', ')}.`)
+                  if (res?.urgency_hint) parts.push(`Vision urgency hint: ${res.urgency_hint}.`)
+                  const composed = parts.filter(Boolean).join(' ')
+                  if (composed.trim()) {
+                    await doAnswer(`[Photo attached] ${composed}`)
                   } else {
                     setAttachError('Could not describe this photo. Try a clearer image.')
                   }

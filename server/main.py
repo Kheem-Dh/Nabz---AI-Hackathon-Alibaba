@@ -56,6 +56,7 @@ from runtime import (  # noqa: E402
 from schemas import Clinic, HealthResponse  # noqa: E402
 from sessions import router as triage_router  # noqa: E402
 from triage_stream import router as triage_stream_router  # noqa: E402
+from voice_stt import router as voice_stt_router  # noqa: E402
 from summary import router as summary_router  # noqa: E402
 from triage import (  # noqa: E402
     get_model_name,
@@ -244,6 +245,7 @@ def create_app(settings: RuntimeSettings | None = None) -> FastAPI:
     application.include_router(facilities_router)
     application.include_router(triage_router)
     application.include_router(triage_stream_router)
+    application.include_router(voice_stt_router)
     application.include_router(chat_attach_router)
     application.include_router(labreport_router)
     application.include_router(prescription_router)

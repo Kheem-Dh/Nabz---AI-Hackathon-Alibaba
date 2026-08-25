@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -167,7 +168,40 @@ def _profile_payload(profile: Profile) -> dict[str, Any]:
             }
             for entry in recent_entries
         ],
+        # Cross-session clinical memory (last 3 completed triages, most-recent
+        # first). Structured so the model can say "is this the same as your
+        # headache from Aug 20, or is it different?" instead of asking cold.
+        "recent_triage_history": _recent_triage_history(profile),
     }
+
+
+def _recent_triage_history(profile: Profile, limit: int = 3) -> list[dict]:
+    triages = [
+        entry for entry in profile.timeline if entry.kind == "triage"
+    ]
+    triages.sort(key=lambda e: e.created_at, reverse=True)
+    out: list[dict] = []
+    now = datetime.now(timezone.utc)
+    for entry in triages[:limit]:
+        payload = entry.payload or {}
+        ts = entry.created_at
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        days_ago = max(0, (now - ts).days)
+        transcript = payload.get("encounter_transcript") or []
+        first_user = next((t for t in transcript if t.get("role") == "user"), None)
+        chief = (first_user or {}).get("text") or entry.title
+        out.append({
+            "date": entry.created_at.isoformat(),
+            "days_ago": days_ago,
+            "level": entry.level,
+            "chief_complaint": str(chief)[:240],
+            "patient_facing_impression_english": payload.get("patient_facing_impression_english"),
+            "reason_english": payload.get("reason_english"),
+            "red_flags_present": (payload.get("red_flags_present") or [])[:4],
+            "escalation_signs": (payload.get("escalation_signs") or [])[:4],
+        })
+    return out
 
 
 def _load_profile(db: Session, account: Account, profile_id: int) -> Profile:

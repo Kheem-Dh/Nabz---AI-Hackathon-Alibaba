@@ -19,7 +19,7 @@ from models_db import Account, Profile
 from security import get_current_account
 from privacy import ensure_consents, record_audit
 from triage import is_mock_mode
-from vision import describe_image, validate_upload
+from vision import describe_image_structured, validate_upload
 
 router = APIRouter(prefix="/api/chat", tags=["chat-attach"])
 
@@ -31,11 +31,21 @@ def _owned_profile(db: Session, account: Account, profile_id: int) -> Profile:
     return profile
 
 
-def _mock_description(profile_name: str) -> str:
-    return (
-        "مریض کی جلد پر واضح سرخ نشان دکھائی دیتا ہے۔ "
-        "A visible red skin mark is present in the photo. No blood or open wound."
-    )
+def _mock_payload(profile_name: str) -> dict:
+    """Realistic structured mock so the whole flow demos with zero credentials."""
+    return {
+        "description": (
+            "مریض کی جلد پر واضح سرخ نشان دکھائی دیتا ہے۔ "
+            "A visible red skin mark is present in the photo. No blood or open wound."
+        ),
+        "description_english": "A visible red skin mark is present. No blood or open wound.",
+        "description_urdu": "جلد پر ایک واضح سرخ نشان ہے، خون یا کھلا زخم نہیں ہے۔",
+        "visible_features": ["coin-sized red mark", "no pus", "no obvious swelling"],
+        "concern_flags": [],
+        "urgency_hint": "clinician_soon",
+        "not_a_clinical_image": False,
+        "mock": True,
+    }
 
 
 @router.post("/attach")
@@ -54,7 +64,7 @@ async def attach_image(
         raise HTTPException(status_code=400, detail=err)
 
     if is_mock_mode():
-        description = _mock_description(profile.display_name)
+        out = _mock_payload(profile.display_name)
         record_audit(
             db,
             account_id=account.id,
@@ -64,18 +74,39 @@ async def attach_image(
             metadata={"mock": True},
         )
         db.commit()
-        return {"description": description, "mock": True}
+        return out
 
-    description = describe_image(payload, file.filename or "photo", mime, profile.display_name)
-    if not description:
+    structured = describe_image_structured(
+        payload, file.filename or "photo", mime, profile.display_name,
+    )
+    if not structured or not (structured.get("description_english") or structured.get("description_urdu")):
         raise HTTPException(status_code=422, detail="could_not_describe_image")
+
+    # Compose the natural-language turn the frontend injects into the transcript.
+    ur = structured.get("description_urdu") or ""
+    en = structured.get("description_english") or ""
+    description = " · ".join(p for p in [ur, en] if p) or "Photo attached."
+
     record_audit(
         db,
         account_id=account.id,
         profile_id=profile.id,
         event_type="document.processed",
         resource_type="clinical_image",
-        metadata={"mock": False},
+        metadata={
+            "mock": False,
+            "concern_flags": structured.get("concern_flags", []),
+            "urgency_hint": structured.get("urgency_hint"),
+        },
     )
     db.commit()
-    return {"description": description, "mock": False}
+    return {
+        "description": description,
+        "description_english": structured.get("description_english"),
+        "description_urdu": structured.get("description_urdu"),
+        "visible_features": structured.get("visible_features", []),
+        "concern_flags": structured.get("concern_flags", []),
+        "urgency_hint": structured.get("urgency_hint"),
+        "not_a_clinical_image": structured.get("not_a_clinical_image", False),
+        "mock": False,
+    }
