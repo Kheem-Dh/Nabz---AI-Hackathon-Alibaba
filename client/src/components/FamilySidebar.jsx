@@ -61,7 +61,15 @@ function ProfileHistoryRow({
       </button>
       {expanded && (
         <ul className="fs-history">
-          {loading && <li className="fs-history-empty">Loading…</li>}
+          {loading && (
+            <li className="fs-history-empty" aria-live="polite">
+              <div className="skeleton-stack" aria-hidden="true">
+                <div className="skeleton" style={{ width: '78%' }} />
+                <div className="skeleton" style={{ width: '52%' }} />
+              </div>
+              <span className="sr-only">Loading history…</span>
+            </li>
+          )}
           {!loading && error && <li className="fs-history-empty">Could not load history.</li>}
           {!loading && !error && history && history.length === 0 && (
             <li className="fs-history-empty">No conversations yet.</li>

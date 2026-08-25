@@ -18,6 +18,7 @@ import SummaryPage from './pages/SummaryPage'
 import PrivacyPage from './pages/PrivacyPage'
 import VerifyPage from './pages/VerifyPage'
 import VerifyBanner from './components/VerifyBanner'
+import TrustBar from './components/TrustBar'
 import DocumentsPage from './pages/DocumentsPage'
 import OnboardingPage, { hasOnboarded } from './pages/OnboardingPage'
 import CompleteProfilePage from './pages/CompleteProfilePage'
@@ -160,6 +161,7 @@ export default function App() {
     <div className="app-shell">
       <div className="app-container">
         {!isPrintRoute && <TopBar />}
+        {!isPrintRoute && !onLocationScreen && !isAdminRoute && <TrustBar />}
         {!isPrintRoute && !onLocationScreen && !isAdminRoute && <VerifyBanner />}
         <main className={`app-main ${isAdminRoute ? 'admin-main' : ''}`}>
           <Routes>
@@ -197,8 +199,19 @@ function TopBar({ minimal = false }) {
   const navigate = useNavigate()
   const location = useLocation()
   const navClass = (path) => location.pathname === path ? 'active' : ''
+  const [scrolled, setScrolled] = useState(false)
+
+  // Header stays pinned on scroll; a shadow + blur appear once the page has
+  // scrolled a few pixels so the initial paint is clean.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   return (
-    <header className="topbar">
+    <header className={`topbar ${scrolled ? 'topbar-scrolled' : ''}`} data-scrolled={scrolled ? 'true' : 'false'}>
       <div className="topbar-row">
         <div className="brand">
           <span className="brand-ur">نبض</span>
