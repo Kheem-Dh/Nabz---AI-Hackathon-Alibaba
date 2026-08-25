@@ -148,10 +148,20 @@ export default function AuthPage() {
     mode === 'register' ? 'Minimum 8 characters, with a letter and a number.' : null
 
   return (
-    <div className="auth-wrap">
+    <div className="auth-page landing-page">
+      <header className="landing-nav auth-site-nav">
+        <button className="landing-brand" onClick={() => navigate('/')} aria-label="Go to Nabz home">
+          <span className="landing-brand-mark">
+            <svg className="landing-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2-6 4 12 2-6h6" /></svg>
+          </span>
+          <span><b className="urdu">نبض</b><small>NABZ</small></span>
+        </button>
+        <span className="auth-nav-context">Secure family health access</span>
+        <button className="auth-home-link" onClick={() => navigate('/')}>← Back to home</button>
+      </header>
+      <main className="auth-wrap">
       <div className="auth-card">
         <div className="auth-hero">
-          <button className="auth-back" onClick={() => navigate('/')} aria-label="Back to Nabz home">← Back to home</button>
           <div className="brand-ur">نبض</div>
           <div className="tag-ur urdu">آپ کی آواز، آپ کی صحت</div>
           <div className="tag-en">NABZ · Your voice, your health</div>
@@ -342,6 +352,7 @@ export default function AuthPage() {
           </p>
         </div>
       </div>
+      </main>
     </div>
   )
 }

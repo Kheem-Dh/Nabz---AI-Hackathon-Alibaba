@@ -39,13 +39,15 @@ async function handle(resp) {
           ? body.detail
           : JSON.stringify(body.detail)
         : `HTTP ${resp.status}`
-    const friendly = detail.startsWith('file_too_large')
-      ? 'File is too large. Maximum size is 25 MB.'
-      : detail.startsWith('unsupported_type') || detail.startsWith('file_signature')
-        ? 'This file format is not supported, or the file does not match its extension.'
-        : detail === 'pdf_render_failed'
-          ? 'This PDF could not be opened. It may be damaged or password protected.'
-          : detail
+    const friendly = validation
+      ? 'Please check the highlighted fields and try again.'
+      : detail.startsWith('file_too_large')
+        ? 'File is too large. Maximum size is 25 MB.'
+        : detail.startsWith('unsupported_type') || detail.startsWith('file_signature')
+          ? 'This file format is not supported, or the file does not match its extension.'
+          : detail === 'pdf_render_failed'
+            ? 'This PDF could not be opened. It may be damaged or password protected.'
+            : detail
     const err = new Error(friendly)
     err.status = resp.status
     err.detail = detail

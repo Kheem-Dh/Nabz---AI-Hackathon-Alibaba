@@ -30,7 +30,7 @@
 
   --container: 1920px;
   --nav-h: 64px;
-  --font-en: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --font-en: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   --font-ur: 'Noto Nastaliq Urdu', serif;
 }
 
@@ -5149,6 +5149,297 @@ textarea.input {
 .handoff-loading, .handoff-error { text-align: center; padding: 40px; color: var(--muted, #6b7c79); }
 .flag-low { color: #b47100; }
 .flag-high { color: #d64545; }
+
+/* ============================================================
+   Production responsive system — public → auth → workspace
+   ============================================================ */
+
+:root {
+  --content-max: 1180px;
+  --space-page: clamp(16px, 2.4vw, 32px);
+  --text-xs: .75rem;
+  --text-sm: .875rem;
+  --text-md: 1rem;
+  --control-h: 48px;
+}
+
+body { font-size: var(--text-md); }
+button, input, select, textarea { font: inherit; }
+button, a, input, select, textarea { touch-action: manipulation; }
+
+/* Keep the public navigation visible across the auth handoff. */
+.auth-page { min-height: 100dvh; overflow-x: hidden; }
+.auth-site-nav { position: relative; z-index: 3; }
+.auth-nav-context {
+  margin-left: auto;
+  color: var(--landing-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.auth-home-link {
+  min-height: 42px;
+  padding: 0 15px;
+  border: 1px solid rgba(16,40,37,.12);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--landing-ink);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+.auth-page .auth-wrap {
+  min-height: calc(100dvh - 78px);
+  padding: clamp(20px, 3vw, 38px);
+  align-items: center;
+  background: transparent;
+}
+.auth-page .auth-card {
+  width: min(1080px, 100%);
+  max-width: 1080px;
+  min-height: min(660px, calc(100dvh - 126px));
+}
+.auth-page .auth-panel { overflow-y: auto; scrollbar-width: thin; }
+.auth-page .auth-tab { min-height: 44px; font-size: var(--text-sm); }
+.auth-page .field { margin-bottom: 12px; }
+.auth-page .field label { font-size: var(--text-xs); }
+.auth-page .input { min-height: var(--control-h); font-size: var(--text-sm); }
+.auth-page .field-hint,
+.auth-page .field-error,
+.auth-page .form-hint,
+.auth-page .forgot-link { font-size: var(--text-xs); line-height: 1.5; }
+.auth-value h1 { font-size: clamp(2rem, 3vw, 2.6rem) !important; }
+.auth-value > p { font-size: var(--text-sm) !important; }
+.auth-value > div { font-size: var(--text-xs) !important; }
+
+/* Family-member dialog: fixed chrome, independently scrolling content. */
+.modal-scrim { padding: clamp(12px, 2vw, 24px); overscroll-behavior: contain; }
+.modal-card {
+  width: min(560px, 100%);
+  max-width: 560px;
+  max-height: min(780px, calc(100dvh - 32px));
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(16,40,37,.08);
+  border-radius: 24px;
+}
+.modal-head { flex: 0 0 auto; padding: 24px 24px 10px; }
+.modal-head h2 { font-size: 1.35rem; letter-spacing: -.02em; }
+.modal-sub { font-size: var(--text-xs); line-height: 1.5; }
+.modal-close {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.wiz-body { min-height: 0; padding: 0 24px 8px; overflow-y: auto; scrollbar-width: thin; }
+.wiz-steps { margin: 4px 0 10px; }
+.wiz-dot { width: 9px; height: 9px; }
+.wiz-step { padding: 12px 0 4px; }
+.wiz-step h3 { margin-bottom: 16px; font-size: 1rem; }
+.wiz-field-label,
+.form-label { font-size: var(--text-xs); font-weight: 600; color: var(--ink-soft); }
+.form-row { gap: 6px; margin-bottom: 14px; }
+.form-input {
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 11px 13px;
+  border-width: 1.5px;
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
+.form-input.invalid { border-color: #c93636; background: #fffafa; }
+.field-error {
+  display: block;
+  margin: 1px 0 0;
+  color: #b42318;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.45;
+}
+.bp-error { margin: -3px 0 10px; }
+.pill-picker { gap: 8px; }
+.pill,
+.pill.compact {
+  min-height: 40px;
+  padding: 8px 13px;
+  font-size: var(--text-xs);
+  line-height: 1.2;
+}
+.tile-pick { min-height: 88px; padding: 13px 8px; font-size: var(--text-xs); }
+.wiz-hint { margin: 7px 0 0; font-size: var(--text-xs); line-height: 1.5; }
+.wiz-review { padding: 14px; font-size: var(--text-xs); line-height: 1.65; }
+.wiz-error-summary {
+  margin: 12px 0 4px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 2px;
+  border-left: 4px solid #c93636;
+  border-radius: 10px;
+  background: #fff1f0;
+  color: #8f1d17;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+.wiz-error-summary strong { font-size: var(--text-sm); }
+.wiz-foot {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--line);
+  background: rgba(255,255,255,.96);
+}
+.wiz-foot .btn { min-height: 48px; font-size: var(--text-sm); }
+.vitals-picker { gap: 10px; }
+
+/* Readable product typography. Supporting labels remain compact, never tiny. */
+.desktop-nav button { font-size: .8125rem; }
+.top-action-btn,
+.audio-stop-btn { min-height: 42px; font-size: var(--text-xs); }
+.trust-bar { font-size: var(--text-xs); line-height: 1.45; }
+.workspace-header p,
+.past-encounter-head p { font-size: .8125rem; line-height: 1.55; }
+.workspace-actions button,
+.insights-title button { min-height: 38px; font-size: var(--text-xs); }
+.home-kicker,
+.insights-title span,
+.fs-head { font-size: .6875rem; line-height: 1.4; }
+.insights-title h2 { font-size: 1.2rem; }
+.fs-name { font-size: var(--text-sm); }
+.fs-relation,
+.fs-history-empty,
+.fs-history-meta { font-size: var(--text-xs); }
+.fs-history-text { font-size: .8125rem; }
+.fs-add-btn { min-height: 46px; font-size: .8125rem; }
+.pd-eyebrow,
+.pd-record-item span,
+.pd-recent > span,
+.pd-evidence-head small,
+.pd-evidence article > span,
+.pd-evidence article p,
+.pd-evidence article > small,
+.pd-evidence article a,
+.pd-stats span { font-size: .6875rem; line-height: 1.45; }
+.pd-meta,
+.pd-summary-en,
+.pd-record-item strong,
+.pd-recent button,
+.pd-evidence-head span,
+.pd-evidence article strong { font-size: var(--text-xs); line-height: 1.5; }
+.pd-summary-ur { font-size: .9375rem; }
+.pd-empty-record,
+.pd-visual-head strong,
+.pd-activity-title,
+.pd-activity-item strong,
+.pd-activity-item small,
+.pd-bar-row,
+.pd-bar-row strong { font-size: .6875rem; }
+.web-quick-actions strong { font-size: var(--text-xs); }
+.web-quick-actions small { font-size: .6875rem; line-height: 1.4; }
+
+/* Prefer readable two-column reflow on normal laptops; reserve the full
+   three-column cockpit for genuinely wide screens. */
+@media (min-width: 900px) and (max-width: 1439px) {
+  .workspace-shell .app-container { height: auto; min-height: 100dvh; overflow: visible; }
+  .workspace-shell .app-main { overflow: visible; }
+  .workspace-shell .desktop-health-workspace {
+    height: auto;
+    grid-template-columns: minmax(220px, 250px) minmax(0, 1fr) !important;
+    align-items: start;
+  }
+  .workspace-shell .family-sidebar,
+  .workspace-shell .assessment-workspace,
+  .workspace-shell .health-insights-column { height: auto; overflow: visible; }
+  .desktop-health-workspace > .encounter-sidebar { display: none !important; }
+  .health-insights-column {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .health-insights-column > .insights-title { grid-column: 1 / -1; }
+}
+
+@media (min-width: 1440px) {
+  .desktop-health-workspace {
+    grid-template-columns: minmax(230px, 260px) minmax(620px, 1fr) minmax(300px, 340px) !important;
+  }
+}
+
+@media (min-width: 900px) {
+  .auth-page { height: 100dvh; overflow: hidden; }
+  .auth-page .auth-wrap { height: calc(100dvh - 78px); min-height: 0; }
+  .auth-page .auth-card { height: min(660px, 100%); min-height: 0; }
+  .auth-page .auth-panel { max-height: 100%; }
+}
+
+@media (max-height: 760px) and (min-width: 700px) {
+  .modal-head { padding-top: 18px; }
+  .wiz-step { padding-top: 7px; }
+  .pill, .pill.compact { min-height: 36px; padding-block: 6px; }
+  .form-row { margin-bottom: 10px; }
+  .wiz-foot { padding-block: 12px; }
+  .auth-value > div { margin-block: 7px !important; }
+}
+
+@media (max-width: 899px) {
+  .auth-nav-context { display: none; }
+  .auth-page .auth-wrap { min-height: calc(100dvh - 70px); padding: 24px 16px 40px; }
+  .auth-page .auth-card { display: block; min-height: 0; background: transparent; box-shadow: none; overflow: visible; }
+  .auth-page .auth-hero { display: none; }
+  .auth-page .auth-panel { width: min(560px, 100%); margin: 0 auto; padding: clamp(22px, 6vw, 36px); border: 1px solid rgba(16,40,37,.08); border-radius: 24px; box-shadow: 0 22px 60px rgba(20,60,53,.12); }
+}
+
+@media (max-width: 640px) {
+  .auth-site-nav { height: 64px; }
+  .auth-home-link { min-height: 40px; padding-inline: 12px; }
+  .modal-scrim { align-items: flex-end; padding: 0; }
+  .modal-card {
+    width: 100%;
+    max-width: none;
+    max-height: min(94dvh, 860px);
+    border-width: 1px 0 0;
+    border-radius: 24px 24px 0 0;
+    animation-name: modal-sheet-in;
+  }
+  @keyframes modal-sheet-in {
+    from { opacity: .7; transform: translateY(32px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .modal-head { padding: 18px 16px 8px; }
+  .wiz-body { padding-inline: 16px; }
+  .wiz-foot { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
+  .vitals-picker { grid-template-columns: 1fr; }
+  .tile-picker:not(.vitals-picker) { gap: 7px; }
+  .tile-pick { min-height: 78px; }
+
+  .topbar-row { flex-wrap: wrap; }
+  .topbar-row > .brand { flex: 1; }
+  .topbar-row > .row { width: 100%; justify-content: space-between; gap: 6px; }
+  .topbar-row > .row > button { flex: 0 0 auto; }
+  .profile-header-btn { margin-right: auto; }
+  .trust-bar { position: static; }
+  .desktop-health-workspace { gap: 12px; }
+  .family-sidebar { min-width: 0; width: 100%; max-width: none; }
+  .workspace-header { align-items: stretch; flex-direction: column; }
+  .workspace-actions { width: 100%; }
+  .workspace-actions button { flex: 1; }
+  .health-insights-column { display: flex; }
+}
+
+@media (max-width: 380px) {
+  .auth-home-link { width: 42px; padding: 0; overflow: hidden; font-size: 0; }
+  .auth-home-link::before { content: '←'; font-size: 1rem; }
+  .auth-page .auth-panel { padding: 20px 14px; }
+  .pill, .pill.compact { padding-inline: 11px; }
+  .tile-pick .tile-icon { font-size: 1.25rem; }
+  .wiz-foot { gap: 8px; }
+  .wiz-foot .btn { padding-inline: 10px; }
+}
+
 @media print {
   .handoff-header button, .btn { display: none !important; }
   .handoff-page { background: #fff; padding: 0; }
