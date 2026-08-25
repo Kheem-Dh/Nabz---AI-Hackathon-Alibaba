@@ -24,6 +24,7 @@ from schemas import (
     PrescriptionOut,
 )
 from security import get_current_account
+from privacy import ensure_consents, record_audit
 from triage import is_mock_mode
 from vision import analyze_image, validate_upload
 
@@ -156,6 +157,7 @@ async def extract_prescription(
     the user reviews and edits the extracted fields.
     """
     profile = _owned_profile(db, account, profile_id)
+    ensure_consents(db, account, "health_data_storage", "ai_processing")
 
     payload = await file.read()
     mime, err = validate_upload(payload, file.filename or "rx", file.content_type)
@@ -188,6 +190,15 @@ async def extract_prescription(
             }
         out = _to_out(profile.id, data, mock=False)
 
+    record_audit(
+        db,
+        account_id=account.id,
+        profile_id=profile.id,
+        event_type="document.processed",
+        resource_type="prescription",
+        metadata={"mock": out.mock},
+    )
+    db.commit()
     return out
 
 
@@ -202,6 +213,7 @@ def confirm_prescription(
     The vault is PATIENT-SPECIFIC: medicines attach only to this profile.
     """
     profile = _owned_profile(db, account, payload.profile_id)
+    ensure_consents(db, account, "health_data_storage", "ai_processing")
     if not payload.medicines:
         raise HTTPException(status_code=400, detail="no_medicines_to_save")
 
@@ -236,6 +248,15 @@ def confirm_prescription(
     db.add(entry)
     db.flush()
     confirmation_entry_id = entry.id
+    record_audit(
+        db,
+        account_id=account.id,
+        profile_id=profile.id,
+        event_type="prescription.confirmed",
+        resource_type="prescription",
+        resource_id=confirmation_entry_id,
+        metadata={"medicine_count": len(saved)},
+    )
     db.commit()
     for med in saved:
         db.refresh(med)

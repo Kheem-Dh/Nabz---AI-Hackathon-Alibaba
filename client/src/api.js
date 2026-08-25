@@ -126,6 +126,16 @@ export const createProfile = (data) => jsonReq('/api/profiles', 'POST', data)
 export const updateProfile = (id, data) => jsonReq(`/api/profiles/${id}`, 'PUT', data)
 export const deleteProfile = (id) => jsonReq(`/api/profiles/${id}`, 'DELETE')
 
+// --- Privacy, consent, and account activity ---------------------------------
+
+export const getConsentStatus = () => jsonReq('/api/privacy/consents', 'GET')
+
+export const updateConsentChoices = (choices, source = 'privacy_page') =>
+  jsonReq('/api/privacy/consents', 'PUT', { choices, source })
+
+export const getPrivacyActivity = (limit = 30) =>
+  jsonReq(`/api/privacy/activity?limit=${encodeURIComponent(limit)}`, 'GET')
+
 // --- Conversational triage ---------------------------------------------------
 
 export const triageStart = (profile_id, text, signal) =>

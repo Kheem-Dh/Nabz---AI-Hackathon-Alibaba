@@ -15,6 +15,7 @@ from db import get_db
 from models_db import Account, Profile, TimelineEntry
 from schemas import LabReportOut, LabValue
 from security import get_current_account
+from privacy import ensure_consents, record_audit
 from storage import content_type_for_filename, store_upload
 from triage import is_mock_mode
 from vision import analyze_image, validate_upload
@@ -103,6 +104,7 @@ async def upload_labreport(
     profile = db.get(Profile, profile_id)
     if not profile or profile.account_id != account.id:
         raise HTTPException(status_code=404, detail="profile_not_found")
+    ensure_consents(db, account, "health_data_storage", "ai_processing")
 
     payload = await file.read()
     mime, err = validate_upload(payload, file.filename or "lab", file.content_type)
@@ -145,6 +147,15 @@ async def upload_labreport(
 
     # Extraction is intentionally temporary. The original report and reviewed
     # values enter the Vault only through /labreport/confirm below.
+    record_audit(
+        db,
+        account_id=account.id,
+        profile_id=profile.id,
+        event_type="document.processed",
+        resource_type="lab_report",
+        metadata={"mock": out.mock},
+    )
+    db.commit()
     return out
 
 
@@ -159,6 +170,7 @@ async def confirm_labreport(
     profile = db.get(Profile, profile_id)
     if not profile or profile.account_id != account.id:
         raise HTTPException(status_code=404, detail="profile_not_found")
+    ensure_consents(db, account, "health_data_storage", "ai_processing")
     try:
         submitted = json.loads(report_json)
         submitted["profile_id"] = profile.id
@@ -198,6 +210,15 @@ async def confirm_labreport(
         },
     )
     db.add(entry)
+    db.flush()
+    record_audit(
+        db,
+        account_id=account.id,
+        profile_id=profile.id,
+        event_type="document.saved",
+        resource_type="lab_report",
+        resource_id=entry.id,
+    )
     db.commit()
 
     return confirmed

@@ -23,6 +23,7 @@ from schemas import (
     TriageSessionListItem,
 )
 from security import get_current_account
+from privacy import ensure_consents, record_audit
 from triage import next_turn, qwen_followup_chat
 from vision import analyze_image, validate_upload
 
@@ -212,6 +213,16 @@ def _record_result(db: Session, session: TriageSession, profile: Profile, turn: 
         payload=payload,
     )
     db.add(entry)
+    db.flush()
+    record_audit(
+        db,
+        account_id=profile.account_id,
+        profile_id=profile.id,
+        event_type="triage.completed",
+        resource_type="triage_session",
+        resource_id=session.id,
+        metadata={"urgency": session.result_level or "unknown"},
+    )
 
 
 def _turn_from_session(db: Session, session: TriageSession, profile: Profile) -> TriageTurn:
@@ -296,6 +307,7 @@ def start(
     db: Session = Depends(get_db),
 ) -> TriageTurn:
     profile = _load_profile(db, account, payload.profile_id)
+    ensure_consents(db, account, "health_data_storage", "ai_processing")
 
     session = TriageSession(
         profile_id=profile.id,
@@ -306,6 +318,14 @@ def start(
     )
     db.add(session)
     db.flush()
+    record_audit(
+        db,
+        account_id=account.id,
+        profile_id=profile.id,
+        event_type="triage.started",
+        resource_type="triage_session",
+        resource_id=session.id,
+    )
 
     return _turn_from_session(db, session, profile)
 
@@ -320,6 +340,7 @@ def answer(
     if not session:
         raise HTTPException(status_code=404, detail="session_not_found")
     profile = _load_profile(db, account, session.profile_id)
+    ensure_consents(db, account, "health_data_storage", "ai_processing")
     if session.status == "closed":
         raise HTTPException(status_code=409, detail="session_closed")
 
@@ -341,6 +362,7 @@ def chat_about_saved_transcript(
     if not session:
         raise HTTPException(status_code=404, detail="session_not_found")
     profile = _load_profile(db, account, session.profile_id)
+    ensure_consents(db, account, "health_data_storage", "ai_processing")
     existing_turns = list(session.turns or [])
     result = qwen_followup_chat(
         _profile_payload(profile),
@@ -385,6 +407,7 @@ async def answer_with_clinical_image(
     if not session:
         raise HTTPException(status_code=404, detail="session_not_found")
     profile = _load_profile(db, account, session.profile_id)
+    ensure_consents(db, account, "health_data_storage", "ai_processing")
     if session.status == "closed":
         raise HTTPException(status_code=409, detail="session_closed")
 
@@ -457,6 +480,7 @@ def retry_ai_assessment(
     if not session:
         raise HTTPException(status_code=404, detail="session_not_found")
     profile = _load_profile(db, account, session.profile_id)
+    ensure_consents(db, account, "health_data_storage", "ai_processing")
     previous = session.result_payload or {}
     if previous.get("response_source") != "ai_unavailable":
         raise HTTPException(status_code=409, detail="session_not_retryable")

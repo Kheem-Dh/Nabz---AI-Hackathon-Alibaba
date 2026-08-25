@@ -51,6 +51,12 @@ def test_owner_sees_real_usage_and_privacy_safe_request_logs(client):
     assert body["overview"]["active_24h"] >= 1
     assert body["overview"]["total_active_seconds"] >= 1
     assert len(body["series"]) == 14
+    assert body["privacy"]["accounts_with_current_consent"] >= 1
+    assert body["privacy"]["audit_events_7d"] >= 2
+    assert any(
+        row["type"] == "consent.granted"
+        for row in body["privacy"]["event_counts_7d"]
+    )
     owner = next(user for user in body["recent_users"] if user["email"] == "admin@nabz.test")
     assert owner["sessions"] == 1
 

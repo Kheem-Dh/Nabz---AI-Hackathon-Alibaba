@@ -394,6 +394,20 @@ this allowlist for every dashboard API request. Usage tracking records active
 seconds, page routes, status codes and latency; it never stores request bodies,
 chat text, tokens or uploaded content in analytics logs.
 
+On Render, add `NABZ_ADMIN_IDENTIFIERS` to the **backend Web Service**, then
+redeploy that service. Do not add it to the frontend Static Site: non-`VITE_`
+variables are unavailable to the built browser app, and admin authorization is
+intentionally decided only by the API. The Static Site needs only
+`VITE_API_BASE` pointing to the public backend URL.
+
+Nabz stores append-only, versioned choices for health-data storage and AI
+processing. New registrations accept them during profile completion; existing
+accounts see a one-time privacy gate. Users can review or withdraw consent and
+see their own privacy-safe activity under **Privacy**. Withdrawal blocks new
+clinical writes and AI processing while preserving access to existing records
+and deletion controls. The owner dashboard shows aggregate consent coverage
+and event counts, never clinical event contents.
+
 Follow [docs/ALIBABA_CLOUD_DEPLOY.md](docs/ALIBABA_CLOUD_DEPLOY.md) for the Alibaba Cloud ECS setup, HTTPS, backups, and rollback steps.
 
 ---

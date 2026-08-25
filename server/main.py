@@ -46,6 +46,7 @@ from location import router as location_router  # noqa: E402
 from medicine_evidence import router as medicine_evidence_router  # noqa: E402
 from observability import RequestTelemetryMiddleware  # noqa: E402
 from prescription import router as prescription_router  # noqa: E402
+from privacy import router as privacy_router  # noqa: E402
 from profiles import router as profiles_router  # noqa: E402
 from readiness import readiness_checks  # noqa: E402
 from runtime import (  # noqa: E402
@@ -246,6 +247,7 @@ def create_app(settings: RuntimeSettings | None = None) -> FastAPI:
     application.include_router(chat_attach_router)
     application.include_router(labreport_router)
     application.include_router(prescription_router)
+    application.include_router(privacy_router)
     application.include_router(summary_router)
     application.include_router(documents_router)
     application.include_router(dashboard_router)

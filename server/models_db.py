@@ -50,6 +50,12 @@ class Account(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
+    consent_records: Mapped[list["ConsentRecord"]] = relationship(
+        back_populates="account", cascade="all, delete-orphan"
+    )
+    audit_events: Mapped[list["AuditEvent"]] = relationship(
+        back_populates="account", cascade="all, delete-orphan"
+    )
 
 
 class LocationPreference(Base):
@@ -210,6 +216,45 @@ class RequestLog(Base):
     status_code: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
     latency_ms: Mapped[float] = mapped_column(Float, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True, nullable=False)
+
+
+class ConsentRecord(Base):
+    """Append-only proof of an account's current consent decision."""
+
+    __tablename__ = "consent_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    consent_type: Mapped[str] = mapped_column(String(40), index=True, nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(24), nullable=False)
+    granted: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    source: Mapped[str] = mapped_column(String(40), default="privacy_page", nullable=False)
+    changed_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True, nullable=False)
+
+    account: Mapped[Account] = relationship(back_populates="consent_records")
+
+
+class AuditEvent(Base):
+    """Privacy-safe security trail; clinical text and uploaded contents never belong here."""
+
+    __tablename__ = "audit_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    # Deliberately not a foreign key: deleting a family profile must not erase
+    # proof that the deletion occurred.
+    profile_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    event_type: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    resource_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    resource_id: Mapped[str | None] = mapped_column(String(80))
+    event_metadata: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True, nullable=False)
+
+    account: Mapped[Account] = relationship(back_populates="audit_events")
 
 
 class VerificationCode(Base):

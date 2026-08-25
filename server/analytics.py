@@ -12,7 +12,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from db import get_db
-from models_db import Account, Profile, RequestLog, TriageSession, UsageSession
+from models_db import Account, AuditEvent, ConsentRecord, Profile, RequestLog, TriageSession, UsageSession
+from privacy import CONSENT_VERSIONS, consent_is_active
 from security import get_current_account, require_admin
 
 router = APIRouter(tags=["analytics"])
@@ -126,6 +127,22 @@ def admin_overview(
     profiles = db.query(Profile).all()
     chats = db.query(TriageSession).all()
     usage = db.query(UsageSession).all()
+    consent_rows = (
+        db.query(ConsentRecord)
+        .order_by(ConsentRecord.changed_at.desc(), ConsentRecord.id.desc())
+        .all()
+    )
+    current_consents: dict[int, dict[str, ConsentRecord]] = defaultdict(dict)
+    for record in consent_rows:
+        current_consents[record.account_id].setdefault(record.consent_type, record)
+    consented_accounts = {
+        account.id
+        for account in accounts
+        if all(
+            consent_is_active(current_consents[account.id].get(kind), kind)
+            for kind in CONSENT_VERSIONS
+        )
+    }
 
     profile_owner = {profile.id: profile.account_id for profile in profiles}
     chats_by_user: Counter[int] = Counter()
@@ -235,6 +252,19 @@ def admin_overview(
         for row in endpoint_rows
     ]
 
+    audit_rows = (
+        db.query(AuditEvent.event_type, func.count(AuditEvent.id).label("events"))
+        .filter(AuditEvent.created_at >= log_since)
+        .group_by(AuditEvent.event_type)
+        .order_by(func.count(AuditEvent.id).desc())
+        .all()
+    )
+    audit_event_counts = [
+        {"type": row.event_type, "events": int(row.events or 0)}
+        for row in audit_rows
+    ]
+    audit_events_7d = sum(row["events"] for row in audit_event_counts)
+
     return {
         "generated_at": now.isoformat(),
         "overview": {
@@ -261,6 +291,12 @@ def admin_overview(
         "series": series,
         "recent_users": recent_users,
         "endpoint_stats": endpoint_stats,
+        "privacy": {
+            "accounts_with_current_consent": len(consented_accounts),
+            "consent_coverage_rate": round(len(consented_accounts) * 100 / len(accounts), 1) if accounts else 0,
+            "audit_events_7d": audit_events_7d,
+            "event_counts_7d": audit_event_counts,
+        },
     }
 
 

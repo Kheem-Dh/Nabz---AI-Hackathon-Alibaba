@@ -31,6 +31,7 @@ from db import SessionLocal, get_db
 from models_db import Account, Profile, TriageSession
 from schemas import TriageAnalysis, TriageTurn
 from security import get_current_account
+from privacy import ensure_consents, record_audit
 from sessions import _load_profile, _turn_from_session
 
 logger = logging.getLogger("nabz.triage.sse")
@@ -162,6 +163,7 @@ async def stream_start(
 ):
     # Create the session synchronously — cheap, DB-only.
     profile = _load_profile(db, account, payload.profile_id)
+    ensure_consents(db, account, "health_data_storage", "ai_processing")
     session = TriageSession(
         profile_id=profile.id,
         initial_text=payload.text.strip(),
@@ -170,6 +172,15 @@ async def stream_start(
         status="open",
     )
     db.add(session)
+    db.flush()
+    record_audit(
+        db,
+        account_id=account.id,
+        profile_id=profile.id,
+        event_type="triage.started",
+        resource_type="triage_session",
+        resource_id=session.id,
+    )
     db.commit()
     db.refresh(session)
     session_id = session.id
@@ -195,6 +206,7 @@ async def stream_answer(
     if not session:
         raise HTTPException(status_code=404, detail="session_not_found")
     _profile = _load_profile(db, account, session.profile_id)
+    ensure_consents(db, account, "health_data_storage", "ai_processing")
     if session.status == "closed":
         raise HTTPException(status_code=409, detail="session_closed")
 

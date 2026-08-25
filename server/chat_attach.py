@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from db import get_db
 from models_db import Account, Profile
 from security import get_current_account
+from privacy import ensure_consents, record_audit
 from triage import is_mock_mode
 from vision import describe_image, validate_upload
 
@@ -45,6 +46,7 @@ async def attach_image(
     db: Session = Depends(get_db),
 ) -> dict:
     profile = _owned_profile(db, account, profile_id)
+    ensure_consents(db, account, "health_data_storage", "ai_processing")
 
     payload = await file.read()
     mime, err = validate_upload(payload, file.filename or "photo", file.content_type)
@@ -53,9 +55,27 @@ async def attach_image(
 
     if is_mock_mode():
         description = _mock_description(profile.display_name)
+        record_audit(
+            db,
+            account_id=account.id,
+            profile_id=profile.id,
+            event_type="document.processed",
+            resource_type="clinical_image",
+            metadata={"mock": True},
+        )
+        db.commit()
         return {"description": description, "mock": True}
 
     description = describe_image(payload, file.filename or "photo", mime, profile.display_name)
     if not description:
         raise HTTPException(status_code=422, detail="could_not_describe_image")
+    record_audit(
+        db,
+        account_id=account.id,
+        profile_id=profile.id,
+        event_type="document.processed",
+        resource_type="clinical_image",
+        metadata={"mock": False},
+    )
+    db.commit()
     return {"description": description, "mock": False}

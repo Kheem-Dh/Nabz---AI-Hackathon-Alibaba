@@ -104,6 +104,7 @@ export default function AdminDashboardPage() {
 
   const { engagement, recent_users: users, series } = overview
   const metrics = overview.overview
+  const privacy = overview.privacy || { consent_coverage_rate: 0, audit_events_7d: 0, event_counts_7d: [] }
 
   return (
     <section className="admin-dashboard">
@@ -127,6 +128,7 @@ export default function AdminDashboardPage() {
         <MetricCard label="Active now" value={metrics.active_now.toLocaleString()} note={`${metrics.active_7d} unique users this week`} tone="live" />
         <MetricCard label="Engagement" value={`${engagement.engagement_rate}%`} note={`${engagement.engaged_users} users started care chats`} />
         <MetricCard label="Successful requests" value={`${requestHealth.rate}%`} note={`${requestHealth.requests.toLocaleString()} tracked API calls / 7 days`} />
+        <MetricCard label="Consent coverage" value={`${privacy.consent_coverage_rate}%`} note={`${privacy.audit_events_7d} privacy-safe audit events / 7 days`} />
       </div>
 
       <div className="admin-grid-main">
@@ -203,6 +205,14 @@ export default function AdminDashboardPage() {
           </div>
         </article>
       </div>
+
+      <article className="admin-panel admin-privacy-panel">
+        <div className="admin-panel-head"><div><span>PRIVACY CONTROLS</span><h2>Audit activity</h2></div><small>Aggregate event types only · no clinical content</small></div>
+        <div className="admin-audit-types">
+          {privacy.event_counts_7d.map((item) => <div key={item.type}><span>{item.type.replaceAll('.', ' ')}</span><strong>{item.events}</strong></div>)}
+          {!privacy.event_counts_7d.length && <p className="admin-empty">Consent and clinical activity events will appear here.</p>}
+        </div>
+      </article>
     </section>
   )
 }

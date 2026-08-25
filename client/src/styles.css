@@ -1369,6 +1369,62 @@ textarea.input {
   display: block;
 }
 
+/* Versioned consent + privacy activity ------------------------------------ */
+.consent-setup {
+  margin: 24px 0;
+  padding: clamp(18px, 3vw, 26px);
+  border: 1px solid #cfe1dc;
+  border-radius: 18px;
+  background: #f7fbfa;
+}
+.consent-setup.has-error { border-color: #d95e68; }
+.consent-setup h2 { margin: 0 0 6px; font-size: 18px; color: #173c37; }
+.consent-setup > p { margin: 0 0 16px; color: #667b77; font-size: 12px; line-height: 1.65; }
+.consent-setup label,
+.privacy-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 0;
+  cursor: pointer;
+}
+.consent-setup label + .field-error { margin: -7px 0 6px 32px; }
+.consent-setup input,
+.privacy-choice input { width: 19px; height: 19px; margin-top: 2px; accent-color: var(--teal); flex: 0 0 auto; }
+.consent-setup label span,
+.privacy-choice span { display: grid; gap: 4px; }
+.consent-setup label b,
+.privacy-choice b { color: #193d38; font-size: 13px; }
+.consent-setup label small,
+.privacy-choice small { color: #71827f; font-size: 11px; line-height: 1.55; }
+
+.privacy-page { max-width: 860px; margin: 0 auto; }
+.privacy-required { padding-top: clamp(20px, 4vw, 48px); }
+.privacy-gate-intro { margin-bottom: 24px; text-align: center; }
+.privacy-gate-intro > span,
+.privacy-control-head > div > span { color: var(--teal-dark); font-size: 9px; font-weight: 800; letter-spacing: .13em; }
+.privacy-gate-intro h1 { max-width: 650px; margin: 9px auto; color: #163a35; font-size: clamp(27px, 4vw, 43px); line-height: 1.08; letter-spacing: -.04em; }
+.privacy-gate-intro p { max-width: 620px; margin: 0 auto; color: #6c7d7a; font-size: 12px; line-height: 1.65; }
+.privacy-controls { border-color: #bcdad2; box-shadow: 0 12px 32px rgba(17, 67, 59, .07); }
+.privacy-control-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
+.privacy-control-head h2 { margin: 3px 0 0; color: #173b36; font-size: 19px; }
+.privacy-control-head > small { color: #7b8b88; font-size: 9px; }
+.privacy-current { padding: 5px 9px; border-radius: 999px; background: #ddf5ed; color: #21745f; font-size: 9px; }
+.privacy-choice { border-top: 1px solid #e5eeeb; }
+.privacy-withdraw-note { margin: 3px 0 16px; color: #778986; font-size: 10px; line-height: 1.6; }
+.privacy-activity { padding-bottom: 8px; }
+.privacy-event { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-top: 1px solid #e8efed; }
+.privacy-event > i { width: 9px; height: 9px; border: 2px solid #59bba5; border-radius: 50%; box-shadow: 0 0 0 4px #eaf7f3; }
+.privacy-event > div { display: grid; gap: 3px; }
+.privacy-event b { color: #254641; font-size: 11px; }
+.privacy-event small { color: #80908d; font-size: 9px; text-transform: capitalize; }
+
+@media (max-width: 520px) {
+  .privacy-control-head { align-items: flex-start; }
+  .privacy-controls .btn { width: 100%; }
+  .consent-setup { padding: 16px; }
+}
+
 /* --- Summary / print --------------------------------------------------- */
 
 .summary-doc {
@@ -4593,7 +4649,7 @@ textarea.input {
 .admin-live small { color: rgba(255,255,255,.55); font-size: 8px; }
 .admin-live button { margin-top: 8px; min-height: 36px; padding: 0 14px; border: 1px solid rgba(255,255,255,.18); border-radius: 10px; background: rgba(255,255,255,.08); color: #fff; font-size: 9px; font-weight: 700; }
 
-.admin-metrics { display: grid; grid-template-columns: repeat(6, minmax(145px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.admin-metrics { display: grid; grid-template-columns: repeat(7, minmax(135px, 1fr)); gap: 12px; margin-bottom: 18px; }
 .admin-metric { min-height: 150px; padding: 21px; display: flex; flex-direction: column; border: 1px solid #dce7e3; border-radius: 19px; background: #fff; box-shadow: 0 8px 25px rgba(16,40,37,.045); }
 .admin-metric > span { color: #6c7f7b; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
 .admin-metric strong { margin: auto 0 4px; color: #102825; font-size: clamp(25px, 2.2vw, 34px); line-height: 1; letter-spacing: -.045em; }
@@ -4605,6 +4661,11 @@ textarea.input {
 
 .admin-grid-main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, .75fr); gap: 18px; margin-bottom: 18px; }
 .admin-grid-lower { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 18px; margin-top: 18px; }
+.admin-privacy-panel { margin-top: 18px; }
+.admin-audit-types { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 9px; padding-top: 13px; }
+.admin-audit-types > div { padding: 13px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid #e1ebe8; border-radius: 12px; background: #f8fbfa; }
+.admin-audit-types span { color: #61736f; font-size: 9px; text-transform: capitalize; }
+.admin-audit-types strong { color: #183d37; font-size: 17px; }
 .admin-panel { padding: 22px; overflow: hidden; border: 1px solid #dce7e3; border-radius: 20px; background: #fff; box-shadow: 0 8px 25px rgba(16,40,37,.04); }
 .admin-panel-head { min-height: 44px; display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
 .admin-panel-head span { display: block; margin-bottom: 3px; color: var(--teal-dark); font-size: 7px; font-weight: 800; letter-spacing: .14em; }

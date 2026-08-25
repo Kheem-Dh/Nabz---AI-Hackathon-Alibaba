@@ -69,6 +69,15 @@ def auth(client: TestClient):
     assert resp.status_code == 200, resp.text
     token = resp.json()["token"]
     headers = {"Authorization": f"Bearer {token}"}
+    consent = client.put(
+        "/api/privacy/consents",
+        headers=headers,
+        json={
+            "choices": {"health_data_storage": True, "ai_processing": True},
+            "source": "existing_user_gate",
+        },
+    )
+    assert consent.status_code == 200, consent.text
     profiles = client.get("/api/profiles", headers=headers).json()
     self_id = profiles[0]["id"]
     return headers, resp.json()["account"], self_id

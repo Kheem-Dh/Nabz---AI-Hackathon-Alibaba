@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { listProfiles, updateProfile } from '../api'
+import { listProfiles, updateConsentChoices, updateProfile } from '../api'
 import { useAuth } from '../context/AuthContext'
 import {
   BLOOD_GROUPS,
@@ -40,6 +40,10 @@ export default function CompleteProfilePage() {
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [consents, setConsents] = useState({
+    health_data_storage: false,
+    ai_processing: false,
+  })
 
   useEffect(() => {
     let alive = true
@@ -93,6 +97,8 @@ export default function CompleteProfilePage() {
     if (wErr) next.weight_kg = wErr
     const bpErr = validateBp(form.bp_systolic, form.bp_diastolic)
     if (bpErr) next.bp = bpErr
+    if (!consents.health_data_storage) next.health_data_storage = 'Required to save this health profile.'
+    if (!consents.ai_processing) next.ai_processing = 'Required for personalised AI health guidance.'
     return next
   }
 
@@ -106,6 +112,7 @@ export default function CompleteProfilePage() {
 
     setSaving(true)
     try {
+      await updateConsentChoices(consents, 'registration')
       await updateProfile(selfId, {
         display_name: form.display_name.trim(),
         relation: form.relation || 'Self',
@@ -316,6 +323,29 @@ export default function CompleteProfilePage() {
               onChange={(e) => update({ notes: e.target.value })}
               placeholder="e.g. seasonal breathing symptoms are worse with dust"
             />
+          </div>
+
+          <div className={`consent-setup ${errors.health_data_storage || errors.ai_processing ? 'has-error' : ''}`}>
+            <h2>Your consent</h2>
+            <p>You can review or withdraw these choices later from Privacy. Withdrawal stops new uploads and AI assessments; your existing records remain available to you.</p>
+            <label>
+              <input
+                type="checkbox"
+                checked={consents.health_data_storage}
+                onChange={(e) => setConsents((value) => ({ ...value, health_data_storage: e.target.checked }))}
+              />
+              <span><b>Save health information</b><small>Allow Nabz to store this profile and future Vault records in your account.</small></span>
+            </label>
+            {errors.health_data_storage && <div className="field-error">{errors.health_data_storage}</div>}
+            <label>
+              <input
+                type="checkbox"
+                checked={consents.ai_processing}
+                onChange={(e) => setConsents((value) => ({ ...value, ai_processing: e.target.checked }))}
+              />
+              <span><b>Use AI for health guidance</b><small>Allow selected profile information and submitted content to be processed for triage and document explanations.</small></span>
+            </label>
+            {errors.ai_processing && <div className="field-error">{errors.ai_processing}</div>}
           </div>
 
           <div className="complete-profile-actions">

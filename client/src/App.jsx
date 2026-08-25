@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import { useLocationPref } from './context/LocationContext'
@@ -25,6 +25,7 @@ import LandingPage from './pages/LandingPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import { stopAllSpeech } from './hooks/useTextToSpeech'
+import { getConsentStatus } from './api'
 
 function Loading() {
   return (
@@ -44,12 +45,29 @@ export default function App() {
   const { account, loading, pendingRegistration } = useAuth()
   const { preference, loading: locLoading } = useLocationPref()
   const location = useLocation()
+  const [consentStatus, setConsentStatus] = useState(null)
+  const [consentLoading, setConsentLoading] = useState(false)
 
   // Audio belongs to the current screen. Navigating anywhere immediately
   // stops it, while the header control can stop it without navigation.
   useEffect(() => {
     stopAllSpeech()
   }, [location.pathname])
+
+  useEffect(() => {
+    if (!account) {
+      setConsentStatus(null)
+      setConsentLoading(false)
+      return
+    }
+    let alive = true
+    setConsentLoading(true)
+    getConsentStatus()
+      .then((next) => alive && setConsentStatus(next))
+      .catch(() => alive && setConsentStatus(null))
+      .finally(() => alive && setConsentLoading(false))
+    return () => { alive = false }
+  }, [account?.id])
 
   if (loading) return <Loading />
   if (!account) {
@@ -77,18 +95,38 @@ export default function App() {
     )
   }
 
-  if (locLoading) return <Loading />
-
   // First-run gate (winning plan §3): location before anything else.
   // The location screen itself is always accessible so users can update it.
   const isPrintRoute = location.pathname.startsWith('/summary')
   const isAdminRoute = location.pathname.startsWith('/admin')
   const onLocationScreen = location.pathname.startsWith('/location')
   const onOnboarding = location.pathname.startsWith('/onboarding')
+  const onPrivacyScreen = location.pathname.startsWith('/privacy')
+
+  if (consentLoading && !isAdminRoute) return <Loading />
+
+  // Existing accounts created before versioned consent are prompted once.
+  // Admin access remains independent and every clinical API also enforces
+  // these choices server-side.
+  if (!isAdminRoute && !onPrivacyScreen && !consentStatus?.complete) {
+    return (
+      <div className="app-shell">
+        <div className="app-container">
+          <TopBar minimal />
+          <main className="app-main">
+            <PrivacyPage required initialStatus={consentStatus} onConsentChange={setConsentStatus} />
+          </main>
+          <Disclaimer />
+        </div>
+      </div>
+    )
+  }
+
+  if (locLoading && !isAdminRoute && !onPrivacyScreen) return <Loading />
 
   // Location permission is the first signed-in step. Manual province/city is
   // offered only from that screen if GPS is unavailable or declined.
-  if (!preference && !onLocationScreen && !isAdminRoute) {
+  if (!preference && !onLocationScreen && !isAdminRoute && !onPrivacyScreen) {
     return (
       <div className="app-shell">
         <div className="app-container">
@@ -104,7 +142,7 @@ export default function App() {
 
   // Onboarding gate — one guided walk-through per account, dismissible via Skip.
   const needsOnboarding = account && !hasOnboarded(account.id)
-  if (needsOnboarding && !onOnboarding && !onLocationScreen && !isAdminRoute) {
+  if (needsOnboarding && !onOnboarding && !onLocationScreen && !isAdminRoute && !onPrivacyScreen) {
     return (
       <div className="app-shell">
         <div className="app-container">
@@ -138,7 +176,7 @@ export default function App() {
             <Route path="/profile/:id/documents" element={<DocumentsPage />} />
             <Route path="/clinics" element={<ClinicsPage />} />
             <Route path="/summary/:id" element={<SummaryPage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/privacy" element={<PrivacyPage initialStatus={consentStatus} onConsentChange={setConsentStatus} />} />
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

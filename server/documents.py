@@ -13,6 +13,7 @@ from db import get_db
 from models_db import Account, Profile, TimelineEntry
 from schemas import VaultDocumentOut
 from security import get_current_account
+from privacy import ensure_consents, record_audit
 from storage import (
     content_type_for_filename,
     delete_upload_ref,
@@ -252,6 +253,7 @@ async def upload_document(
     db: Session = Depends(get_db),
 ) -> VaultDocumentOut:
     profile = _owned_profile(db, account, profile_id)
+    ensure_consents(db, account, "health_data_storage", "ai_processing")
     normalized_type = document_type.strip().lower()
     if normalized_type not in DOCUMENT_TYPES:
         raise HTTPException(status_code=422, detail="invalid_document_type")
@@ -292,6 +294,16 @@ async def upload_document(
         },
     )
     db.add(entry)
+    db.flush()
+    record_audit(
+        db,
+        account_id=account.id,
+        profile_id=profile.id,
+        event_type="document.saved",
+        resource_type=normalized_type,
+        resource_id=entry.id,
+        metadata={"extraction_status": extraction.get("extraction_status", "not_applicable")},
+    )
     db.commit()
     db.refresh(entry)
     return _entry_document(entry)  # type: ignore[return-value]
@@ -307,6 +319,7 @@ async def attach_confirmed_prescription_source(
 ) -> VaultDocumentOut:
     """Attach the original paper only after its transcription was confirmed."""
     profile = _owned_profile(db, account, profile_id)
+    ensure_consents(db, account, "health_data_storage")
     entry = db.get(TimelineEntry, confirmation_entry_id)
     if (
         not entry
@@ -336,6 +349,14 @@ async def attach_confirmed_prescription_source(
         "content_type": content_type_for_filename(file.filename or "rx.jpg"),
         "size_bytes": len(payload),
     }
+    record_audit(
+        db,
+        account_id=account.id,
+        profile_id=profile.id,
+        event_type="document.source_attached",
+        resource_type="prescription",
+        resource_id=entry.id,
+    )
     db.commit()
     db.refresh(entry)
     return _entry_document(entry)  # type: ignore[return-value]
@@ -397,6 +418,14 @@ def delete_document(
     if not document.deletable:
         raise HTTPException(status_code=409, detail="delete_from_source_record")
     stored_ref = str((entry.payload or {}).get("stored_ref") or "")
+    record_audit(
+        db,
+        account_id=account.id,
+        profile_id=entry.profile_id,
+        event_type="document.deleted",
+        resource_type=document.document_type,
+        resource_id=entry.id,
+    )
     db.delete(entry)
     db.commit()
     delete_upload_ref(stored_ref)

@@ -9,6 +9,7 @@ from db import get_db
 from models_db import Account, Medicine, Profile, TimelineEntry
 from schemas import MedicineOut, ProfileIn, ProfileOut, TimelineEntryOut
 from security import get_current_account
+from privacy import ensure_consents, record_audit
 from storage import delete_upload_ref
 
 router = APIRouter(prefix="/api/profiles", tags=["profiles"])
@@ -87,6 +88,7 @@ def create_profile(
     account: Account = Depends(get_current_account),
     db: Session = Depends(get_db),
 ) -> ProfileOut:
+    ensure_consents(db, account, "health_data_storage")
     profile = Profile(
         account_id=account.id,
         display_name=payload.display_name.strip(),
@@ -108,6 +110,15 @@ def create_profile(
     if payload.date_of_birth:
         profile.age = _age_on(payload.date_of_birth)
     db.add(profile)
+    db.flush()
+    record_audit(
+        db,
+        account_id=account.id,
+        profile_id=profile.id,
+        event_type="profile.created",
+        resource_type="profile",
+        resource_id=profile.id,
+    )
     db.commit()
     db.refresh(profile)
     return _to_out(profile)
@@ -130,6 +141,7 @@ def update_profile(
     db: Session = Depends(get_db),
 ) -> ProfileOut:
     profile = _load_owned(db, account, profile_id)
+    ensure_consents(db, account, "health_data_storage")
     profile.display_name = payload.display_name.strip()
     profile.relation = payload.relation
     profile.age = payload.age
@@ -147,6 +159,14 @@ def update_profile(
     profile.chronic_conditions = list(payload.chronic_conditions or [])
     profile.allergies = list(payload.allergies or [])
     profile.notes = payload.notes
+    record_audit(
+        db,
+        account_id=account.id,
+        profile_id=profile.id,
+        event_type="profile.updated",
+        resource_type="profile",
+        resource_id=profile.id,
+    )
     db.commit()
     db.refresh(profile)
     return _to_out(profile)
@@ -161,12 +181,21 @@ def delete_profile(
     profile = _load_owned(db, account, profile_id)
     if profile.is_self:
         raise HTTPException(status_code=400, detail="cannot_delete_self_profile")
+    ensure_consents(db, account, "health_data_storage")
     stored_refs = []
     for entry in profile.timeline:
         payload = entry.payload or {}
         stored_ref = payload.get("stored_ref") or payload.get("image_ref")
         if stored_ref:
             stored_refs.append(str(stored_ref))
+    record_audit(
+        db,
+        account_id=account.id,
+        profile_id=profile.id,
+        event_type="profile.deleted",
+        resource_type="profile",
+        resource_id=profile.id,
+    )
     db.delete(profile)
     db.commit()
     for stored_ref in stored_refs:

@@ -20,6 +20,7 @@ from medicine_evidence import evidence_for_medicine
 from models_db import Account, Profile, TimelineEntry
 from schemas import SummaryResponse
 from security import get_current_account
+from privacy import record_audit
 
 router = APIRouter(prefix="/api", tags=["summary"])
 
@@ -132,7 +133,7 @@ def summary(
     now = datetime.now(timezone.utc)
     reference = f"NABZ-{profile.id}-{now.strftime('%Y%m%d%H%M')}"
 
-    return SummaryResponse(
+    response = SummaryResponse(
         profile_id=profile.id,
         generated_at=now,
         reference=reference,
@@ -165,3 +166,13 @@ def summary(
             "Nabz does not diagnose or prescribe."
         ),
     )
+    record_audit(
+        db,
+        account_id=account.id,
+        profile_id=profile.id,
+        event_type="summary.generated",
+        resource_type="doctor_summary",
+        resource_id=reference,
+    )
+    db.commit()
+    return response
