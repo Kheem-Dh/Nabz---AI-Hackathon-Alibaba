@@ -58,6 +58,8 @@ from sessions import router as triage_router  # noqa: E402
 from triage_stream import router as triage_stream_router  # noqa: E402
 from voice_stt import router as voice_stt_router  # noqa: E402
 from summary import router as summary_router  # noqa: E402
+from handoff import router as handoff_router  # noqa: E402
+from safety_eval import router as safety_eval_router  # noqa: E402
 from triage import (  # noqa: E402
     get_model_name,
     get_request_timeout_seconds,
@@ -251,6 +253,8 @@ def create_app(settings: RuntimeSettings | None = None) -> FastAPI:
     application.include_router(prescription_router)
     application.include_router(privacy_router)
     application.include_router(summary_router)
+    application.include_router(handoff_router)
+    application.include_router(safety_eval_router)
     application.include_router(documents_router)
     application.include_router(dashboard_router)
     if settings.demo_enabled and not settings.is_production:

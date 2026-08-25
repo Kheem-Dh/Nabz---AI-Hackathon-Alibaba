@@ -4972,3 +4972,105 @@ textarea.input {
 {
   box-shadow: var(--shadow-1);
 }
+
+/* ============================================================
+   Doctor QR handoff + public handoff page (2026-08-26)
+   ============================================================ */
+
+.doctor-handoff-card {
+  background: linear-gradient(135deg, rgba(15,157,138,0.06), rgba(15,157,138,0.02));
+  border: 1px solid rgba(15,157,138,0.25);
+  border-radius: var(--radius-lg, 18px);
+  padding: 18px;
+  box-shadow: var(--shadow-2);
+}
+.doctor-handoff-head {
+  display: flex; justify-content: space-between; gap: 12px;
+  align-items: flex-start;
+}
+.doctor-handoff-kicker {
+  font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--teal-dark, #0b7d6e); margin-bottom: 4px;
+}
+.doctor-handoff-card h2 { margin: 0 0 6px; font-size: 18px; color: var(--text); }
+.doctor-handoff-card p { margin: 0; font-size: 13px; color: var(--muted, #6b7c79); line-height: 1.55; }
+.doctor-handoff-body {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.doctor-handoff-qr {
+  background: #fff;
+  border: 1px solid var(--border, #e3ecea);
+  border-radius: var(--radius-md, 14px);
+  padding: 10px;
+  min-width: 240px;
+  min-height: 240px;
+  display: flex; align-items: center; justify-content: center;
+}
+.doctor-handoff-qr svg { width: 220px; height: 220px; display: block; }
+.doctor-handoff-actions { display: flex; flex-direction: column; gap: 10px; }
+.doctor-handoff-url {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border, #e3ecea);
+  background: #fff;
+  border-radius: var(--radius-sm, 10px);
+  word-break: break-all;
+  color: var(--muted, #6b7c79);
+}
+.doctor-handoff-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.doctor-handoff-hint { font-size: 12px; color: var(--muted, #6b7c79); }
+
+@media (max-width: 720px) {
+  .doctor-handoff-body { grid-template-columns: 1fr; }
+  .doctor-handoff-qr { justify-self: center; }
+}
+
+/* Public HandoffPage */
+.handoff-page { min-height: 100vh; background: #f4f7f7; padding: 24px 16px; }
+.handoff-wrap { max-width: 780px; margin: 0 auto; background: #fff; border-radius: var(--radius-xl, 22px); border: 1px solid var(--border, #e3ecea); padding: 24px; box-shadow: var(--shadow-2); }
+.handoff-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.handoff-brand { display: flex; align-items: center; gap: 10px; color: var(--teal-dark, #0b7d6e); font-weight: 600; }
+.handoff-brand .brand-ur { font-size: 22px; }
+.handoff-patient-card {
+  background: var(--teal-light, #e6f6f3);
+  border-radius: var(--radius-md, 14px);
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+.handoff-patient-card h1 { margin: 0; font-size: 22px; color: var(--teal-dark, #0b7d6e); }
+.handoff-patient-meta { color: var(--muted, #6b7c79); font-size: 13px; margin-top: 4px; }
+.handoff-allergy { margin-top: 8px; color: #a13a00; font-size: 13px; font-weight: 500; }
+.handoff-block { padding: 14px 0; border-top: 1px solid var(--border, #e3ecea); }
+.handoff-block h2 { margin: 0 0 8px; font-size: 15px; color: var(--teal-dark, #0b7d6e); text-transform: uppercase; letter-spacing: 0.06em; }
+.handoff-level {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.handoff-level.level-emergency { background: #fdecea; color: #d64545; }
+.handoff-level.level-doctor_24h { background: #fff6e5; color: #b47100; }
+.handoff-level.level-home_care { background: #e6f6f3; color: #0b7d6e; }
+.handoff-line { margin: 6px 0; font-size: 14px; line-height: 1.55; }
+.handoff-sbar { background: rgba(0,0,0,0.03); padding: 8px 10px; border-radius: 8px; }
+.handoff-list ul, .handoff-list ol { margin: 4px 0 6px 20px; }
+.handoff-list li { margin-bottom: 3px; font-size: 13.5px; }
+.handoff-red { color: #a13a00; background: #fdecea; padding: 6px 10px; border-radius: 8px; font-size: 13px; margin: 6px 0; }
+.handoff-note { color: var(--muted, #6b7c79); font-size: 12px; }
+.handoff-weight { color: var(--teal-dark, #0b7d6e); font-size: 12px; }
+.handoff-footer { padding-top: 14px; border-top: 1px dashed var(--border, #e3ecea); color: var(--muted, #6b7c79); font-size: 12px; margin-top: 14px; }
+.handoff-loading, .handoff-error { text-align: center; padding: 40px; color: var(--muted, #6b7c79); }
+.flag-low { color: #b47100; }
+.flag-high { color: #d64545; }
+@media print {
+  .handoff-header button, .btn { display: none !important; }
+  .handoff-page { background: #fff; padding: 0; }
+  .handoff-wrap { border: none; box-shadow: none; padding: 0; }
+}

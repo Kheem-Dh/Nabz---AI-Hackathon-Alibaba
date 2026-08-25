@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getSummary } from '../api'
+import DoctorHandoffCard from '../components/DoctorHandoffCard'
 
 function fmt(iso) {
   try {
@@ -85,6 +86,10 @@ export default function SummaryPage() {
             <button className="back-link" onClick={() => navigate(`/profile/${id}`)}>
               ‹ پروفائل · Profile
             </button>
+          </div>
+
+          <div className="no-print" style={{ marginBottom: 12 }}>
+            <DoctorHandoffCard profileId={Number(id)} />
           </div>
 
           <div className="summary-doc">

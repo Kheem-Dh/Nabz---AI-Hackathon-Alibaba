@@ -271,6 +271,17 @@ export function getNearbyFacilities({ urgency = 'DOCTOR_24H', latitude, longitud
 // --- Summary + misc ----------------------------------------------------------
 
 export const getSummary = (profileId) => jsonReq(`/api/summary/${profileId}`, 'GET')
+
+// Doctor QR handoff — issues a short-lived read-only link the doctor can
+// scan or open on their phone. The public read endpoint is unauthenticated
+// (the token in the URL grants read access), so we do not attach the JWT.
+export const createDoctorHandoff = (profileId) =>
+  jsonReq(`/api/summary/${profileId}/handoff`, 'POST')
+
+export async function readDoctorHandoff(token) {
+  const resp = await fetch(`${API_BASE}/api/handoff/${encodeURIComponent(token)}`)
+  return handle(resp)
+}
 export const getDashboard = (profileId) => jsonReq(`/api/dashboard/${profileId}`, 'GET')
 export const seedDemoProfile = (profileId) => jsonReq(`/api/demo/seed/${profileId}`, 'POST')
 

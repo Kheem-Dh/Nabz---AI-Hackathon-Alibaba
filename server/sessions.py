@@ -225,6 +225,27 @@ def _record_result(db: Session, session: TriageSession, profile: Profile, turn: 
     payload["encounter_transcript"] = list(session.turns or [])
     payload["session_id"] = session.id
 
+    # PK-context ranked differential (winning-plan demo trio #6). Ranker is
+    # deterministic; safe to call for every persisted triage.
+    try:
+        from pk_context import rank_differential
+        from models_db import LocationPreference
+
+        province = None
+        loc_row = (
+            db.query(LocationPreference)
+            .filter(LocationPreference.account_id == profile.account_id)
+            .first()
+        )
+        if loc_row and loc_row.province:
+            province = loc_row.province
+        payload["pk_ranked_differential"] = rank_differential(
+            payload.get("doctor_differential") or [],
+            province=province,
+        )
+    except Exception:  # noqa: BLE001
+        payload["pk_ranked_differential"] = []
+
     # A legacy version saved an AI-unavailable safety response as if it were a
     # completed assessment. If that same session is retried successfully,
     # remove the stale placeholder before adding the real result.

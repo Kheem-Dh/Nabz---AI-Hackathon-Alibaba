@@ -25,6 +25,7 @@ import CompleteProfilePage from './pages/CompleteProfilePage'
 import LandingPage from './pages/LandingPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
+import HandoffPage from './pages/HandoffPage'
 import { stopAllSpeech } from './hooks/useTextToSpeech'
 import { getConsentStatus } from './api'
 
@@ -69,6 +70,12 @@ export default function App() {
       .finally(() => alive && setConsentLoading(false))
     return () => { alive = false }
   }, [account?.id])
+
+  // Public doctor-handoff page — bypasses every gate (auth, consent, onboarding,
+  // location). The URL token itself is the grant.
+  if (location.pathname.startsWith('/handoff/')) {
+    return <HandoffPage />
+  }
 
   if (loading) return <Loading />
   if (!account) {
@@ -178,6 +185,7 @@ export default function App() {
             <Route path="/profile/:id/documents" element={<DocumentsPage />} />
             <Route path="/clinics" element={<ClinicsPage />} />
             <Route path="/summary/:id" element={<SummaryPage />} />
+            <Route path="/handoff/:token" element={<HandoffPage />} />
             <Route path="/privacy" element={<PrivacyPage initialStatus={consentStatus} onConsentChange={setConsentStatus} />} />
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
