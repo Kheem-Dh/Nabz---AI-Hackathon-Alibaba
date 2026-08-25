@@ -78,6 +78,11 @@ export default function App() {
   }
 
   if (loading) return <Loading />
+
+  // Keep the public product home available after sign-in. The Nabz brand in
+  // the application header always returns here without ending the session.
+  if (location.pathname === '/welcome') return <LandingPage />
+
   if (!account) {
     if (location.pathname.startsWith('/forgot-password')) return <ForgotPasswordPage />
     if (location.pathname.startsWith('/auth')) return <AuthPage />
@@ -209,10 +214,12 @@ function TopBar({ minimal = false }) {
   return (
     <header className={`topbar ${scrolled ? 'topbar-scrolled' : ''}`} data-scrolled={scrolled ? 'true' : 'false'}>
       <div className="topbar-row">
-        <button className="brand brand-home" onClick={() => navigate('/')} aria-label="Go to Nabz home">
-          <span className="brand-ur">نبض</span>
+        <button className="brand brand-home" onClick={() => navigate('/welcome')} aria-label="Go to Nabz home">
+          <span className="brand-app-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M2.5 12h4l2.1-6 4.2 12 2.2-6h6.5" /></svg>
+          </span>
           <div>
-            <div className="brand-en">NABZ</div>
+            <div className="brand-title"><span className="brand-ur">نبض</span><span className="brand-en">NABZ</span></div>
             <div className="brand-pulse urdu">آپ کی آواز، آپ کی صحت</div>
           </div>
         </button>

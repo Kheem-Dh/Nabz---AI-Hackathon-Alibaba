@@ -330,7 +330,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
         <div className="triage-start-head">
           <div>
             <div className="hero-greet-ur urdu">
-              {profile.display_name}، آپ کیسا محسوس کر رہے ہیں؟
+              آج طبیعت کیسی ہے؟
             </div>
             <div className="hero-greet-en">Tell Nabz how {profile.display_name} feels</div>
           </div>
@@ -353,6 +353,20 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
             Microphone permission denied. Allow it, or type below.
           </div>
         )}
+
+        <div className="voice-first-start">
+          <div className="voice-start-rings" aria-hidden="true"><i /><i /></div>
+          <MicButton
+            listening={false}
+            disabled={!speech.supported}
+            onClick={startVoice}
+          />
+          <div className="voice-first-copy">
+            <strong>Start with your voice</strong>
+            <span className="urdu">مائیک دبائیں اور آرام سے اپنی بات بتائیں</span>
+            <small>{speech.backend === 'live' ? 'Live transcript as you speak' : 'Secure cloud transcription after recording'}</small>
+          </div>
+        </div>
 
         <form
           className="care-composer symptom-composer"
@@ -379,7 +393,8 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           />
           <footer>
             <button className="care-tool" type="button" onClick={startVoice} disabled={!speech.supported}>
-              🎤 Speak
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 10.5v.7a6.5 6.5 0 0 0 13 0v-.7M12 17.7V21" /></svg>
+              Speak
             </button>
             <span>{speech.backend === 'live' ? 'Live transcript in Chrome' : 'Transcript appears after Done'} · Enter to send</span>
             <button className="care-send" type="submit" disabled={!typed.trim()} aria-label="Send">

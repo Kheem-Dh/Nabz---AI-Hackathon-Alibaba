@@ -176,22 +176,24 @@ export default function HomePage() {
         )}
         {workspaceError && <div className="form-error">{workspaceError}</div>}
 
-        {selectedId ? (
-          <PastEncounter
-            encounter={selectedEncounter}
-            loading={detailLoading}
-            onNew={newAssessment}
-            onRetry={retrySavedAssessment}
-            profileId={active.id}
-          />
-        ) : (
-          <TriageConversation
-            key={`${active.id}-${conversationKey}`}
-            profile={active}
-            onSessionChanged={sessionChanged}
-            initialTurn={resumeTurn}
-          />
-        )}
+        <div className={`workspace-conversation ${selectedId ? 'has-encounter' : 'is-new'}`}>
+          {selectedId ? (
+            <PastEncounter
+              encounter={selectedEncounter}
+              loading={detailLoading}
+              onNew={newAssessment}
+              onRetry={retrySavedAssessment}
+              profileId={active.id}
+            />
+          ) : (
+            <TriageConversation
+              key={`${active.id}-${conversationKey}`}
+              profile={active}
+              onSessionChanged={sessionChanged}
+              initialTurn={resumeTurn}
+            />
+          )}
+        </div>
       </main>
 
       <aside className="health-insights-column">

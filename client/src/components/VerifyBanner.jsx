@@ -16,6 +16,7 @@ export default function VerifyBanner() {
 
   return (
     <button
+      className="verify-banner"
       onClick={() => navigate('/verify')}
       style={{
         width: '100%',

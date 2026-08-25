@@ -5440,6 +5440,314 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
   .wiz-foot .btn { padding-inline: 10px; }
 }
 
+/* ============================================================
+   Chat-first responsive workspace and unified product hierarchy
+   ============================================================ */
+
+:root {
+  --type-display: clamp(2rem, 4vw, 4.5rem);
+  --type-page-title: clamp(1.6rem, 2.3vw, 2.15rem);
+  --type-section-title: clamp(1.15rem, 1.4vw, 1.35rem);
+  --type-body: clamp(.875rem, .25vw + .8rem, 1rem);
+  --type-support: .8125rem;
+  --type-label: .6875rem;
+}
+
+/* The public header now remains stable while the marketing page scrolls and
+   uses the same surface treatment as the authenticated product header. */
+.landing-nav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  width: min(1220px, calc(100% - 32px));
+  padding-inline: clamp(10px, 1.5vw, 18px);
+  border: 1px solid rgba(16, 40, 37, .08);
+  border-top: 0;
+  border-radius: 0 0 18px 18px;
+  background: rgba(255, 255, 255, .9);
+  box-shadow: 0 8px 30px rgba(16, 40, 37, .06);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+}
+.landing-hero h1 { font-size: var(--type-display); text-wrap: balance; }
+.landing-lead { font-size: var(--type-body); }
+.landing-section-head h2,
+.safety-copy h2 { text-wrap: balance; }
+.landing-step p,
+.landing-feature p,
+.safety-copy > p { font-size: var(--type-support); }
+
+/* Compact, recognizable product brand. */
+.brand-home { align-items: center; gap: 10px; }
+.brand-app-mark {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 12px;
+  background: rgba(255,255,255,.12);
+}
+.brand-app-mark svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.brand-title { display: flex; align-items: baseline; gap: 7px; }
+.brand-title .brand-ur { font-size: 1.45rem; }
+.brand-title .brand-en { font-size: .7rem; font-weight: 800; letter-spacing: .12em; }
+.brand-pulse { margin-top: 1px; font-size: .6875rem; line-height: 1.45; }
+.topbar { background: linear-gradient(120deg, #319e8b 0%, #0b7568 100%); }
+.topbar-row { gap: clamp(10px, 1.4vw, 22px); }
+.desktop-nav button { min-height: 42px; padding-inline: 14px; }
+.profile-header-btn { min-height: 44px; }
+.profile-header-btn strong { font-size: .75rem; }
+.profile-header-btn small { font-size: .625rem; }
+
+/* Let the conversation own the center viewport, just like a modern chat app. */
+.assessment-workspace {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+.workspace-header { flex: 0 0 auto; }
+.workspace-header h1 { font-size: var(--type-page-title); line-height: 1.12; }
+.workspace-header p { font-size: var(--type-support); }
+.workspace-conversation {
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+.workspace-conversation > * { width: 100%; }
+.workspace-conversation > .triage-start-card {
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.triage-start-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(15,157,138,.08), transparent 17rem),
+    linear-gradient(180deg, #fff 0%, #fbfdfc 100%);
+}
+.triage-start-head { flex: 0 0 auto; }
+.triage-start-card .hero-greet-ur {
+  font-size: clamp(1.45rem, 2vw, 1.9rem);
+  line-height: 1.75;
+}
+.triage-start-card .hero-greet-en { font-size: var(--type-support); }
+.voice-language button { min-height: 36px; font-size: .75rem; }
+
+.voice-first-start {
+  position: relative;
+  min-height: clamp(140px, 18vh, 240px);
+  padding: 14px 16px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  flex-direction: column;
+  text-align: center;
+}
+.voice-first-start .mic-button {
+  position: relative;
+  z-index: 2;
+  width: clamp(100px, 7.5vw, 112px);
+  height: clamp(100px, 7.5vw, 112px);
+  flex: 0 0 auto;
+  box-shadow: 0 18px 45px rgba(11,125,110,.27);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.voice-first-start .mic-button:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 24px 54px rgba(11,125,110,.34);
+}
+.mic-button .mic-icon svg {
+  width: 38px;
+  height: 38px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.mic-button.listening .mic-icon svg { fill: currentColor; stroke: none; }
+.mic-button .mic-label { font-size: 1rem; }
+.voice-start-rings {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 170px;
+  height: 170px;
+  transform: translate(-50%, -62%);
+  pointer-events: none;
+}
+.voice-start-rings i {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(15,157,138,.13);
+  border-radius: 50%;
+}
+.voice-start-rings i:last-child { inset: -24px; opacity: .55; }
+.voice-first-copy { position: relative; z-index: 2; margin-top: 10px; display: grid; gap: 2px; }
+.voice-first-copy strong { color: #173b35; font-size: 1rem; }
+.voice-first-copy span { color: var(--teal-dark); font-size: .9375rem; line-height: 1.9; }
+.voice-first-copy small { color: var(--ink-mute); font-size: .75rem; }
+
+.triage-start-card .symptom-composer {
+  width: min(780px, 100%);
+  margin: auto auto 0;
+  flex: 0 0 auto;
+}
+.triage-start-card .care-composer textarea {
+  height: 72px;
+  min-height: 76px;
+  font-size: var(--type-body);
+  line-height: 1.55;
+}
+.care-composer footer > span { font-size: .6875rem; }
+.care-tool {
+  min-height: 38px;
+  padding-inline: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .75rem;
+}
+.care-tool svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* One contained application viewport on laptops and desktops. Secondary
+   insights collapse before the primary care conversation becomes cramped. */
+@media (min-width: 900px) {
+  .workspace-shell .app-container { height: 100dvh; min-height: 0; overflow: hidden; }
+  .workspace-shell .app-main {
+    min-height: 0;
+    padding: clamp(14px, 1.5vw, 22px) 0 8px !important;
+    overflow: hidden;
+  }
+  .workspace-shell .desktop-health-workspace {
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    align-items: stretch;
+  }
+  .workspace-shell .family-sidebar,
+  .workspace-shell .assessment-workspace,
+  .workspace-shell .health-insights-column {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .workspace-shell .assessment-workspace { overflow: hidden; }
+  .workspace-shell .workspace-conversation:not(.is-new) { overflow-y: auto; }
+}
+
+@media (min-width: 900px) and (max-width: 1439px) {
+  .workspace-shell .desktop-health-workspace {
+    grid-template-columns: minmax(210px, 240px) minmax(0, 1fr) !important;
+  }
+  .workspace-shell .health-insights-column { display: none !important; }
+}
+
+@media (min-width: 1440px) {
+  .workspace-shell .desktop-health-workspace {
+    grid-template-columns: minmax(210px, 240px) minmax(560px, 1fr) minmax(280px, 320px) !important;
+  }
+}
+
+/* Tablets keep family switching as a compact horizontal strip instead of a
+   tall sidebar that pushes the actual health conversation below the fold. */
+@media (max-width: 899px) {
+  .workspace-shell .app-main { padding-top: 14px; }
+  .desktop-health-workspace { display: flex; }
+  .family-sidebar {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    padding: 8px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .family-sidebar::-webkit-scrollbar { display: none; }
+  .family-sidebar .fs-head { display: none; }
+  .family-sidebar .fs-list { flex-direction: row; gap: 7px; }
+  .family-sidebar .fs-profile { min-width: min(240px, 68vw); }
+  .family-sidebar .fs-history { display: none; }
+  .family-sidebar .fs-add-btn {
+    min-width: 170px;
+    min-height: 44px;
+    margin: 0;
+    white-space: nowrap;
+  }
+  .assessment-workspace { min-height: min(680px, calc(100dvh - 180px)); }
+  .voice-first-start { min-height: 220px; }
+  .desktop-health-workspace > .encounter-sidebar,
+  .desktop-health-workspace > .health-insights-column { display: none !important; }
+}
+
+@media (max-width: 640px) {
+  .topbar { padding: 10px 12px 11px; border-radius: 0 0 18px 18px; }
+  .brand-app-mark { width: 36px; height: 36px; }
+  .brand-title .brand-ur { font-size: 1.25rem; }
+  .brand-pulse { display: none; }
+  .topbar-row > .row { justify-content: flex-end; overflow-x: auto; scrollbar-width: none; }
+  .topbar-row > .row::-webkit-scrollbar { display: none; }
+  .trust-bar { display: none; }
+  .verify-banner {
+    min-height: 44px;
+    padding: 7px 12px !important;
+    font-size: .75rem !important;
+    line-height: 1.35;
+  }
+  .assessment-workspace { min-height: calc(100dvh - 190px); }
+  .workspace-header {
+    margin: 0 0 10px;
+    padding: 0 0 10px;
+    gap: 8px;
+  }
+  .workspace-header > div:first-child { display: none; }
+  .workspace-actions button { min-height: 42px; }
+  .triage-start-head { gap: 12px; }
+  .triage-start-card .hero-greet-ur { font-size: 1.35rem; }
+  .voice-first-start { min-height: 210px; padding-block: 18px 12px; }
+  .voice-first-start .mic-button { width: 96px; height: 96px; }
+  .voice-start-rings { width: 135px; height: 135px; }
+  .voice-first-copy strong { font-size: .9375rem; }
+  .voice-first-copy span { font-size: .875rem; }
+  .triage-start-card .symptom-composer { margin-top: 10px; }
+  .triage-start-card .care-composer textarea { min-height: 68px; }
+  .landing-nav { width: 100%; border-radius: 0 0 16px 16px; }
+}
+
+@media (max-height: 760px) and (min-width: 900px) {
+  .voice-first-start { min-height: 150px; padding-block: 12px 8px; }
+  .voice-first-start .mic-button { width: 84px; height: 84px; }
+  .voice-start-rings { width: 118px; height: 118px; }
+  .voice-first-copy { margin-top: 9px; }
+  .voice-first-copy span { display: none; }
+  .triage-start-card .care-composer textarea { min-height: 62px; }
+}
+
 @media print {
   .handoff-header button, .btn { display: none !important; }
   .handoff-page { background: #fff; padding: 0; }
