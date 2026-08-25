@@ -63,6 +63,20 @@ def test_register_and_login(client):
     assert bad.status_code == 401
 
 
+def test_registration_rejects_weak_passwords(client):
+    too_short = client.post(
+        "/api/auth/register",
+        json={"full_name": "Weak User", "phone": "03001234568", "password": "abc123"},
+    )
+    assert too_short.status_code == 422
+
+    missing_digit = client.post(
+        "/api/auth/register",
+        json={"full_name": "Weak User", "phone": "03001234569", "password": "passwordonly"},
+    )
+    assert missing_digit.status_code == 422
+
+
 def test_register_creates_self_profile(client, auth):
     headers, account, self_id = auth
     me = client.get("/api/auth/me", headers=headers)

@@ -30,6 +30,9 @@ async function handle(resp) {
     body = text
   }
   if (!resp.ok) {
+    const validation = body && typeof body === 'object' && Array.isArray(body.detail)
+      ? body.detail
+      : null
     const detail =
       body && typeof body === 'object' && body.detail
         ? typeof body.detail === 'string'
@@ -46,6 +49,7 @@ async function handle(resp) {
     const err = new Error(friendly)
     err.status = resp.status
     err.detail = detail
+    err.validation = validation
     throw err
   }
   return body

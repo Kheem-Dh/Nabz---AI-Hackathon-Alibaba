@@ -94,7 +94,10 @@ export default function AdminDashboardPage() {
         <div className="admin-lock">⌁</div>
         <span>OWNER CONSOLE</span>
         <h1>Private dashboard</h1>
-        <p>This account is not on the server’s admin allowlist. Sign in with the owner email or phone configured in <code>NABZ_ADMIN_IDENTIFIERS</code>.</p>
+        <p>
+          Signed in as <strong>{account?.email || account?.phone || 'this account'}</strong>, but the backend did not mark it as an admin.
+          Add this exact identifier to <code>NABZ_ADMIN_IDENTIFIERS</code> on the API service, redeploy it, then sign out and back in.
+        </p>
       </section>
     )
   }

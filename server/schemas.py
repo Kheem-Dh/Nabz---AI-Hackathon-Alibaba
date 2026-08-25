@@ -19,7 +19,7 @@ class TriageLevel(str, Enum):
 class RegisterRequest(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=120)
     phone: str = Field(..., min_length=6, max_length=32)
-    password: str = Field(..., min_length=6, max_length=128)
+    password: str = Field(..., min_length=8, max_length=128)
     email: Optional[str] = Field(default=None, max_length=160)
 
     @field_validator("full_name", "phone")
@@ -43,6 +43,13 @@ class RegisterRequest(BaseModel):
         if re.search(r"\.(?:com|net|org|edu|gov|pk)[a-z]{2,}$", v):
             raise ValueError("invalid email address")
         return v
+
+    @field_validator("password")
+    @classmethod
+    def _strong_password(cls, value: str) -> str:
+        if not any(ch.isalpha() for ch in value) or not any(ch.isdigit() for ch in value):
+            raise ValueError("password must include a letter and a number")
+        return value
 
 
 class LoginRequest(BaseModel):

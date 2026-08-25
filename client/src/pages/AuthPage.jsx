@@ -34,26 +34,30 @@ export default function AuthPage() {
     }
   }, [consumePostSignupNotice])
 
-  function collectErrors() {
+  function validateIdentifier(value, currentMode = mode) {
+    const identifier = (value || '').trim()
+    if (!identifier) return currentMode === 'register'
+      ? 'Enter a Pakistan phone number.'
+      : 'Enter your phone number or email.'
+    return currentMode === 'login' && identifier.includes('@')
+      ? validateEmail(identifier)
+      : validatePkPhone(identifier)
+  }
+
+  function collectErrors(values = { fullName, phone, email, password }) {
     const next = {}
     if (mode === 'register') {
-      const nameErr = validateFullName(fullName)
+      const nameErr = validateFullName(values.fullName)
       if (nameErr) next.fullName = nameErr
-      const emailErr = validateEmail(email)
+      const emailErr = validateEmail(values.email)
       if (emailErr) next.email = emailErr
-      const pwErr = validatePassword(password)
+      const pwErr = validatePassword(values.password)
       if (pwErr) next.password = pwErr
-    } else if (!password) {
+    } else if (!values.password) {
       next.password = 'Enter your password.'
     }
-    if (mode === 'register' || !phone.includes('@')) {
-      const phoneErr = validatePkPhone(phone)
-      if (phoneErr) next.phone = phoneErr
-    } else {
-      const emailErr = validateEmail(phone)
-      if (!phone.trim()) next.phone = 'Enter your phone number or email.'
-      else if (emailErr) next.phone = emailErr
-    }
+    const identifierError = validateIdentifier(values.phone)
+    if (identifierError) next.phone = identifierError
     return next
   }
 
@@ -61,24 +65,53 @@ export default function AuthPage() {
     e.preventDefault()
     setError('')
     setNotice(null)
-    const validation = collectErrors()
+    // Read the submitted DOM values as well as React state. Chrome password
+    // managers can visually autofill a field without firing React onChange.
+    const submitted = new FormData(e.currentTarget)
+    const values = {
+      fullName: String(submitted.get('full_name') ?? fullName),
+      phone: String(submitted.get('identifier') ?? phone),
+      email: String(submitted.get('email') ?? email),
+      password: String(submitted.get('password') ?? password),
+    }
+    setFullName(values.fullName)
+    setPhone(values.phone)
+    setEmail(values.email)
+    setPassword(values.password)
+    const validation = collectErrors(values)
     setErrors(validation)
     if (Object.keys(validation).length > 0) return
 
     setBusy(true)
     try {
-      const normalisedIdentifier = phone.includes('@')
-        ? phone.trim().toLowerCase()
-        : normalizePkPhone(phone)
+      const normalisedIdentifier = values.phone.includes('@')
+        ? values.phone.trim().toLowerCase()
+        : normalizePkPhone(values.phone)
       if (mode === 'register') {
-        await register(fullName.trim(), normalisedIdentifier, password, email.trim() || null)
+        await register(values.fullName.trim(), normalisedIdentifier, values.password, values.email.trim() || null)
       } else {
-        await login(normalisedIdentifier, password)
+        await login(normalisedIdentifier, values.password)
       }
     } catch (err) {
+      if (Array.isArray(err.validation)) {
+        const serverErrors = {}
+        for (const issue of err.validation) {
+          const locations = Array.isArray(issue?.loc) ? issue.loc : []
+          const field = locations[locations.length - 1]
+          if (field === 'password') serverErrors.password = mode === 'register'
+            ? (validatePassword(values.password) || 'Check your password.')
+            : 'Enter your password.'
+          else if (field === 'identifier' || field === 'phone') serverErrors.phone = validateIdentifier(values.phone)
+          else if (field === 'full_name') serverErrors.fullName = validateFullName(values.fullName)
+          else if (field === 'email') serverErrors.email = validateEmail(values.email) || 'Enter a valid email address.'
+        }
+        setErrors((current) => ({ ...current, ...serverErrors }))
+      }
       const msg =
         err.status === 401
-          ? 'Wrong phone or password.'
+          ? 'Wrong phone/email or password.'
+          : err.status === 422
+          ? 'Please check the highlighted fields.'
           : err.status === 409
           ? err.detail === 'email_already_registered'
             ? 'This email is already registered — try logging in.'
@@ -144,6 +177,7 @@ export default function AuthPage() {
                 </label>
                 <input
                   id="fname"
+                  name="full_name"
                   className="input"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
@@ -162,13 +196,14 @@ export default function AuthPage() {
               </label>
               <input
                 id="phone"
+                name="identifier"
                 className="input"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                onBlur={() => setErrors((es) => ({ ...es, phone: validatePkPhone(phone) }))}
+                onBlur={() => setErrors((es) => ({ ...es, phone: validateIdentifier(phone) }))}
                 placeholder={mode === 'register' ? '03XX-XXXXXXX' : '03XX-XXXXXXX or you@example.com'}
                 inputMode={mode === 'register' ? 'tel' : 'email'}
-                autoComplete="tel"
+                autoComplete={mode === 'register' ? 'tel' : 'username'}
                 required
               />
               {errors.phone && <div className="field-error">{errors.phone}</div>}
@@ -188,6 +223,7 @@ export default function AuthPage() {
                 </label>
                 <input
                   id="email"
+                  name="email"
                   className="input"
                   type="email"
                   value={email}
@@ -206,6 +242,7 @@ export default function AuthPage() {
               <div className="pw-row">
                 <input
                   id="pw"
+                  name="password"
                   className="input"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
