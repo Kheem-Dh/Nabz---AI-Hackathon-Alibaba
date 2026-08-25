@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 import json
+from datetime import date
 
 VALID_LEVELS = {"EMERGENCY", "DOCTOR_24H", "HOME_CARE"}
 
@@ -84,6 +85,39 @@ def test_register_creates_self_profile(client, auth):
     profiles = client.get("/api/profiles", headers=headers).json()
     assert len(profiles) == 1
     assert profiles[0]["is_self"] is True
+
+
+def test_registration_dob_populates_self_profile(client):
+    reg = client.post(
+        "/api/auth/register",
+        json={
+            "full_name": "DOB User",
+            "phone": "03001234560",
+            "password": "secret123",
+            "date_of_birth": "1996-04-12",
+        },
+    )
+    assert reg.status_code == 200, reg.text
+    headers = {"Authorization": f"Bearer {reg.json()['token']}"}
+    profiles = client.get("/api/profiles", headers=headers).json()
+    assert profiles[0]["date_of_birth"] == "1996-04-12"
+    assert profiles[0]["age"] >= 29
+
+
+def test_profile_rejects_implausible_newborn_weight(client, auth):
+    headers, _account, self_id = auth
+    response = client.put(
+        f"/api/profiles/{self_id}",
+        headers=headers,
+        json={
+            "display_name": "Baby Test",
+            "relation": "Self",
+            "date_of_birth": date.today().isoformat(),
+            "weight_kg": 20,
+        },
+    )
+    assert response.status_code == 422
+    assert "weight is not plausible" in response.text
 
 
 def test_protected_routes_reject_without_token(client):

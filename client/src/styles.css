@@ -4791,6 +4791,86 @@ textarea.input {
   .topbar { transition: none; }
 }
 
+/* Chat-first workspace, account profile control, and desktop viewport fit. */
+.brand-home {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.profile-header-btn {
+  min-height: 42px;
+  padding: 5px 10px 5px 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 13px;
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  text-align: left;
+}
+.profile-header-btn:not(.complete) { background: #fff; color: var(--teal-dark); }
+.profile-header-avatar {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: rgba(255,255,255,.18);
+  font-size: 12px;
+  font-weight: 800;
+}
+.profile-header-btn:not(.complete) .profile-header-avatar { background: var(--teal-050); }
+.profile-header-btn strong,
+.profile-header-btn small { display: block; white-space: nowrap; }
+.profile-header-btn strong { font-size: 10px; }
+.profile-header-btn small { margin-top: 1px; opacity: .72; font-size: 7.5px; }
+
+.triage-start-card { min-height: 0; padding: clamp(20px, 3vw, 34px); }
+.triage-start-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.triage-start-card .hero-greet-ur { color: #102825; font-size: clamp(22px, 2vw, 29px); text-align: left; }
+.triage-start-card .hero-greet-en { color: var(--ink-mute); text-align: left; }
+.triage-start-card .symptom-composer { width: 100%; margin: 24px 0 0; }
+.voice-language { padding: 3px; display: flex; flex: 0 0 auto; gap: 2px; border-radius: 10px; background: var(--teal-050); }
+.voice-language button { min-height: 30px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--teal-dark); font-size: 9px; font-weight: 700; }
+.voice-language button.active { background: #fff; box-shadow: var(--shadow-1); }
+.voice-capture-meta { margin-bottom: 14px; display: flex; justify-content: center; align-items: center; gap: 6px; color: var(--teal-dark); font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.voice-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #e25555; box-shadow: 0 0 0 5px rgba(226,85,85,.1); animation: pulse 1.2s infinite; }
+.triage-start-card textarea { resize: none; }
+.profile-completion-card { padding: 17px 18px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border: 1px solid rgba(15,157,138,.24); border-radius: 17px; background: var(--teal-050); }
+.profile-completion-card strong,
+.profile-completion-card span { display: block; }
+.profile-completion-card strong { color: var(--teal-dark); font-size: 14px; }
+.profile-completion-card span { margin-top: 3px; color: var(--ink-soft); font-size: 10px; }
+.profile-completion-card .btn { width: auto; flex: 0 0 auto; }
+
+@media (min-width: 1200px) {
+  .workspace-shell .app-container { height: 100dvh; min-height: 0; overflow: hidden; }
+  .workspace-shell .app-main { min-height: 0; padding-bottom: 8px !important; overflow: hidden; }
+  .workspace-shell .desktop-health-workspace { height: 100%; min-height: 0; align-items: stretch; }
+  .workspace-shell .family-sidebar,
+  .workspace-shell .assessment-workspace,
+  .workspace-shell .health-insights-column { min-height: 0; height: 100%; overflow-y: auto; scrollbar-width: thin; }
+  .workspace-shell .assessment-workspace { padding: clamp(18px, 1.7vw, 28px); }
+  .workspace-shell .workspace-header { margin-bottom: 16px; padding-bottom: 14px; }
+}
+
+@media (max-width: 1380px) {
+  .profile-header-btn > span:last-child { display: none; }
+  .profile-header-btn { padding-right: 6px; }
+}
+@media (max-width: 640px) {
+  .triage-start-head,
+  .profile-completion-card { align-items: stretch; flex-direction: column; }
+  .voice-language { align-self: flex-start; }
+  .triage-start-card { padding: 18px 15px; }
+  .profile-completion-card .btn { width: 100%; }
+}
+
 /* Global focus ring for keyboard users — never on mouse click */
 :where(button, a, input, select, textarea, [role="button"]):focus-visible {
   outline: none;

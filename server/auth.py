@@ -1,6 +1,8 @@
 """Authentication routes — register, login, /me, and phone/email verification."""
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
@@ -70,6 +72,12 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> AuthRes
         account_id=account.id,
         display_name=account.full_name.strip(),
         relation="Self",
+        date_of_birth=payload.date_of_birth,
+        age=(
+            date.today().year - payload.date_of_birth.year
+            - ((date.today().month, date.today().day) < (payload.date_of_birth.month, payload.date_of_birth.day))
+            if payload.date_of_birth else None
+        ),
         is_self=True,
     )
     db.add(self_profile)

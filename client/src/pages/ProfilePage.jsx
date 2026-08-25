@@ -65,12 +65,27 @@ export default function ProfilePage() {
 
   const meds = profile.medicines || []
   const timeline = profile.timeline || []
+  const missingDetails = [
+    !profile.gender && 'gender',
+    !profile.blood_group && 'blood group',
+    !profile.weight_kg && 'weight',
+  ].filter(Boolean)
 
   return (
     <div className="page">
       <button className="back-link" onClick={() => navigate('/vault')}>
         ‹ والٹ · Vault
       </button>
+
+      {missingDetails.length > 0 && (
+        <div className="profile-completion-card">
+          <div>
+            <strong>Complete your health profile</strong>
+            <span>Add {missingDetails.join(', ')} so Nabz can use safer, more relevant context.</span>
+          </div>
+          <button className="btn btn-primary" onClick={() => navigate(`/profile/${id}/edit`)}>Complete now</button>
+        </div>
+      )}
 
       <div className="detail-head">
         <div className="dh-name urdu">{profile.display_name}</div>

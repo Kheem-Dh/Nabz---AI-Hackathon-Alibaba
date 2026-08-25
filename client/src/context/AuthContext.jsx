@@ -10,38 +10,22 @@ import {
 const AuthContext = createContext(null)
 const PENDING_KEY = 'nabz_pending_registration'
 
-// Small helpers so the register/complete-profile handshake doesn't need to
-// know how the flag is persisted.
-function markPendingRegistration(accountId) {
-  try {
-    localStorage.setItem(PENDING_KEY, String(accountId))
-  } catch { /* ignore */ }
-}
 function clearPendingRegistration() {
   try {
     localStorage.removeItem(PENDING_KEY)
   } catch { /* ignore */ }
 }
-function currentPendingId() {
-  try {
-    return localStorage.getItem(PENDING_KEY) || null
-  } catch {
-    return null
-  }
-}
-
 export function AuthProvider({ children }) {
   const [account, setAccount] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [pendingRegistration, setPendingRegistration] = useState(currentPendingId)
-  // Set right after a successful register — used to show "Log in to continue"
-  // on the login screen after the profile-details step finishes.
   const [postSignupNotice, setPostSignupNotice] = useState(null)
 
   // On boot, if we have a token, verify it and load the account.
   useEffect(() => {
     let alive = true
     async function boot() {
+      // Remove the obsolete complete-profile gate from older deployments.
+      clearPendingRegistration()
       if (!getToken()) {
         setLoading(false)
         return
@@ -51,8 +35,6 @@ export function AuthProvider({ children }) {
         if (alive) setAccount(me)
       } catch {
         setToken('') // stale/invalid token
-        clearPendingRegistration()
-        if (alive) setPendingRegistration(null)
       } finally {
         if (alive) setLoading(false)
       }
@@ -66,18 +48,21 @@ export function AuthProvider({ children }) {
     setToken(res.token)
     setAccount(res.account)
     clearPendingRegistration()
-    setPendingRegistration(null)
     setPostSignupNotice(null)
     return res.account
   }, [])
 
-  const register = useCallback(async (fullName, phone, password, email) => {
-    const res = await registerAccount(fullName, phone, password, email)
-    setToken(res.token)
-    setAccount(res.account)
-    // Force the user through the profile-details form before they can use the app.
-    markPendingRegistration(res.account.id)
-    setPendingRegistration(String(res.account.id))
+  const register = useCallback(async (fullName, phone, password, email, dateOfBirth) => {
+    const res = await registerAccount(fullName, phone, password, email, dateOfBirth)
+    // Registration credentials are deliberately not kept as a signed-in
+    // session. The person must prove them on the Login screen.
+    setToken('')
+    setAccount(null)
+    clearPendingRegistration()
+    setPostSignupNotice({
+      kind: 'ok',
+      message: `Account created for ${res.account.full_name}. Log in to continue.`,
+    })
     return res.account
   }, [])
 
@@ -85,23 +70,6 @@ export function AuthProvider({ children }) {
     setToken('')
     setAccount(null)
     clearPendingRegistration()
-    setPendingRegistration(null)
-  }, [])
-
-  // The registration flow calls this when the detailed profile form is saved:
-  // it clears the token + pending flag AND leaves a "Log in to continue" hint
-  // that the login screen renders once.
-  const finishRegistration = useCallback((accountName) => {
-    setToken('')
-    setAccount(null)
-    clearPendingRegistration()
-    setPendingRegistration(null)
-    setPostSignupNotice({
-      kind: 'ok',
-      message: accountName
-        ? `Account created for ${accountName}. Log in to continue.`
-        : 'Account created. Log in to continue.',
-    })
   }, [])
 
   const consumePostSignupNotice = useCallback(() => {
@@ -118,12 +86,10 @@ export function AuthProvider({ children }) {
       value={{
         account,
         loading,
-        pendingRegistration: !!pendingRegistration,
         postSignupNotice,
         login,
         register,
         logout,
-        finishRegistration,
         applyAccount,
         consumePostSignupNotice,
       }}

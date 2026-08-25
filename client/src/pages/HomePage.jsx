@@ -12,12 +12,9 @@ import PatientDashboard from '../components/PatientDashboard'
 import EncounterSidebar from '../components/EncounterSidebar'
 import PastEncounter from '../components/PastEncounter'
 import FamilySidebar from '../components/FamilySidebar'
-import HomeIntroCard from '../components/HomeIntroCard'
-import { useAuth } from '../context/AuthContext'
 
 export default function HomePage() {
   const { active, loading, selectProfile } = useProfiles()
-  const { account } = useAuth()
   const navigate = useNavigate()
   const [sessions, setSessions] = useState([])
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -149,9 +146,6 @@ export default function HomePage() {
       />
 
       <main className="assessment-workspace">
-        {!selectedEncounter && (
-          <HomeIntroCard account={account} activeProfile={active} />
-        )}
         <header className="workspace-header">
           <div>
             <span className="home-kicker">NABZ AI HEALTH ASSISTANT</span>

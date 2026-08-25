@@ -28,11 +28,12 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   const imageInputRef = useRef(null)
   const [clinicalImage, setClinicalImage] = useState(null)
   const [imagePreview, setImagePreview] = useState('')
+  const [voiceLang, setVoiceLang] = useState('ur-PK')
 
-  // Winning plan §7: initial-complaint silence window is generous so a slow
-  // Urdu narration is not cut off; follow-up answers can be shorter.
-  // Cloud STT preferred (Firefox/Safari/in-app browsers ok); webkit fallback.
-  const speech = useVoiceInput({ lang: 'ur-PK', silenceMs: 8000 })
+  // Chrome uses interim browser recognition for a true live transcript. Other
+  // browsers use the cloud recorder fallback. A short silence closes the turn,
+  // while Done speaking remains available for immediate review.
+  const speech = useVoiceInput({ lang: voiceLang, silenceMs: 3200 })
   const tts = useTextToSpeech()
   const spokenRef = useRef(null)
   const submittedRef = useRef(false)
@@ -324,25 +325,27 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   // --- Idle: capture the first symptom -----------------------------------
   if (phase === 'idle') {
     return (
-      <div className="hero-card">
+      <div className="q-card triage-start-card">
         {error && <div className="notice notice-warn">{error}</div>}
-        <div className="hero-greet-ur urdu">
-          {profile.display_name}، آپ کیسا محسوس کر رہے ہیں؟
-        </div>
-        <div className="hero-greet-en">Tell Nabz how {profile.display_name} feels</div>
-
-        <div className="mic-wrap">
-          {speech.supported ? (
-            <MicButton listening={false} onClick={startVoice} />
-          ) : (
-            <div className="notice notice-info">
-              <span className="ur urdu">اس براؤزر میں آواز دستیاب نہیں — نیچے لکھیں۔</span>
-              Voice input isn’t supported here. Please type below.
+        <div className="triage-start-head">
+          <div>
+            <div className="hero-greet-ur urdu">
+              {profile.display_name}، آپ کیسا محسوس کر رہے ہیں؟
             </div>
-          )}
-          <p className="hero-hint-ur urdu">مائیک دبائیں اور اپنی تکلیف بتائیں</p>
-          <p className="hero-hint-en">Tap the mic and describe the problem</p>
+            <div className="hero-greet-en">Tell Nabz how {profile.display_name} feels</div>
+          </div>
+          <div className="voice-language" aria-label="Voice language">
+            <button type="button" className={voiceLang === 'ur-PK' ? 'active' : ''} onClick={() => setVoiceLang('ur-PK')}>اردو</button>
+            <button type="button" className={voiceLang === 'en-PK' ? 'active' : ''} onClick={() => setVoiceLang('en-PK')}>English</button>
+          </div>
         </div>
+
+        {!speech.supported && (
+          <div className="notice notice-info">
+            <span className="ur urdu">اس براؤزر میں آواز دستیاب نہیں — نیچے لکھیں۔</span>
+            Voice input isn’t supported here. Please type below.
+          </div>
+        )}
 
         {speech.error === 'not-allowed' && (
           <div className="notice notice-warn" style={{ marginTop: 8 }}>
@@ -352,7 +355,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
         )}
 
         <form
-          className="claude-composer symptom-composer"
+          className="care-composer symptom-composer"
           onSubmit={(e) => {
             e.preventDefault()
             tts.prime()
@@ -375,11 +378,13 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
             }}
           />
           <footer>
-            <button className="composer-voice" type="button" onClick={startVoice} disabled={!speech.supported}>
-              🎤 Voice
+            <button className="care-tool" type="button" onClick={startVoice} disabled={!speech.supported}>
+              🎤 Speak
             </button>
-            <span>Enter to send · Shift+Enter for a new line</span>
-            <button className="composer-send" type="submit" disabled={!typed.trim()} aria-label="Send">↑</button>
+            <span>{speech.backend === 'live' ? 'Live transcript in Chrome' : 'Transcript appears after Done'} · Enter to send</span>
+            <button className="care-send" type="submit" disabled={!typed.trim()} aria-label="Send">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 16-8-5 16-3-6-8-2Zm8 2 8-10" /></svg>
+            </button>
           </footer>
         </form>
       </div>
@@ -390,12 +395,16 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   if (phase === 'listening' || phase === 'answering-voice') {
     return (
       <div className="q-card">
+        <div className="voice-capture-meta">
+          <span className="voice-live-dot" />
+          {speech.backend === 'live' ? 'Live transcript' : 'Cloud recording'} · {voiceLang === 'ur-PK' ? 'Urdu' : 'English'}
+        </div>
         <MicButton listening onClick={() => speech.stop()} />
         <p className="hero-hint-ur urdu" style={{ marginTop: 12 }}>
           آرام سے پوری بات بتائیں — نبض آپ کے رکنے کا انتظار کرے گا۔
         </p>
         <p className="hero-hint-en">
-          Speak naturally — Nabz waits through short pauses.
+          Speak naturally — words appear below while you talk.
           Tap <strong>Done speaking</strong> when finished.
         </p>
         <div className="live-transcript urdu" dir="auto" style={{ marginTop: 12 }}>

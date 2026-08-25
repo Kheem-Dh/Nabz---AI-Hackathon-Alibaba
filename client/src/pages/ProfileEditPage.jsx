@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { createProfile, getProfile, updateProfile } from '../api'
 import { useProfiles } from '../context/ProfileContext'
+import {
+  validateAge,
+  validateBloodGroup,
+  validateBp,
+  validateDob,
+  validateFullName,
+  validateWeightForDob,
+} from '../utils/validators'
 
 const EMPTY = {
   display_name: '',
@@ -32,6 +40,7 @@ export default function ProfileEditPage({ mode }) {
   const { refresh } = useProfiles()
   const [form, setForm] = useState(EMPTY)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -60,15 +69,35 @@ export default function ProfileEditPage({ mode }) {
 
   function set(k, v) {
     setForm((f) => ({ ...f, [k]: v }))
+    setFieldErrors((current) => ({ ...current, [k]: null }))
+  }
+
+  function collectErrors() {
+    const next = {}
+    const name = validateFullName(form.display_name)
+    const age = validateAge(form.age)
+    const dob = validateDob(form.date_of_birth)
+    const weight = validateWeightForDob(form.weight_kg, form.date_of_birth)
+    const blood = validateBloodGroup(form.blood_group)
+    const bp = validateBp(form.bp_systolic, form.bp_diastolic)
+    if (name) next.display_name = name
+    if (age) next.age = age
+    if (dob) next.date_of_birth = dob
+    if (weight) next.weight_kg = weight
+    if (blood) next.blood_group = blood
+    if (bp) {
+      next.bp_systolic = bp
+      next.bp_diastolic = bp
+    }
+    return next
   }
 
   async function submit(e) {
     e.preventDefault()
     setError('')
-    if (form.display_name.trim().length < 1) {
-      setError('Please enter a name.')
-      return
-    }
+    const validation = collectErrors()
+    setFieldErrors(validation)
+    if (Object.keys(validation).length) return
     setBusy(true)
     const payload = {
       display_name: form.display_name.trim(),
@@ -115,25 +144,38 @@ export default function ProfileEditPage({ mode }) {
       {error && <div className="form-error">{error}</div>}
 
       <form className="card" onSubmit={submit}>
-        <div className="field">
+        <div className={`field ${fieldErrors.display_name ? 'has-error' : ''}`}>
           <label>
             <span className="ur urdu">نام</span> Name *
           </label>
-          <input className="input" value={form.display_name} onChange={(e) => set('display_name', e.target.value)} />
+          <input
+            className="input"
+            value={form.display_name}
+            onChange={(e) => set('display_name', e.target.value)}
+            onBlur={() => setFieldErrors((current) => ({
+              ...current,
+              display_name: validateFullName(form.display_name),
+            }))}
+          />
+          {fieldErrors.display_name && <div className="field-error">{fieldErrors.display_name}</div>}
         </div>
         <div className="rx-grid">
           <div className="field">
             <label>
               <span className="ur urdu">رشتہ</span> Relation
             </label>
-            <input
+            <select
               className="input"
-              placeholder="Son, Mother…"
               value={form.relation}
               onChange={(e) => set('relation', e.target.value)}
-            />
+            >
+              <option value="">Select relation</option>
+              {['Self', 'Mother', 'Father', 'Spouse', 'Daughter', 'Son', 'Sister', 'Brother', 'Other'].map((relation) => (
+                <option key={relation} value={relation}>{relation}</option>
+              ))}
+            </select>
           </div>
-          <div className="field">
+          <div className={`field ${fieldErrors.age ? 'has-error' : ''}`}>
             <label>
               <span className="ur urdu">عمر</span> Age
             </label>
@@ -145,18 +187,29 @@ export default function ProfileEditPage({ mode }) {
               inputMode="numeric"
               value={form.age}
               onChange={(e) => set('age', e.target.value)}
+              onBlur={() => setFieldErrors((current) => ({ ...current, age: validateAge(form.age) }))}
+              disabled={Boolean(form.date_of_birth)}
             />
+            {fieldErrors.age && <div className="field-error">{fieldErrors.age}</div>}
+            {form.date_of_birth && <small className="muted">Calculated from date of birth.</small>}
           </div>
         </div>
-        <div className="field">
+        <div className={`field ${fieldErrors.date_of_birth ? 'has-error' : ''}`}>
           <label><span className="ur urdu">تاریخ پیدائش</span> Date of birth (preferred)</label>
           <input
             className="input"
             type="date"
+            min="1900-01-01"
             max={new Date().toISOString().slice(0, 10)}
             value={form.date_of_birth}
             onChange={(e) => set('date_of_birth', e.target.value)}
+            onBlur={() => setFieldErrors((current) => ({
+              ...current,
+              date_of_birth: validateDob(form.date_of_birth),
+              weight_kg: validateWeightForDob(form.weight_kg, form.date_of_birth),
+            }))}
           />
+          {fieldErrors.date_of_birth && <div className="field-error">{fieldErrors.date_of_birth}</div>}
           <small className="muted">When provided, Nabz calculates age from date of birth.</small>
         </div>
         <div className="rx-grid">
@@ -171,7 +224,7 @@ export default function ProfileEditPage({ mode }) {
               <option value="other">Other</option>
             </select>
           </div>
-          <div className="field">
+          <div className={`field ${fieldErrors.blood_group ? 'has-error' : ''}`}>
             <label>
               <span className="ur urdu">بلڈ گروپ</span> Blood
             </label>
@@ -179,18 +232,39 @@ export default function ProfileEditPage({ mode }) {
               className="input"
               value={form.blood_group}
               onChange={(e) => set('blood_group', e.target.value)}
+              onBlur={() => setFieldErrors((current) => ({
+                ...current,
+                blood_group: validateBloodGroup(form.blood_group),
+              }))}
             >
               <option value="">Unknown</option>
               {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((group) => (
                 <option key={group} value={group}>{group}</option>
               ))}
             </select>
+            {fieldErrors.blood_group && <div className="field-error">{fieldErrors.blood_group}</div>}
           </div>
         </div>
         <div className="rx-grid">
-          <div className="field">
+          <div className={`field ${fieldErrors.weight_kg ? 'has-error' : ''}`}>
             <label><span className="ur urdu">وزن</span> Weight (kg)</label>
-            <input className="input" type="number" min="1" max="500" step="0.1" value={form.weight_kg} onChange={(e) => set('weight_kg', e.target.value)} />
+            <input
+              className="input"
+              type="number"
+              min="1"
+              max="300"
+              step="0.1"
+              value={form.weight_kg}
+              onChange={(e) => set('weight_kg', e.target.value)}
+              onBlur={() => setFieldErrors((current) => ({
+                ...current,
+                weight_kg: validateWeightForDob(form.weight_kg, form.date_of_birth),
+              }))}
+            />
+            {fieldErrors.weight_kg && <div className="field-error">{fieldErrors.weight_kg}</div>}
+            {!fieldErrors.weight_kg && form.date_of_birth && (
+              <small className="muted">Broad age-plausibility check only — not a growth assessment.</small>
+            )}
           </div>
           <div className="field">
             <label>BP reading date</label>
@@ -198,13 +272,15 @@ export default function ProfileEditPage({ mode }) {
           </div>
         </div>
         <div className="rx-grid">
-          <div className="field">
+          <div className={`field ${fieldErrors.bp_systolic ? 'has-error' : ''}`}>
             <label>Systolic BP</label>
-            <input className="input" type="number" min="50" max="300" placeholder="120" value={form.bp_systolic} onChange={(e) => set('bp_systolic', e.target.value)} />
+            <input className="input" type="number" min="60" max="260" placeholder="120" value={form.bp_systolic} onChange={(e) => set('bp_systolic', e.target.value)} onBlur={() => { const message = validateBp(form.bp_systolic, form.bp_diastolic); setFieldErrors((current) => ({ ...current, bp_systolic: message, bp_diastolic: message })) }} />
+            {fieldErrors.bp_systolic && <div className="field-error">{fieldErrors.bp_systolic}</div>}
           </div>
-          <div className="field">
+          <div className={`field ${fieldErrors.bp_diastolic ? 'has-error' : ''}`}>
             <label>Diastolic BP</label>
-            <input className="input" type="number" min="30" max="200" placeholder="80" value={form.bp_diastolic} onChange={(e) => set('bp_diastolic', e.target.value)} />
+            <input className="input" type="number" min="30" max="180" placeholder="80" value={form.bp_diastolic} onChange={(e) => set('bp_diastolic', e.target.value)} onBlur={() => { const message = validateBp(form.bp_systolic, form.bp_diastolic); setFieldErrors((current) => ({ ...current, bp_systolic: message, bp_diastolic: message })) }} />
+            {fieldErrors.bp_diastolic && <div className="field-error">{fieldErrors.bp_diastolic}</div>}
           </div>
         </div>
         <div className="field">

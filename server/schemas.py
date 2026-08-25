@@ -21,6 +21,7 @@ class RegisterRequest(BaseModel):
     phone: str = Field(..., min_length=6, max_length=32)
     password: str = Field(..., min_length=8, max_length=128)
     email: Optional[str] = Field(default=None, max_length=160)
+    date_of_birth: Optional[date] = None
 
     @field_validator("full_name", "phone")
     @classmethod
@@ -49,6 +50,13 @@ class RegisterRequest(BaseModel):
     def _strong_password(cls, value: str) -> str:
         if not any(ch.isalpha() for ch in value) or not any(ch.isdigit() for ch in value):
             raise ValueError("password must include a letter and a number")
+        return value
+
+    @field_validator("date_of_birth")
+    @classmethod
+    def _registration_dob(cls, value: Optional[date]) -> Optional[date]:
+        if value and (value > date.today() or value.year < 1900):
+            raise ValueError("invalid date of birth")
         return value
 
 
@@ -161,9 +169,9 @@ class ProfileIn(BaseModel):
     gender: Optional[str] = Field(default=None, max_length=16)
     blood_group: Optional[str] = Field(default=None, max_length=8)
     date_of_birth: Optional[date] = None
-    weight_kg: Optional[float] = Field(default=None, ge=1, le=500)
-    bp_systolic: Optional[int] = Field(default=None, ge=50, le=300)
-    bp_diastolic: Optional[int] = Field(default=None, ge=30, le=200)
+    weight_kg: Optional[float] = Field(default=None, ge=1, le=300)
+    bp_systolic: Optional[int] = Field(default=None, ge=60, le=260)
+    bp_diastolic: Optional[int] = Field(default=None, ge=30, le=180)
     bp_recorded_at: Optional[date] = None
     chronic_conditions: list[str] = Field(default_factory=list)
     allergies: list[str] = Field(default_factory=list)
@@ -192,6 +200,21 @@ class ProfileIn(BaseModel):
             raise ValueError("both systolic and diastolic blood pressure are required")
         if self.bp_systolic is not None and self.bp_systolic <= self.bp_diastolic:
             raise ValueError("systolic blood pressure must exceed diastolic")
+        if self.date_of_birth and self.weight_kg is not None:
+            age_days = (date.today() - self.date_of_birth).days
+            ranges = (
+                (31, 1.0, 10.0, "newborn"),
+                (364, 1.5, 20.0, "child under 1 year"),
+                (729, 4.0, 30.0, "child under 2 years"),
+                (1825, 5.0, 60.0, "child under 5 years"),
+            )
+            for max_days, minimum, maximum, label in ranges:
+                if age_days <= max_days:
+                    if not minimum <= self.weight_kg <= maximum:
+                        raise ValueError(
+                            f"weight is not plausible for {label}; check date of birth and weight"
+                        )
+                    break
         return self
 
 

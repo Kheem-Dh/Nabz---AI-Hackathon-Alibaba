@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import {
   normalizePkPhone,
   validateEmail,
+  validateDob,
   validateFullName,
   validatePassword,
   validatePkPhone,
@@ -18,6 +19,7 @@ export default function AuthPage() {
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  const [dateOfBirth, setDateOfBirth] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState({}) // field-level messages
   const [error, setError] = useState('')   // top-level API/error banner
@@ -44,7 +46,7 @@ export default function AuthPage() {
       : validatePkPhone(identifier)
   }
 
-  function collectErrors(values = { fullName, phone, email, password }) {
+  function collectErrors(values = { fullName, phone, email, password, dateOfBirth }) {
     const next = {}
     if (mode === 'register') {
       const nameErr = validateFullName(values.fullName)
@@ -53,6 +55,8 @@ export default function AuthPage() {
       if (emailErr) next.email = emailErr
       const pwErr = validatePassword(values.password)
       if (pwErr) next.password = pwErr
+      const dobErr = values.dateOfBirth ? validateDob(values.dateOfBirth) : 'Enter your date of birth.'
+      if (dobErr) next.dateOfBirth = dobErr
     } else if (!values.password) {
       next.password = 'Enter your password.'
     }
@@ -73,11 +77,13 @@ export default function AuthPage() {
       phone: String(submitted.get('identifier') ?? phone),
       email: String(submitted.get('email') ?? email),
       password: String(submitted.get('password') ?? password),
+      dateOfBirth: String(submitted.get('date_of_birth') ?? dateOfBirth),
     }
     setFullName(values.fullName)
     setPhone(values.phone)
     setEmail(values.email)
     setPassword(values.password)
+    setDateOfBirth(values.dateOfBirth)
     const validation = collectErrors(values)
     setErrors(validation)
     if (Object.keys(validation).length > 0) return
@@ -88,7 +94,21 @@ export default function AuthPage() {
         ? values.phone.trim().toLowerCase()
         : normalizePkPhone(values.phone)
       if (mode === 'register') {
-        await register(values.fullName.trim(), normalisedIdentifier, values.password, values.email.trim() || null)
+        const created = await register(
+          values.fullName.trim(),
+          normalisedIdentifier,
+          values.password,
+          values.email.trim() || null,
+          values.dateOfBirth,
+        )
+        setMode('login')
+        setPassword('')
+        setPhone(values.email.trim() || normalisedIdentifier)
+        setErrors({})
+        setNotice({
+          kind: 'ok',
+          message: `Account created for ${created.full_name}. Log in to continue.`,
+        })
       } else {
         await login(normalisedIdentifier, values.password)
       }
@@ -104,6 +124,7 @@ export default function AuthPage() {
           else if (field === 'identifier' || field === 'phone') serverErrors.phone = validateIdentifier(values.phone)
           else if (field === 'full_name') serverErrors.fullName = validateFullName(values.fullName)
           else if (field === 'email') serverErrors.email = validateEmail(values.email) || 'Enter a valid email address.'
+          else if (field === 'date_of_birth') serverErrors.dateOfBirth = validateDob(values.dateOfBirth) || 'Enter your date of birth.'
         }
         setErrors((current) => ({ ...current, ...serverErrors }))
       }
@@ -233,6 +254,31 @@ export default function AuthPage() {
                   autoComplete="email"
                 />
                 {errors.email && <div className="field-error">{errors.email}</div>}
+              </div>
+            )}
+            {mode === 'register' && (
+              <div className={`field ${errors.dateOfBirth ? 'has-error' : ''}`}>
+                <label htmlFor="registration-dob">
+                  <span className="ur urdu">تاریخ پیدائش</span> Date of birth
+                </label>
+                <input
+                  id="registration-dob"
+                  name="date_of_birth"
+                  className="input"
+                  type="date"
+                  min="1900-01-01"
+                  max={new Date().toISOString().slice(0, 10)}
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  onBlur={() => setErrors((es) => ({
+                    ...es,
+                    dateOfBirth: dateOfBirth ? validateDob(dateOfBirth) : 'Enter your date of birth.',
+                  }))}
+                  autoComplete="bday"
+                  required
+                />
+                {errors.dateOfBirth && <div className="field-error">{errors.dateOfBirth}</div>}
+                {!errors.dateOfBirth && <div className="field-hint">Used to create your personal health profile.</div>}
               </div>
             )}
             <div className={`field ${errors.password ? 'has-error' : ''}`}>

@@ -21,13 +21,13 @@ import VerifyBanner from './components/VerifyBanner'
 import TrustBar from './components/TrustBar'
 import DocumentsPage from './pages/DocumentsPage'
 import OnboardingPage, { hasOnboarded } from './pages/OnboardingPage'
-import CompleteProfilePage from './pages/CompleteProfilePage'
 import LandingPage from './pages/LandingPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import HandoffPage from './pages/HandoffPage'
 import { stopAllSpeech } from './hooks/useTextToSpeech'
 import { getConsentStatus } from './api'
+import { useProfiles } from './context/ProfileContext'
 
 function Loading() {
   return (
@@ -44,7 +44,7 @@ function Loading() {
 }
 
 export default function App() {
-  const { account, loading, pendingRegistration } = useAuth()
+  const { account, loading } = useAuth()
   const { preference, loading: locLoading } = useLocationPref()
   const location = useLocation()
   const [consentStatus, setConsentStatus] = useState(null)
@@ -85,22 +85,6 @@ export default function App() {
       return <div className="public-legal"><PrivacyPage /></div>
     }
     return <LandingPage />
-  }
-
-  // Just-registered accounts must complete the detailed profile form before
-  // anything else — no auto-drop into the app.
-  if (pendingRegistration) {
-    return (
-      <div className="app-shell">
-        <div className="app-container">
-          <TopBar minimal />
-          <main className="app-main">
-            <CompleteProfilePage />
-          </main>
-          <Disclaimer />
-        </div>
-      </div>
-    )
   }
 
   // First-run gate (winning plan §3): location before anything else.
@@ -165,7 +149,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${location.pathname === '/' ? 'workspace-shell' : ''}`}>
       <div className="app-container">
         {!isPrintRoute && <TopBar />}
         {!isPrintRoute && !onLocationScreen && !isAdminRoute && <TrustBar />}
@@ -204,10 +188,14 @@ export default function App() {
 
 function TopBar({ minimal = false }) {
   const { account, logout } = useAuth()
+  const { active } = useProfiles()
   const navigate = useNavigate()
   const location = useLocation()
   const navClass = (path) => location.pathname === path ? 'active' : ''
   const [scrolled, setScrolled] = useState(false)
+  const profileComplete = Boolean(
+    active?.date_of_birth && active?.gender && active?.blood_group && active?.weight_kg,
+  )
 
   // Header stays pinned on scroll; a shadow + blur appear once the page has
   // scrolled a few pixels so the initial paint is clean.
@@ -221,13 +209,13 @@ function TopBar({ minimal = false }) {
   return (
     <header className={`topbar ${scrolled ? 'topbar-scrolled' : ''}`} data-scrolled={scrolled ? 'true' : 'false'}>
       <div className="topbar-row">
-        <div className="brand">
+        <button className="brand brand-home" onClick={() => navigate('/')} aria-label="Go to Nabz home">
           <span className="brand-ur">نبض</span>
           <div>
             <div className="brand-en">NABZ</div>
             <div className="brand-pulse urdu">آپ کی آواز، آپ کی صحت</div>
           </div>
-        </div>
+        </button>
         {!minimal && (
           <nav className="desktop-nav" aria-label="Primary navigation">
             <button className={navClass('/')} onClick={() => navigate('/')}>Workspace</button>
@@ -237,6 +225,19 @@ function TopBar({ minimal = false }) {
           </nav>
         )}
         <div className="row">
+          {!minimal && active && (
+            <button
+              className={`profile-header-btn ${profileComplete ? 'complete' : ''}`}
+              title="Open your profile"
+              onClick={() => navigate(profileComplete ? `/profile/${active.id}` : `/profile/${active.id}/edit`)}
+            >
+              <span className="profile-header-avatar">{(active.display_name || account?.full_name || 'U').charAt(0).toUpperCase()}</span>
+              <span>
+                <strong>{profileComplete ? active.display_name : 'Complete profile'}</strong>
+                <small>{profileComplete ? 'My health profile' : 'Add health details'}</small>
+              </span>
+            </button>
+          )}
           {!minimal && <LocationChip compact />}
           <button
             className="audio-stop-btn"

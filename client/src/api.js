@@ -101,8 +101,14 @@ function validateClientUpload(file) {
 
 // --- Auth --------------------------------------------------------------------
 
-export const registerAccount = (full_name, phone, password, email) =>
-  jsonReq('/api/auth/register', 'POST', { full_name, phone, password, email: email || null })
+export const registerAccount = (full_name, phone, password, email, date_of_birth) =>
+  jsonReq('/api/auth/register', 'POST', {
+    full_name,
+    phone,
+    password,
+    email: email || null,
+    date_of_birth,
+  })
 
 export const loginAccount = (identifier, password) =>
   jsonReq('/api/auth/login', 'POST', { identifier, password })

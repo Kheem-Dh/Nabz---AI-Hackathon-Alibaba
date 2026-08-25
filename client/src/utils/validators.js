@@ -73,6 +73,30 @@ export function validateWeight(value) {
   return null
 }
 
+// Broad data-quality guard for young children. It catches impossible entry
+// mistakes without presenting a diagnosis or a growth classification.
+export function validateWeightForDob(weight, dob) {
+  const baseError = validateWeight(weight)
+  if (baseError || weight === '' || weight == null || !dob) return baseError
+  if (validateDob(dob)) return null
+
+  const born = new Date(`${dob}T00:00:00`)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const ageDays = Math.floor((today.getTime() - born.getTime()) / 86400000)
+  const kg = Number(weight)
+  let range = null
+  if (ageDays <= 31) range = [1, 10, 'a newborn']
+  else if (ageDays < 365) range = [1.5, 20, 'a child under 1 year']
+  else if (ageDays < 730) range = [4, 30, 'a child under 2 years']
+  else if (ageDays < 1826) range = [5, 60, 'a child under 5 years']
+
+  if (range && (kg < range[0] || kg > range[1])) {
+    return `That weight is not plausible for ${range[2]} (${range[0]}–${range[1]} kg entry range). Check DOB and weight.`
+  }
+  return null
+}
+
 export function validateBp(sys, dia) {
   const hasSys = sys !== '' && sys != null
   const hasDia = dia !== '' && dia != null

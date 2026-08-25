@@ -119,7 +119,15 @@ export function useCloudVoiceCapture({ lang = 'ur' } = {}) {
     reset()
     setError(null)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 16000,
+        },
+      })
       streamRef.current = stream
       const mimeType = pickMimeType()
       const rec = mimeType
@@ -145,7 +153,7 @@ export function useCloudVoiceCapture({ lang = 'ur' } = {}) {
         }
         await uploadBlob(blob, chosenType)
       }
-      rec.start(1000)
+      rec.start(250)
       startedAtRef.current = Date.now()
       timerRef.current = window.setInterval(() => {
         setElapsedMs(Date.now() - startedAtRef.current)
