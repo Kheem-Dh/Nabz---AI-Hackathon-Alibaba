@@ -1243,8 +1243,26 @@ def qwen_next_turn(
                 )
                 data = json.loads(_strip_fences(result.text))
                 turn = _turn_from_qwen_json(data, profile, session_id, turns)
-                if _count_questions(turns) >= MAX_QUESTIONS and turn.type != "result":
+                asked = _count_questions(turns)
+                if asked >= MAX_QUESTIONS and turn.type != "result":
                     raise ValueError("question ceiling reached; return a result")
+                # Hard floor: prevent 2-question triage failures. Non-emergency
+                # results require real anamnesis. The prompt asks for this but
+                # LLMs routinely defect on counting rules — enforce in code.
+                MIN_QUESTIONS_FOR_RESULT = 4
+                if (
+                    turn.type == "result"
+                    and asked < MIN_QUESTIONS_FOR_RESULT
+                    and (turn.level is None or turn.level.value != "EMERGENCY")
+                ):
+                    raise ValueError(
+                        f"interview too shallow — only {asked} questions asked. "
+                        f"You MUST ask at least {MIN_QUESTIONS_FOR_RESULT} targeted "
+                        "questions before a non-emergency result. Return a "
+                        "type:'question' turn covering the highest-value missing "
+                        "domain (onset/character/severity/associated symptoms/"
+                        "past history/allergies/medications)."
+                    )
                 logger.info(
                     "Live AI triage completed (provider=%s model=%s latency_seconds=%.3f type=%s attempt=%d)",
                     result.provider, result.model, time.perf_counter() - started,
