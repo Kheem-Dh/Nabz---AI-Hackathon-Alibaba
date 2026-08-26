@@ -6670,23 +6670,46 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
 .nav-links button small,
 .app-header nav button small { display: block; font-size: 9px; opacity: .65; text-transform: uppercase; letter-spacing: .06em; margin-top: 1px; }
 
-/* Unified authed workspace — matches guest chat visual style
-   .authed-chat-page uses the same flex-row shell as .guest-chat-page:
-   one 260px left sidebar (family), main flows to fill the rest. No
-   centered max-width — content sits at the natural width like guest. */
+/* Unified authed workspace — three-column flex row that stays inside the
+   viewport. .page is display:flex column by default, so we must set
+   flex-direction:row explicitly.
+   Wide  : [family 240] [chat flex] [record 320]
+   Medium: [family 220] [chat flex]                (record hides)
+   Narrow: single column stack
+*/
 .authed-chat-page {
-  display: flex !important; grid-template-columns: none !important;
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 16px;
+  align-items: stretch;
   min-height: calc(100vh - var(--top-bar-h, 60px));
-  background: var(--card-bg, #fafbfa);
 }
-.authed-chat-page > .family-sidebar { flex: 0 0 260px; }
+.authed-chat-page > .family-sidebar { flex: 0 0 240px; min-width: 0; }
 .authed-chat-page > .assessment-workspace { flex: 1 1 auto; min-width: 0; }
+.authed-chat-page > .authed-insights { flex: 0 0 320px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+@media (max-width: 1180px) {
+  .authed-chat-page > .authed-insights { display: none; }
+}
 @media (max-width: 900px) {
-  .authed-chat-page { flex-direction: column; }
+  .authed-chat-page { flex-direction: column !important; }
   .authed-chat-page > .family-sidebar { flex: 0 0 auto; width: 100%; }
 }
-.authed-chat-workspace { padding: 24px 40px 40px; max-width: none; margin: 0; }
+.authed-chat-workspace { padding: 20px 28px 40px; max-width: none; margin: 0; }
 @media (max-width: 768px) { .authed-chat-workspace { padding: 16px; } }
+
+.authed-insights-head { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 4px 0; }
+.urdu-side-title { font-size: 18px; color: #0F9D8A; font-weight: 700; }
+.authed-side-view { background: transparent; border: 0; color: #0F9D8A; font-size: 12px; cursor: pointer; }
+.authed-side-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.authed-side-quick button {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; border: 1px solid #d9e5e2; border-radius: 12px;
+  background: #fff; cursor: pointer; text-align: left;
+}
+.authed-side-quick button:hover { background: #f4faf8; }
+.authed-side-quick button > span:first-child { font-size: 20px; }
+.authed-side-quick b { display: block; font-size: 13px; color: #0F9D8A; }
+.authed-side-quick small { display: block; font-size: 10px; color: #6b7c79; }
 .authed-chat-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
 .authed-chat-title h1 { margin: 0 !important; font-size: clamp(24px, 3.4vw, 34px); line-height: 1.4; color: var(--nabz-primary, #0F9D8A); }
 .authed-chat-sub { margin: 4px 0 0; font-size: 12px; color: #7a8b88; }

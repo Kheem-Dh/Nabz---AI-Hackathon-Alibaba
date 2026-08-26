@@ -8,6 +8,7 @@ import {
 } from '../api'
 import { useProfiles } from '../context/ProfileContext'
 import TriageConversation from '../components/TriageConversation'
+import PatientDashboard from '../components/PatientDashboard'
 import PastEncounter from '../components/PastEncounter'
 import FamilySidebar from '../components/FamilySidebar'
 
@@ -20,6 +21,7 @@ export default function HomePage() {
   const [selectedEncounter, setSelectedEncounter] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [conversationKey, setConversationKey] = useState(0)
+  const [dashboardKey, setDashboardKey] = useState(0)
   const [service, setService] = useState(null)
   const [resumeTurn, setResumeTurn] = useState(null)
   const [workspaceError, setWorkspaceError] = useState('')
@@ -88,6 +90,7 @@ export default function HomePage() {
   function sessionChanged(turn) {
     loadHistory()
     if (turn.type === 'result') {
+      setDashboardKey((value) => value + 1)
       resetConversationScroll()
     }
   }
@@ -205,6 +208,29 @@ export default function HomePage() {
           )}
         </div>
       </main>
+
+      <aside className="authed-insights">
+        <div className="authed-insights-head">
+          <span className="urdu urdu-side-title" dir="rtl">صحت کا ریکارڈ</span>
+          <button onClick={() => navigate(`/profile/${active.id}/documents`)} className="authed-side-view"><span className="urdu" dir="rtl">سب دیکھیں</span></button>
+        </div>
+        <PatientDashboard
+          key={`dashboard-${active.id}-${dashboardKey}`}
+          profile={active}
+          onOpenVault={() => navigate(`/profile/${active.id}/documents`)}
+          onOpenSummary={() => navigate(`/summary/${active.id}`)}
+        />
+        <div className="authed-side-quick">
+          <button onClick={() => navigate(`/profile/${active.id}/lab`)}>
+            <span aria-hidden="true">🧪</span>
+            <span><b className="urdu" dir="rtl">لیب رپورٹ</b><small>Explain lab</small></span>
+          </button>
+          <button onClick={() => navigate(`/profile/${active.id}/prescription`)}>
+            <span aria-hidden="true">📝</span>
+            <span><b className="urdu" dir="rtl">نسخہ</b><small>Add prescription</small></span>
+          </button>
+        </div>
+      </aside>
     </div>
   )
 }
