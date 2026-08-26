@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TriageResult from '../components/TriageResult'
+import MicButton from '../components/MicButton'
 import {
+  attachGuestTriageFile,
   clearGuestTriage,
   guestTriageAnswer,
   guestTriageChat,
   guestTriageStart,
   retryGuestTriage,
 } from '../api'
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import { useTextToSpeech } from '../hooks/useTextToSpeech'
 
 const STORAGE_KEY = 'nabz_guest_assessment_v1'
@@ -87,7 +90,51 @@ function QuestionCard({ turn, active, busy, onAnswer, onReplay, speaking }) {
   )
 }
 
-function FollowupChat({ entries, busy, value, onChange, onSubmit }) {
+function AttachmentIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 5.8-5.8a3 3 0 0 1 4.2 4.2l-7.3 7.3a5 5 0 0 1-7.1-7.1l7.1-7.1" /></svg>
+}
+
+function SmallMicIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 10.5v.7a6.5 6.5 0 0 0 13 0v-.7M12 17.7V21M8.5 21h7" /></svg>
+}
+
+function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
+  const speech = useSpeechRecognition({ lang: 'ur-PK', silenceMs: 4500 })
+  const [attachment, setAttachment] = useState(null)
+  const [attaching, setAttaching] = useState(false)
+  const [localError, setLocalError] = useState('')
+  const fileRef = useRef(null)
+
+  useEffect(() => {
+    if (speech.transcript) onChange(speech.transcript)
+  }, [speech.transcript, onChange])
+
+  useEffect(() => {
+    if (speech.error) setLocalError('Voice input could not start. Check microphone permission and try again.')
+  }, [speech.error])
+
+  async function chooseAttachment(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || attaching || busy) return
+    setAttaching(true)
+    setLocalError('')
+    try {
+      const result = await onAttach(file)
+      setAttachment({ name: file.name, description: result.description })
+    } catch (nextError) {
+      setLocalError(nextError.message || 'This attachment could not be read.')
+    } finally {
+      setAttaching(false)
+    }
+  }
+
+  async function submit(event) {
+    event.preventDefault()
+    const sent = await onSubmit(event, attachment)
+    if (sent) setAttachment(null)
+  }
+
   return (
     <section className="guest-followup" id="continue-care-chat">
       <div className="guest-followup-head">
@@ -104,9 +151,24 @@ function FollowupChat({ entries, busy, value, onChange, onSubmit }) {
           </div>
         </div>
       ))}
-      <form className="guest-followup-form" onSubmit={onSubmit}>
-        <input value={value} onChange={(event) => onChange(event.target.value)} placeholder="Ask a follow-up about this result…" />
-        <button disabled={busy || !value.trim()}>{busy ? '…' : 'Ask →'}</button>
+      {attachment && (
+        <div className="guest-attachment-preview">
+          <AttachmentIcon />
+          <span><strong>{attachment.name}</strong><small>Read as temporary supporting context · not saved to a Vault</small></span>
+          <button type="button" onClick={() => setAttachment(null)} aria-label="Remove attachment">×</button>
+        </div>
+      )}
+      {localError && <p className="guest-tool-error" role="alert">{localError}</p>}
+      <form className="guest-followup-form" onSubmit={submit}>
+        <input ref={fileRef} hidden type="file" accept="image/*,.pdf,application/pdf" onChange={chooseAttachment} />
+        <button type="button" className="guest-input-tool" onClick={() => fileRef.current?.click()} disabled={busy || attaching} aria-label="Attach an image or PDF" title="Attach image or PDF">
+          {attaching ? '…' : <AttachmentIcon />}
+        </button>
+        <button type="button" className={`guest-input-tool ${speech.listening ? 'recording' : ''}`} onClick={() => { setLocalError(''); speech.listening ? speech.stop() : speech.start() }} disabled={busy || !speech.supported} aria-label={speech.listening ? 'Stop voice input' : 'Start voice input'} title={speech.supported ? 'Speak your follow-up' : 'Voice input is not supported in this browser'}>
+          {speech.listening ? '■' : <SmallMicIcon />}
+        </button>
+        <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={speech.listening ? 'Listening…' : 'Ask a follow-up about this result…'} />
+        <button className="guest-followup-send" disabled={busy || (!value.trim() && !attachment)}>{busy ? '…' : 'Ask →'}</button>
       </form>
     </section>
   )
@@ -121,13 +183,17 @@ export default function GuestChatPage() {
   const [followups, setFollowups] = useState(restored?.followups || [])
   const [typed, setTyped] = useState('')
   const [followupText, setFollowupText] = useState('')
+  const [draftAttachment, setDraftAttachment] = useState(null)
+  const [attaching, setAttaching] = useState(false)
   const [consent, setConsent] = useState(Boolean(restored?.stateToken))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const controllerRef = useRef(null)
   const endRef = useRef(null)
   const resultRef = useRef(null)
+  const fileRef = useRef(null)
   const tts = useTextToSpeech()
+  const speech = useSpeechRecognition({ lang: 'ur-PK', silenceMs: 4500 })
 
   const currentTurn = [...messages].reverse().find((item) => item.role === 'assistant')?.turn || null
   const resultTurn = currentTurn?.type === 'result' ? currentTurn : null
@@ -153,6 +219,14 @@ export default function GuestChatPage() {
     controllerRef.current?.abort()
     tts.cancel()
   }, [tts.cancel])
+
+  useEffect(() => {
+    if (speech.transcript) setTyped(speech.transcript)
+  }, [speech.transcript])
+
+  useEffect(() => {
+    if (speech.error) setError('Voice input could not start. Check microphone permission and try again.')
+  }, [speech.error])
 
   function saveResponse(response, userMessage) {
     setStateToken(response.state_token)
@@ -183,8 +257,10 @@ export default function GuestChatPage() {
         urdu: display?.urdu || '',
       })
       setTyped('')
+      return true
     } catch (nextError) {
       setError(nextError.message || 'Nabz could not start the assessment. Please try again.')
+      return false
     } finally {
       setBusy(false)
       controllerRef.current = null
@@ -205,21 +281,27 @@ export default function GuestChatPage() {
         urdu: display?.urdu || '',
       })
       setTyped('')
+      return true
     } catch (nextError) {
       if (nextError.status === 410 || nextError.status === 404) {
         sessionStorage.removeItem(STORAGE_KEY)
         setStateToken('')
       }
       setError(nextError.message || 'Your answer could not be sent. Please try again.')
+      return false
     } finally {
       setBusy(false)
       controllerRef.current = null
     }
   }
 
-  async function submitFollowup(event) {
+  async function submitFollowup(event, attachment = null) {
     event.preventDefault()
-    const question = followupText.trim()
+    const typedQuestion = followupText.trim()
+    const attachmentContext = attachment
+      ? `[Temporary attachment: ${attachment.name}] ${attachment.description}`
+      : ''
+    const question = [attachmentContext, typedQuestion].filter(Boolean).join('\n')
     if (!question || !stateToken || busy) return
     tts.cancel()
     setBusy(true)
@@ -228,10 +310,13 @@ export default function GuestChatPage() {
     controllerRef.current = controller
     try {
       const response = await guestTriageChat(stateToken, question, controller.signal)
-      setFollowups((items) => [...items, { question, answer: response.answer }])
+      const visibleQuestion = [attachment ? `📎 ${attachment.name}` : '', typedQuestion].filter(Boolean).join('\n')
+      setFollowups((items) => [...items, { question: visibleQuestion, answer: response.answer }])
       setFollowupText('')
+      return true
     } catch (nextError) {
       setError(nextError.message || 'The follow-up could not be answered right now.')
+      return false
     } finally {
       setBusy(false)
       controllerRef.current = null
@@ -257,11 +342,56 @@ export default function GuestChatPage() {
     }
   }
 
-  function submitTyped(event) {
+  async function submitTyped(event) {
     event.preventDefault()
     if (resultTurn) return
-    if (started) answer(typed)
-    else start(typed)
+    if (speech.listening) speech.stop()
+    const typedValue = typed.trim()
+    const attachmentContext = draftAttachment
+      ? `[Temporary attachment: ${draftAttachment.name}] ${draftAttachment.description}`
+      : ''
+    const modelText = [attachmentContext, typedValue].filter(Boolean).join('\n')
+    if (!modelText) return
+    const visible = [draftAttachment ? `📎 ${draftAttachment.name}` : '', typedValue].filter(Boolean).join('\n')
+    const sent = started
+      ? await answer(modelText, { english: visible })
+      : await start(modelText, { english: visible })
+    if (sent) setDraftAttachment(null)
+  }
+
+  function toggleVoice() {
+    if (!consent && !started) {
+      setError('Please confirm the temporary-session privacy note before using voice input.')
+      return
+    }
+    setError('')
+    tts.cancel()
+    if (speech.listening) speech.stop()
+    else speech.start()
+  }
+
+  async function describeAttachment(file) {
+    return attachGuestTriageFile(file, { stateToken, consent: consent || started })
+  }
+
+  async function chooseDraftAttachment(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || busy || attaching) return
+    if (!consent && !started) {
+      setError('Please confirm the temporary-session privacy note before attaching a health file.')
+      return
+    }
+    setAttaching(true)
+    setError('')
+    try {
+      const result = await describeAttachment(file)
+      setDraftAttachment({ name: file.name, description: result.description })
+    } catch (nextError) {
+      setError(nextError.message || 'This attachment could not be read.')
+    } finally {
+      setAttaching(false)
+    }
   }
 
   async function reset() {
@@ -273,8 +403,10 @@ export default function GuestChatPage() {
     setFollowups([])
     setTyped('')
     setFollowupText('')
+    setDraftAttachment(null)
     setError('')
     setConsent(false)
+    speech.reset()
     sessionStorage.removeItem(STORAGE_KEY)
     if (oldToken) clearGuestTriage(oldToken).catch(() => {})
   }
@@ -312,11 +444,22 @@ export default function GuestChatPage() {
         <div className={`guest-chat-scroll ${started ? 'has-conversation' : ''}`}>
           {!started && (
             <section className="guest-welcome">
-              <div className="guest-welcome-mark"><PulseIcon /></div>
               <span className="guest-welcome-kicker">START WITHOUT AN ACCOUNT</span>
               <h1>What’s worrying you today?</h1>
               <p className="urdu" dir="rtl">اپنی تکلیف بتائیں، نبض ایک ڈاکٹر کی طرح اہم سوالات پوچھے گا</p>
               <p className="guest-welcome-lead">Describe what you feel in Urdu, Roman Urdu or English. Nabz will ask only the follow-up questions needed to clarify urgency and the next safe step.</p>
+              <label className="guest-consent">
+                <input type="checkbox" checked={consent} onChange={(event) => { setConsent(event.target.checked); setError('') }} />
+                <span><strong>Use my words for this temporary AI assessment</strong><small>Not added to a medical Vault. The anonymous session expires in about 2 hours. Do not use Nabz for an emergency.</small></span>
+              </label>
+              <div className="guest-voice-first">
+                <div className="guest-voice-rings"><i /><i /></div>
+                <MicButton listening={speech.listening} disabled={busy || !speech.supported || !consent} onClick={toggleVoice} />
+                <strong>{speech.listening ? 'Listening — speak naturally' : 'Start with your voice'}</strong>
+                <span className="urdu" dir="rtl">اردو، رومن اردو یا انگریزی میں بولیں</span>
+                <small>{consent ? 'Your words appear below so you can review them before sending.' : 'Confirm the privacy note to enable voice.'}</small>
+              </div>
+              <div className="guest-starter-label"><span>OR CHOOSE A COMMON CONCERN</span></div>
               <div className="guest-starters">
                 {STARTERS.map(([urdu, english]) => (
                   <button key={english} onClick={() => start(english, { urdu, english })} disabled={busy}>
@@ -324,10 +467,6 @@ export default function GuestChatPage() {
                   </button>
                 ))}
               </div>
-              <label className="guest-consent">
-                <input type="checkbox" checked={consent} onChange={(event) => { setConsent(event.target.checked); setError('') }} />
-                <span><strong>Use my words for this temporary AI assessment</strong><small>Not added to a medical Vault. The anonymous session expires in about 2 hours. Do not use Nabz for an emergency.</small></span>
-              </label>
             </section>
           )}
 
@@ -361,6 +500,7 @@ export default function GuestChatPage() {
                             value={followupText}
                             onChange={setFollowupText}
                             onSubmit={submitFollowup}
+                            onAttach={describeAttachment}
                           />
                         ) : null}
                       />
@@ -392,7 +532,10 @@ export default function GuestChatPage() {
         {!resultTurn && (
           <div className="guest-composer-dock">
             <form className="guest-composer" onSubmit={submitTyped}>
-              <span className="guest-compose-icon">＋</span>
+              <input ref={fileRef} hidden type="file" accept="image/*,.pdf,application/pdf" onChange={chooseDraftAttachment} />
+              <button type="button" className="guest-compose-icon" onClick={() => fileRef.current?.click()} disabled={busy || attaching} aria-label="Attach an image or PDF" title="Attach image or PDF">
+                {attaching ? '…' : <AttachmentIcon />}
+              </button>
               <textarea
                 id="guest-message"
                 rows="1"
@@ -406,8 +549,17 @@ export default function GuestChatPage() {
                 }}
                 placeholder={started ? 'Answer in Urdu, Roman Urdu or English…' : 'Describe your symptoms…'}
               />
-              <button disabled={busy || !typed.trim() || (!started && !consent)} aria-label="Send message">{busy ? '…' : '↑'}</button>
+              <button type="button" className={`guest-composer-mic ${speech.listening ? 'recording' : ''}`} onClick={toggleVoice} disabled={busy || !speech.supported || (!started && !consent)} aria-label={speech.listening ? 'Stop voice input' : 'Start voice input'}>
+                {speech.listening ? '■' : <SmallMicIcon />}
+              </button>
+              <button className="guest-composer-send" disabled={busy || (!typed.trim() && !draftAttachment) || (!started && !consent)} aria-label="Send message">{busy ? '…' : '↑'}</button>
             </form>
+            {draftAttachment && (
+              <div className="guest-draft-attachment">
+                <AttachmentIcon /><span><strong>{draftAttachment.name}</strong><small>Temporary supporting context · not saved to a Vault</small></span>
+                <button type="button" onClick={() => setDraftAttachment(null)} aria-label="Remove attachment">×</button>
+              </div>
+            )}
             <div className="guest-composer-note"><span>AI health guidance—not a diagnosis</span><span>Emergency? Call 1122 now</span><span>Temporary session · no account required</span></div>
           </div>
         )}

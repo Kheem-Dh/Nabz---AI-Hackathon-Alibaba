@@ -198,6 +198,20 @@ export const retryGuestTriage = (state_token, signal) =>
 export const guestTriageChat = (state_token, text, signal) =>
   jsonReq('/api/guest/triage/chat', 'POST', { state_token, text }, { signal, timeoutMs: 75_000 })
 
+export function attachGuestTriageFile(file, { stateToken = '', consent = false, signal } = {}) {
+  validateClientUpload(file)
+  const form = new FormData()
+  form.append('file', file)
+  form.append('consent', String(Boolean(consent)))
+  if (stateToken) form.append('state_token', stateToken)
+  return fetch(`${API_BASE}/api/guest/triage/attach`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: form,
+    signal,
+  }).then(handle)
+}
+
 export const clearGuestTriage = (stateToken) =>
   jsonReq(`/api/guest/triage/${encodeURIComponent(stateToken)}`, 'DELETE')
 

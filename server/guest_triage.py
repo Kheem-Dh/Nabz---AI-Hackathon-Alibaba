@@ -15,7 +15,7 @@ from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from db import get_db
@@ -31,7 +31,8 @@ from schemas import (
     TriageChatResponse,
     TriageTurn,
 )
-from triage import next_turn, qwen_followup_chat
+from triage import is_mock_mode, next_turn, qwen_followup_chat
+from vision import describe_image_structured, validate_upload
 
 router = APIRouter(prefix="/api/guest/triage", tags=["guest-triage"])
 
@@ -40,6 +41,24 @@ _RATE_WINDOW_SECONDS = 10 * 60
 _RATE_LIMIT = max(12, int(os.getenv("NABZ_GUEST_RATE_LIMIT", "60")))
 _rate_events: dict[str, deque[float]] = defaultdict(deque)
 _rate_lock = threading.Lock()
+
+
+def _mock_attachment() -> dict[str, Any]:
+    return {
+        "description": (
+            "منسلک فائل موصول ہوگئی ہے۔ "
+            "The attached file is available as supporting context; visible details require clinician review."
+        ),
+        "description_english": (
+            "The attached file is available as supporting context; visible details require clinician review."
+        ),
+        "description_urdu": "منسلک فائل معاون معلومات کے طور پر موصول ہوگئی ہے؛ ڈاکٹر اس کی تصدیق کریں۔",
+        "visible_features": [],
+        "concern_flags": [],
+        "urgency_hint": "clinician_soon",
+        "not_a_clinical_image": False,
+        "mock": True,
+    }
 
 
 def _now() -> datetime:
@@ -250,6 +269,57 @@ def chat_about_guest_result(
         expires_at=session.expires_at,
         answer=TriageChatResponse.model_validate(answer),
     )
+
+
+@router.post("/attach")
+async def attach_guest_file(
+    request: Request,
+    file: UploadFile = File(...),
+    consent: bool = Form(...),
+    state_token: str | None = Form(default=None),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Describe a temporary attachment without saving its raw bytes.
+
+    This endpoint is intentionally available before the first assessment turn
+    so a guest can begin with a report or clinical photo. The returned factual
+    description is the only content the browser may add to the transcript.
+    """
+    _rate_limit(request)
+    if consent is not True:
+        raise HTTPException(status_code=422, detail="guest_consent_required")
+    if state_token and not 32 <= len(state_token) <= 160:
+        raise HTTPException(status_code=422, detail="invalid_guest_state_token")
+    if state_token:
+        _load_session(db, state_token)
+
+    payload = await file.read()
+    filename = file.filename or "attachment"
+    mime, err = validate_upload(payload, filename, file.content_type)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
+
+    if is_mock_mode():
+        return _mock_attachment()
+
+    structured = describe_image_structured(payload, filename, mime, "Guest patient")
+    if not structured or not (
+        structured.get("description_english") or structured.get("description_urdu")
+    ):
+        raise HTTPException(status_code=422, detail="could_not_describe_attachment")
+
+    urdu = structured.get("description_urdu") or ""
+    english = structured.get("description_english") or ""
+    return {
+        "description": " · ".join(part for part in (urdu, english) if part),
+        "description_english": english or None,
+        "description_urdu": urdu or None,
+        "visible_features": structured.get("visible_features", []),
+        "concern_flags": structured.get("concern_flags", []),
+        "urgency_hint": structured.get("urgency_hint"),
+        "not_a_clinical_image": structured.get("not_a_clinical_image", False),
+        "mock": False,
+    }
 
 
 @router.delete("/{state_token}", status_code=204)

@@ -1,6 +1,8 @@
 """Public temporary assessment contract and privacy boundaries."""
 from __future__ import annotations
 
+import base64
+
 from db import SessionLocal
 from models_db import Account, GuestTriageSession, Profile, TriageSession
 
@@ -73,3 +75,27 @@ def test_guest_token_is_required_and_invalid_tokens_are_rejected(client):
         json={"state_token": "x" * 48, "text": "No"},
     )
     assert response.status_code == 404
+
+
+def test_guest_attachment_requires_consent_and_is_not_persisted(client):
+    tiny_png = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+    )
+    denied = client.post(
+        "/api/guest/triage/attach",
+        data={"consent": "false"},
+        files={"file": ("photo.png", tiny_png, "image/png")},
+    )
+    assert denied.status_code == 422
+    assert denied.json()["detail"] == "guest_consent_required"
+
+    accepted = client.post(
+        "/api/guest/triage/attach",
+        data={"consent": "true"},
+        files={"file": ("photo.png", tiny_png, "image/png")},
+    )
+    assert accepted.status_code == 200, accepted.text
+    assert accepted.json()["description"]
+    assert accepted.json()["mock"] is True
+    with SessionLocal() as db:
+        assert db.query(GuestTriageSession).count() == 0

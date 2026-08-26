@@ -41,6 +41,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   const [reviewOrigin, setReviewOrigin] = useState(null) // 'start' | 'answer'
   const [attaching, setAttaching] = useState(false)
   const [attachError, setAttachError] = useState('')
+  const [initialAttachment, setInitialAttachment] = useState(null)
   const requestControllerRef = useRef(null)
   const lastRequestRef = useRef(null)
   const [waitSeconds, setWaitSeconds] = useState(0)
@@ -313,7 +314,38 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     const text = reviewText.trim()
     if (!text) return
     if (reviewOrigin === 'answer') doAnswer(text)
-    else doStart(text)
+    else doStart(withInitialAttachment(text))
+  }
+
+  function withInitialAttachment(text) {
+    const context = initialAttachment
+      ? `[Attached file: ${initialAttachment.name}] ${initialAttachment.description}`
+      : ''
+    return [context, text.trim()].filter(Boolean).join('\n')
+  }
+
+  function submitInitialSymptoms() {
+    const payload = withInitialAttachment(typed)
+    if (payload) doStart(payload)
+  }
+
+  async function chooseInitialAttachment(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || attaching) return
+    setAttaching(true)
+    setAttachError('')
+    try {
+      const result = await attachChatImage(profile.id, file)
+      setInitialAttachment({
+        name: file.name,
+        description: result.description || 'Clinical file attached for supporting context.',
+      })
+    } catch (nextError) {
+      setAttachError(nextError.message || 'Could not read that attachment.')
+    } finally {
+      setAttaching(false)
+    }
   }
 
   function reset() {
@@ -323,6 +355,8 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     setTurn(null)
     setSessionId(null)
     setTyped('')
+    setInitialAttachment(null)
+    setAttachError('')
     selectClinicalImage(null)
     setError('')
     setPhase('idle')
@@ -375,7 +409,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           onSubmit={(e) => {
             e.preventDefault()
             tts.prime()
-            doStart(typed)
+            submitInitialSymptoms()
           }}
         >
           <textarea
@@ -386,20 +420,33 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && typed.trim()) {
+              if (e.key === 'Enter' && !e.shiftKey && (typed.trim() || initialAttachment)) {
                 e.preventDefault()
                 tts.prime()
-                doStart(typed)
+                submitInitialSymptoms()
               }
             }}
           />
+          {initialAttachment && (
+            <div className="care-attachment-preview">
+              <span aria-hidden="true">📎</span>
+              <span><strong>{initialAttachment.name}</strong><small>Included as supporting context</small></span>
+              <button type="button" onClick={() => setInitialAttachment(null)} aria-label="Remove attachment">×</button>
+            </div>
+          )}
+          {attachError && <div className="care-attachment-error" role="alert">{attachError}</div>}
           <footer>
             <button className="care-tool" type="button" onClick={startVoice} disabled={!speech.supported}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 10.5v.7a6.5 6.5 0 0 0 13 0v-.7M12 17.7V21" /></svg>
               Speak
             </button>
+            <label className={`care-tool ${attaching ? 'busy' : ''}`} title="Attach a clinical image or PDF">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 5.8-5.8a3 3 0 0 1 4.2 4.2l-7.3 7.3a5 5 0 0 1-7.1-7.1l7.1-7.1" /></svg>
+              {attaching ? 'Reading…' : 'Attach'}
+              <input type="file" hidden accept="image/*,.pdf,application/pdf" onChange={chooseInitialAttachment} />
+            </label>
             <span>{speech.backend === 'live' ? 'Live transcript in Chrome' : 'Transcript appears after Done'} · Enter to send</span>
-            <button className="care-send" type="submit" disabled={!typed.trim()} aria-label="Send">
+            <button className="care-send" type="submit" disabled={!typed.trim() && !initialAttachment} aria-label="Send">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 16-8-5 16-3-6-8-2Zm8 2 8-10" /></svg>
             </button>
           </footer>
