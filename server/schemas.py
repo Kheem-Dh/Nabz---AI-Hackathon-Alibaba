@@ -640,6 +640,9 @@ class GuestTriageChatResponse(BaseModel):
     state_token: str
     expires_at: datetime
     answer: TriageChatResponse
+    followups_used: int = 0
+    followups_limit: int = 3
+    registration_required: bool = False
 
 
 class TriageSessionListItem(BaseModel):

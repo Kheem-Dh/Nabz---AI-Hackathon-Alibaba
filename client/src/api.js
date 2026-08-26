@@ -54,6 +54,7 @@ async function handle(resp) {
     err.status = resp.status
     err.detail = detail
     err.validation = validation
+    err.body = body
     throw err
   }
   return body

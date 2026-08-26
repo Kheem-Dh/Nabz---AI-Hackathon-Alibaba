@@ -99,6 +99,8 @@ function SmallMicIcon() {
 }
 
 function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
+  const lastEntry = entries[entries.length - 1]
+  const limitReached = Boolean(lastEntry?.registration_required)
   const speech = useSpeechRecognition({ lang: 'ur-PK', silenceMs: 4500 })
   const [attachment, setAttachment] = useState(null)
   const [attaching, setAttaching] = useState(false)
@@ -144,13 +146,29 @@ function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
       {entries.map((entry, index) => (
         <div className="guest-followup-pair" key={`${entry.question}-${index}`}>
           <div className="guest-user-bubble">{entry.question}</div>
-          <div className="guest-followup-answer">
+          <div className={`guest-followup-answer ${entry.limit_reached ? 'limit-reached' : ''}`}>
             {entry.answer.answer_urdu && <p className="urdu" dir="rtl">{entry.answer.answer_urdu}</p>}
             <p>{entry.answer.answer_english}</p>
-            <small>{entry.answer.safety_note}</small>
+            {entry.answer.safety_note && <small>{entry.answer.safety_note}</small>}
+            {entry.registration_required && (
+              <a className="btn btn-primary guest-register-cta" href="/auth?mode=register">
+                Create private Vault to continue →
+              </a>
+            )}
           </div>
         </div>
       ))}
+      {(() => {
+        const last = entries[entries.length - 1]
+        const usedAll = last?.registration_required
+        if (!usedAll) return null
+        return (
+          <div className="guest-followup-limit-hint">
+            Guest follow-up limit reached ({last.followups_limit ?? 3}/{last.followups_limit ?? 3}).
+            Create your private Vault to keep asking and save this conversation.
+          </div>
+        )
+      })()}
       {attachment && (
         <div className="guest-attachment-preview">
           <AttachmentIcon />
@@ -167,8 +185,8 @@ function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
         <button type="button" className={`guest-input-tool ${speech.listening ? 'recording' : ''}`} onClick={() => { setLocalError(''); speech.listening ? speech.stop() : speech.start() }} disabled={busy || !speech.supported} aria-label={speech.listening ? 'Stop voice input' : 'Start voice input'} title={speech.supported ? 'Speak your follow-up' : 'Voice input is not supported in this browser'}>
           {speech.listening ? '■' : <SmallMicIcon />}
         </button>
-        <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={speech.listening ? 'Listening…' : 'Ask a follow-up about this result…'} />
-        <button className="guest-followup-send" disabled={busy || (!value.trim() && !attachment)}>{busy ? '…' : 'Ask →'}</button>
+        <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={limitReached ? 'Create a Vault to keep asking…' : (speech.listening ? 'Listening…' : 'Ask a follow-up about this result…')} disabled={limitReached} />
+        <button className="guest-followup-send" disabled={busy || limitReached || (!value.trim() && !attachment)}>{busy ? '…' : 'Ask →'}</button>
       </form>
     </section>
   )
@@ -311,10 +329,30 @@ export default function GuestChatPage() {
     try {
       const response = await guestTriageChat(stateToken, question, controller.signal)
       const visibleQuestion = [attachment ? `📎 ${attachment.name}` : '', typedQuestion].filter(Boolean).join('\n')
-      setFollowups((items) => [...items, { question: visibleQuestion, answer: response.answer }])
+      setFollowups((items) => [...items, {
+        question: visibleQuestion,
+        answer: response.answer,
+        followups_used: response.followups_used,
+        followups_limit: response.followups_limit,
+        registration_required: response.registration_required,
+      }])
       setFollowupText('')
       return true
     } catch (nextError) {
+      if (nextError.status === 403 && nextError.body?.detail?.code === 'guest_followup_limit_reached') {
+        setFollowups((items) => [...items, {
+          question: typedQuestion,
+          answer: {
+            answer_english: nextError.body.detail.message,
+            answer_urdu: 'مفت گیسٹ سوالات ختم ہو گئے ہیں۔ اپنی نجی والٹ بنائیں (20 سیکنڈ، مفت) تاکہ گفتگو جاری رکھ سکیں اور اسے اپنے فیملی ریکارڈ میں محفوظ کر سکیں۔',
+            safety_note: 'Guest follow-up limit reached.',
+          },
+          registration_required: true,
+          limit_reached: true,
+        }])
+        setFollowupText('')
+        return true
+      }
       setError(nextError.message || 'The follow-up could not be answered right now.')
       return false
     } finally {

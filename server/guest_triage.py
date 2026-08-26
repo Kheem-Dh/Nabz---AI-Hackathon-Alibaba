@@ -88,8 +88,16 @@ def _rate_limit(request: Request) -> None:
         events.append(now)
 
 
+GUEST_FOLLOWUP_LIMIT = int(os.getenv("NABZ_GUEST_FOLLOWUP_LIMIT", "3"))
+
+
 def _guest_profile() -> dict[str, Any]:
-    """Minimal safe context; age/allergies are unknown until the guest says so."""
+    """Minimal safe context; guest is assumed adult until proven otherwise.
+
+    Setting is_guest + assumed_adult unlocks OTC nominations in the prompt.
+    The model is instructed to still ask about allergies and pregnancy before
+    nominating any drug, and the server-side safety filter enforces the same.
+    """
     return {
         "id": 0,
         "display_name": "آپ",
@@ -108,7 +116,13 @@ def _guest_profile() -> dict[str, Any]:
         "recent_timeline": [],
         "relevant_documents": [],
         "recent_triage_history": [],
+        "is_guest": True,
+        "assumed_adult": True,
     }
+
+
+def _count_guest_followups(turns: list[dict[str, Any]]) -> int:
+    return sum(1 for t in (turns or []) if t.get("kind") == "followup_user")
 
 
 def _load_session(db: Session, token: str) -> GuestTriageSession:
@@ -253,6 +267,19 @@ def chat_about_guest_result(
     if session.status != "closed" or not session.result_payload:
         raise HTTPException(status_code=409, detail="guest_assessment_not_complete")
     existing = list(session.turns or [])
+    if _count_guest_followups(existing) >= GUEST_FOLLOWUP_LIMIT:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "guest_followup_limit_reached",
+                "limit": GUEST_FOLLOWUP_LIMIT,
+                "message": (
+                    "You have used all free follow-up questions for this guest "
+                    "session. Create a private Vault (free, 20 seconds) to keep "
+                    "asking and to save this conversation to your family record."
+                ),
+            },
+        )
     answer = qwen_followup_chat(
         _guest_profile(), session.id, dict(session.result_payload), existing, payload.text.strip(),
         usage_context=guest_usage_context(
@@ -273,10 +300,14 @@ def chat_about_guest_result(
     db.add(session)
     db.commit()
     db.refresh(session)
+    used = _count_guest_followups(session.turns or [])
     return GuestTriageChatResponse(
         state_token=payload.state_token,
         expires_at=session.expires_at,
         answer=TriageChatResponse.model_validate(answer),
+        followups_used=used,
+        followups_limit=GUEST_FOLLOWUP_LIMIT,
+        registration_required=used >= GUEST_FOLLOWUP_LIMIT,
     )
 
 
