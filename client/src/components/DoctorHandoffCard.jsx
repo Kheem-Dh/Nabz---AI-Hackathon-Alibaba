@@ -9,15 +9,21 @@ export default function DoctorHandoffCard({ profileId }) {
   const [svg, setSvg] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [qrError, setQrError] = useState('')
   const [copied, setCopied] = useState(false)
 
   async function issue() {
     setError('')
+    setQrError('')
+    setSvg('')
     setCopied(false)
     setBusy(true)
     try {
       const h = await createDoctorHandoff(profileId)
-      setHandoff(h)
+      // The API may run on a different Render service. Always make the QR
+      // open the public React handoff route on the web origin.
+      const publicUrl = `${window.location.origin}/handoff/${encodeURIComponent(h.token)}`
+      setHandoff({ ...h, url: publicUrl })
     } catch (e) {
       setError(e?.message || 'Could not create a handoff link.')
     } finally {
@@ -26,11 +32,17 @@ export default function DoctorHandoffCard({ profileId }) {
   }
 
   useEffect(() => {
-    if (!handoff?.url) { setSvg(''); return }
+    if (!handoff?.url) { setSvg(''); setQrError(''); return }
     let alive = true
+    setQrError('')
     toSvg(handoff.url, { width: 220 })
       .then((s) => { if (alive) setSvg(s) })
-      .catch(() => { if (alive) setSvg('') })
+      .catch(() => {
+        if (alive) {
+          setSvg('')
+          setQrError('The QR image could not be rendered. Use Copy link or Open handoff below.')
+        }
+      })
     return () => { alive = false }
   }, [handoff?.url])
 
@@ -54,8 +66,8 @@ export default function DoctorHandoffCard({ profileId }) {
           <div className="doctor-handoff-kicker">FOR YOUR DOCTOR</div>
           <h2>Show this QR at the clinic</h2>
           <p>
-            One-tap read-only snapshot: impression, differential, red flags, confirmed medicines,
-            recent flagged labs. The link expires after {expiresIn} — no login for the doctor.
+            One-tap read-only snapshot: assessment, supporting findings, Vault documents,
+            confirmed medicines and recent labs. The link expires after {expiresIn} — no login for the doctor.
           </p>
         </div>
         {!handoff && (
@@ -73,12 +85,20 @@ export default function DoctorHandoffCard({ profileId }) {
 
       {handoff && (
         <div className="doctor-handoff-body">
-          <div
-            className="doctor-handoff-qr"
-            aria-label="QR code linking to the doctor snapshot"
-            dangerouslySetInnerHTML={{ __html: svg || '' }}
-          />
+          {svg ? (
+            <div
+              className="doctor-handoff-qr"
+              aria-label="QR code linking to the doctor snapshot"
+              dangerouslySetInnerHTML={{ __html: svg }}
+            />
+          ) : (
+            <div className="doctor-handoff-qr" aria-live="polite">
+              {!qrError && <span className="spinner-inline" aria-label="Rendering QR code" />}
+              {qrError && <span className="doctor-handoff-qr-error">QR unavailable</span>}
+            </div>
+          )}
           <div className="doctor-handoff-actions">
+            <div className="doctor-handoff-ready">✓ Report snapshot ready for the doctor</div>
             <div className="doctor-handoff-url" title={handoff.url}>{handoff.url}</div>
             <div className="doctor-handoff-buttons">
               <button className="btn btn-outline" onClick={copyLink}>
@@ -97,8 +117,9 @@ export default function DoctorHandoffCard({ profileId }) {
               </button>
             </div>
             <div className="doctor-handoff-hint">
-              Expires {new Date(handoff.expires_at).toLocaleString()}. Regenerating invalidates any older link once it expires.
+              Expires {new Date(handoff.expires_at).toLocaleString()}. Each generated link remains usable only until its own expiry.
             </div>
+            {qrError && <div className="form-error">{qrError}</div>}
           </div>
         </div>
       )}

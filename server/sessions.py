@@ -161,6 +161,10 @@ def _profile_payload(profile: Profile) -> dict[str, Any]:
                 if entry.kind == "document"
                 and (entry.payload or {}).get("extraction_status") == "extracted"
                 else None,
+                "extracted_document_facts": (entry.payload or {}).get("extracted_facts", [])[:10]
+                if entry.kind == "document"
+                and (entry.payload or {}).get("extraction_status") == "extracted"
+                else [],
                 "document_attention_items": (entry.payload or {}).get("attention_items", [])[:6]
                 if entry.kind == "document"
                 and (entry.payload or {}).get("extraction_status") == "extracted"

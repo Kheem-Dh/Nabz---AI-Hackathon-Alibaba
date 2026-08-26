@@ -47,7 +47,39 @@ export default function NearbyCare({ urgency = 'DOCTOR_24H', title = null }) {
       </div>
     )
   }
-  if (!state.data || !state.data.facilities?.length) return null
+  if (!state.data) return null
+
+  if (!state.data.facilities?.length) {
+    const label = state.data.location?.label || preference?.label || preference?.city || 'Pakistan'
+    const query = urgency === 'EMERGENCY'
+      ? `emergency hospitals near ${label}`
+      : `clinics and hospitals near ${label}`
+    return (
+      <section className="nearby nearby-live-fallback">
+        <div className="section-title">
+          <span className="ur urdu">قریبی طبی سہولت</span>
+          <span className="en">Nearby care</span>
+        </div>
+        <div className="clinic-empty card">
+          <span className="clinic-empty-icon">⌖</span>
+          <strong>No verified Nabz directory listing is available near {label} yet.</strong>
+          <p>
+            Live map listings may still be available. They open in Maps so you can review
+            current directions, hours, phone numbers and ratings at the source.
+          </p>
+          <a
+            className="btn btn-primary"
+            target="_blank"
+            rel="noreferrer"
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`}
+          >
+            View live nearby results in Maps ↗
+          </a>
+          {urgency === 'EMERGENCY' && <a className="btn btn-outline" href="tel:1122">Call Rescue 1122</a>}
+        </div>
+      </section>
+    )
+  }
 
   const { facilities, location } = state.data
   const [primary, ...rest] = facilities

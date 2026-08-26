@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   getHealthDetail,
@@ -26,6 +26,16 @@ export default function HomePage() {
   const [service, setService] = useState(null)
   const [resumeTurn, setResumeTurn] = useState(null)
   const [workspaceError, setWorkspaceError] = useState('')
+  const conversationRef = useRef(null)
+
+  function resetConversationScroll(behavior = 'auto') {
+    // The result replaces the processing panel inside a bounded desktop
+    // viewport. Wait for that larger tree to commit, then reset the actual
+    // center scroller so the new report is immediately usable.
+    window.requestAnimationFrame(() => {
+      conversationRef.current?.scrollTo({ top: 0, behavior })
+    })
+  }
 
   const loadHistory = useCallback(async () => {
     if (!active) return
@@ -61,6 +71,7 @@ export default function HomePage() {
     setDetailLoading(true)
     try {
       setSelectedEncounter(await getTriageHistory(id))
+      resetConversationScroll()
     } catch {
       setSelectedEncounter(null)
     } finally {
@@ -74,11 +85,15 @@ export default function HomePage() {
     setResumeTurn(null)
     setWorkspaceError('')
     setConversationKey((value) => value + 1)
+    resetConversationScroll()
   }
 
   function sessionChanged(turn) {
     loadHistory()
-    if (turn.type === 'result') setDashboardKey((value) => value + 1)
+    if (turn.type === 'result') {
+      setDashboardKey((value) => value + 1)
+      resetConversationScroll()
+    }
   }
 
   async function retrySavedAssessment() {
@@ -176,7 +191,7 @@ export default function HomePage() {
         )}
         {workspaceError && <div className="form-error">{workspaceError}</div>}
 
-        <div className={`workspace-conversation ${selectedId ? 'has-encounter' : 'is-new'}`}>
+        <div ref={conversationRef} className={`workspace-conversation ${selectedId ? 'has-encounter' : 'is-new'}`}>
           {selectedId ? (
             <PastEncounter
               encounter={selectedEncounter}

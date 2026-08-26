@@ -38,6 +38,13 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
     await navigator.clipboard?.writeText(turn.doctor_handoff_english)
   }
 
+  function continueConversation() {
+    document.getElementById('continue-care-chat')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }
+
   return (
     <div className="stack">
       {turn.response_source === 'ai_unavailable' && (
@@ -68,12 +75,14 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
         {turn.response_source === 'safety_protocol' && (
           <div className="ai-source-badge safety_protocol">Safety protocol · no AI dependency</div>
         )}
-        <div className="result-icon" aria-hidden="true">
-          {cfg.icon}
+        <div className="result-status-row">
+          <div className="result-icon" aria-hidden="true">{cfg.icon}</div>
+          <div className="result-status-copy">
+            <div className="result-level-ur urdu">{cfg.urdu}</div>
+            <div className="result-level-en">{cfg.english}</div>
+            <div className="result-level-sub">{cfg.sub}</div>
+          </div>
         </div>
-        <div className="result-level-ur urdu">{cfg.urdu}</div>
-        <div className="result-level-en">{cfg.english}</div>
-        <div className="result-level-sub">{cfg.sub}</div>
 
         <p className="advice-ur urdu" dir="rtl">
           {turn.advice_urdu}
@@ -87,6 +96,11 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
           <button className="btn btn-outline" onClick={() => setShowWhy((s) => !s)}>
             کیوں؟ · Why?
           </button>
+          {chatSlot && (
+            <button className="btn btn-primary" onClick={continueConversation}>
+              Continue conversation ↓
+            </button>
+          )}
         </div>
         {ttsSupported === false && onReplay && (
           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
@@ -106,18 +120,16 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
         )}
       </div>
 
-      {chatSlot}
-
-      <details className="clinical-report-details">
-        <summary>
+      <section className="clinical-report-details always-open">
+        <div className="clinical-report-summary">
           <span>
             <strong>Full assessment and care plan</strong>
             <small>
               {turn.possible_causes?.length || 0} ranked explanations · {medicationSteps.length || 0} medication options · doctor handoff · nearby care
             </small>
           </span>
-          <span className="details-open-label">Review evidence</span>
-        </summary>
+          <span className="details-open-label">Evidence open</span>
+        </div>
         <div className="clinical-report-body stack">
 
       {(turn.patient_facing_impression_english || turn.possible_causes?.length > 0) && (
@@ -177,6 +189,15 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
               })}
             </div>
           )}
+          {turn.vault_context_used?.length > 0 && (
+            <div className="vault-evidence-used">
+              <strong>Relevant Vault history used</strong>
+              <p>These saved facts informed this assessment; they do not by themselves confirm the current cause.</p>
+              <ul>
+                {turn.vault_context_used.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
+              </ul>
+            </div>
+          )}
           {turn.escalation_signs?.length > 0 && (
             <div className="escalation-block">
               <strong>Get urgent care if:</strong>
@@ -208,6 +229,12 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
           )}
           {medicationSteps.length === 0 && (
             <div className="notice notice-info">No new drug option passed the current safety and evidence checks.</div>
+          )}
+          {medicationSteps.length > 0 && (
+            <div className="notice notice-warn medication-confirmation">
+              <strong>Confirm before first use</strong>
+              <span>Ask a doctor or pharmacist to verify the exact product, formulation, labelled dose, interactions, and suitability for this patient.</span>
+            </div>
           )}
           {medicationSteps.map((opt) => (
             <div key={opt.generic_name} className="medication-option">
@@ -326,7 +353,9 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
       <NearbyCare urgency={turn.level || 'DOCTOR_24H'} />
 
         </div>
-      </details>
+      </section>
+
+      {chatSlot}
 
       <div className="btn-row no-print">
         <button className="btn btn-outline" onClick={() => navigate('/clinics')}>

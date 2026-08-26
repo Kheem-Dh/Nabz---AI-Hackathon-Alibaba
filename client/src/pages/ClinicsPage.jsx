@@ -196,7 +196,10 @@ export default function ClinicsPage() {
                 : 'clinical'}{' '}
               facilities are verified in the Nabz directory for this city yet.
             </strong>
-            <p>Search live map results around <b>{label}</b> while we expand the verified directory.</p>
+            <p>
+              Live map listings may still be available. Open Maps to review current directions,
+              hours, phone numbers and ratings at the source while we expand the verified directory.
+            </p>
             <a
               className="btn btn-primary"
               target="_blank"
@@ -205,7 +208,7 @@ export default function ClinicsPage() {
                 `${category === 'pharmacy' ? 'pharmacies' : category === 'blood_bank' ? 'blood banks' : 'clinics and hospitals'} near ${label}`,
               )}`}
             >
-              Open nearby results in Maps ↗
+              View live nearby results in Maps ↗
             </a>
           </div>
         )}

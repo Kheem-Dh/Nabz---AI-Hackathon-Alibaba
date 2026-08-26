@@ -77,13 +77,28 @@ def test_extracted_vault_document_context_is_bounded_for_live_prompt():
         "title": "Prior radiology report",
         "patient_document_note": "Patient says this was from last year.",
         "extracted_document_context": "Report text states no acute chest finding.",
+        "extracted_document_facts": ["Report date: 2026-08-20"],
         "document_attention_items": ["Follow-up was recommended in the report."],
     }]
     context = triage._profile_context(profile)
     record = context["recent_vault_record"][0]
     assert record["extracted_document_context"] == "Report text states no acute chest finding."
+    assert record["extracted_document_facts"] == ["Report date: 2026-08-20"]
     assert record["patient_document_note"].startswith("Patient says")
     assert record["document_attention_items"] == ["Follow-up was recommended in the report."]
+
+
+def test_continued_chat_keeps_full_bounded_transcript_context():
+    import triage
+
+    turns = [
+        {"role": "user" if index % 2 == 0 else "assistant", "text": f"turn {index}"}
+        for index in range(24)
+    ]
+    context = triage._conversation_context(turns)
+    assert len(context) == 24
+    assert context[0]["text"] == "turn 0"
+    assert context[-1]["text"] == "turn 23"
 
 
 def test_model_can_request_one_optional_clinical_image():

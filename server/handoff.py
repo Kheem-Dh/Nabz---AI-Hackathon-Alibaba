@@ -26,12 +26,14 @@ import os
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import urlparse
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from db import get_db
+from documents import list_profile_documents
 from models_db import Account, Profile, TimelineEntry
 from schemas import HealthResponse  # unused but sets typing precedent
 from security import JWT_ALG, get_current_account, _secret
@@ -88,14 +90,19 @@ def _handoff_snapshot(db: Session, profile: Profile) -> dict[str, Any]:
             "level": latest_triage.level,
             "chief_complaint": (first_user or latest_triage.title or "")[:400],
             "patient_facing_impression_english": p.get("patient_facing_impression_english"),
+            "possible_causes": (p.get("possible_causes") or [])[:3],
             "doctor_differential": (p.get("doctor_differential") or [])[:8],
             "supporting_findings": (p.get("supporting_findings") or [])[:6],
+            "findings_against": (p.get("findings_against") or [])[:6],
             "red_flags_present": (p.get("red_flags_present") or [])[:6],
+            "red_flags_denied": (p.get("red_flags_denied") or [])[:6],
             "unresolved_questions": (p.get("unresolved_questions") or [])[:6],
             "escalation_signs": (p.get("escalation_signs") or [])[:6],
             "reason_english": p.get("reason_english"),
             "doctor_handoff_english": p.get("doctor_handoff_english"),
             "medication_options": (p.get("medication_options") or [])[:6],
+            "medication_plan": p.get("medication_plan"),
+            "vault_context_used": (p.get("vault_context_used") or [])[:8],
             "pk_ranked_differential": p.get("pk_ranked_differential"),
         }
 
@@ -120,6 +127,20 @@ def _handoff_snapshot(db: Session, profile: Profile) -> dict[str, Any]:
         for m in profile.medicines
     ]
 
+    recent_documents = [
+        {
+            "title": document.title,
+            "type": document.document_type,
+            "date": document.created_at.isoformat(),
+            "patient_notes": document.notes,
+            "extraction_status": document.extraction_status,
+            "extracted_summary": document.extracted_summary,
+            "extracted_facts": list(document.extracted_facts or [])[:10],
+            "attention_items": list(document.attention_items or [])[:8],
+        }
+        for document in list_profile_documents(profile)[:6]
+    ]
+
     return {
         "patient": {
             "name": profile.display_name,
@@ -133,11 +154,29 @@ def _handoff_snapshot(db: Session, profile: Profile) -> dict[str, Any]:
         "current_medicines": current_medicines,
         "latest_triage": triage_view,
         "recent_labs": labs_view,
+        "recent_documents": recent_documents,
         "notice": (
             "This link was shared by the patient. It expires soon and shows only their "
             "most recent Vault snapshot. It is not a substitute for a clinical examination."
         ),
     }
+
+
+def _web_origin(request: Request) -> str:
+    """Resolve the browser origin without ever defaulting to the API host."""
+    configured = os.getenv("NABZ_WEB_BASE_URL", "").strip().rstrip("/")
+    if configured:
+        return configured
+    for candidate in (
+        request.headers.get("origin", ""),
+        request.headers.get("referer", ""),
+    ):
+        parsed = urlparse(candidate)
+        if parsed.scheme in {"http", "https"} and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}"
+    # Local/same-service deployments still work; split Render deployments are
+    # additionally protected by the frontend rebuilding the URL from token.
+    return str(request.base_url).rstrip("/")
 
 
 @router.post("/api/summary/{profile_id}/handoff")
@@ -151,10 +190,7 @@ def create_handoff(
     if not profile or profile.account_id != account.id:
         raise HTTPException(status_code=404, detail="profile_not_found")
     token, exp = _issue_handoff_token(account.id, profile.id)
-    base = os.getenv("NABZ_WEB_BASE_URL", "").strip().rstrip("/")
-    if not base:
-        # Fall back to the same origin the browser used.
-        base = str(request.base_url).rstrip("/")
+    base = _web_origin(request)
     url = f"{base}/handoff/{token}"
     logger.info(
         "handoff_issued account_id=%s profile_id=%s expires_at=%s",

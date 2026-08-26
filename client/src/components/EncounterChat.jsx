@@ -19,6 +19,7 @@ export default function EncounterChat({ sessionId, profileId, initialTurns = nul
   const speech = useSpeechRecognition({ lang: 'ur-PK', silenceMs: 4500 })
   const tts = useTextToSpeech()
   const wasListening = useRef(false)
+  const threadEndRef = useRef(null)
 
   useEffect(() => {
     let active = true
@@ -110,8 +111,14 @@ export default function EncounterChat({ sessionId, profileId, initialTurns = nul
 
   const followups = turns.filter((turn) => turn.kind?.startsWith('followup_'))
 
+  useEffect(() => {
+    if (followups.length > 0 || sending) {
+      threadEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [followups.length, sending])
+
   return (
-    <section className="encounter-chat no-print">
+    <section className="encounter-chat no-print" id="continue-care-chat">
       <header className="encounter-chat-head">
         <div className="chat-orb" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6" /></svg>
@@ -151,6 +158,7 @@ export default function EncounterChat({ sessionId, profileId, initialTurns = nul
             </article>
           ))}
           {sending && <div className="chat-thinking"><i /><i /><i /><span>Nabz is reviewing context…</span></div>}
+          <div ref={threadEndRef} />
         </div>
       )}
 

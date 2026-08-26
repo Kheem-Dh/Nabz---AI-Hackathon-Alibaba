@@ -38,7 +38,7 @@ export default function HandoffPage() {
       </div>
     )
   }
-  const { patient, chronic_conditions, allergies, current_medicines, latest_triage, recent_labs, notice } = state.data || {}
+  const { patient, chronic_conditions, allergies, current_medicines, latest_triage, recent_labs, recent_documents, notice } = state.data || {}
 
   return (
     <div className="handoff-page">
@@ -86,10 +86,37 @@ export default function HandoffPage() {
                 <strong>Impression:</strong> {latest_triage.patient_facing_impression_english}
               </div>
             )}
+            {latest_triage.possible_causes?.length > 0 && (
+              <div className="handoff-list">
+                <strong>Ranked explanations (not confirmed diagnoses):</strong>
+                <ol>
+                  {latest_triage.possible_causes.map((cause, i) => (
+                    <li key={`${cause.name_english || cause.name || 'cause'}-${i}`}>
+                      <strong>{cause.name_english || cause.name || 'Possible explanation'}</strong>
+                      {cause.likelihood && ` · ${String(cause.likelihood).replaceAll('_', ' ').toLowerCase()}`}
+                      {cause.why_it_may_fit && <div className="handoff-note">Why it may fit: {cause.why_it_may_fit}</div>}
+                      {cause.what_would_help_confirm && <div className="handoff-note">To distinguish: {cause.what_would_help_confirm}</div>}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
             {latest_triage.doctor_differential?.length > 0 && (
               <div className="handoff-list">
                 <strong>Differential:</strong>
                 <ul>{latest_triage.doctor_differential.map((d, i) => <li key={i}>{d}</li>)}</ul>
+              </div>
+            )}
+            {latest_triage.supporting_findings?.length > 0 && (
+              <div className="handoff-list">
+                <strong>Supporting findings:</strong>
+                <ul>{latest_triage.supporting_findings.map((finding, i) => <li key={i}>{finding}</li>)}</ul>
+              </div>
+            )}
+            {latest_triage.findings_against?.length > 0 && (
+              <div className="handoff-list">
+                <strong>Findings against / uncertainty:</strong>
+                <ul>{latest_triage.findings_against.map((finding, i) => <li key={i}>{finding}</li>)}</ul>
               </div>
             )}
             {latest_triage.pk_ranked_differential?.length > 0 && (
@@ -117,9 +144,38 @@ export default function HandoffPage() {
                 <ul>{latest_triage.unresolved_questions.map((q, i) => <li key={i}>{q}</li>)}</ul>
               </div>
             )}
+            {latest_triage.escalation_signs?.length > 0 && (
+              <div className="handoff-red">
+                <strong>Escalate if:</strong> {latest_triage.escalation_signs.join(' · ')}
+              </div>
+            )}
+            {latest_triage.vault_context_used?.length > 0 && (
+              <div className="handoff-list handoff-vault-evidence">
+                <strong>Vault facts used in this assessment:</strong>
+                <ul>{latest_triage.vault_context_used.map((fact, i) => <li key={i}>{fact}</li>)}</ul>
+              </div>
+            )}
             {latest_triage.doctor_handoff_english && (
               <div className="handoff-line handoff-sbar">
                 <strong>SBAR:</strong> {latest_triage.doctor_handoff_english}
+              </div>
+            )}
+            {latest_triage.medication_options?.length > 0 && (
+              <div className="handoff-list">
+                <strong>Evidence-checked symptom-relief options (not prescriptions):</strong>
+                <ul>
+                  {latest_triage.medication_options.map((option, i) => (
+                    <li key={i}>
+                      <strong>{option.generic_name}</strong>
+                      {option.purpose ? ` — ${option.purpose}` : ''}
+                      {option.safety_note && <div className="handoff-note">{option.safety_note}</div>}
+                      {option.dailymed_source_url && (
+                        <a href={option.dailymed_source_url} target="_blank" rel="noreferrer">DailyMed label ↗</a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <div className="handoff-note">Confirm the exact product, formulation, label directions, interactions and patient suitability before use.</div>
               </div>
             )}
           </section>
@@ -167,6 +223,26 @@ export default function HandoffPage() {
                 )}
                 {lab.explanation_english && <div className="handoff-note">{lab.explanation_english}</div>}
               </div>
+            ))}
+          </section>
+        )}
+
+        {recent_documents?.length > 0 && (
+          <section className="handoff-block">
+            <h2>Relevant Vault documents</h2>
+            {recent_documents.map((document, i) => (
+              <article className="handoff-document" key={`${document.title}-${i}`}>
+                <strong>{document.title}</strong>
+                <span className="handoff-note"> · {document.type} · {new Date(document.date).toLocaleDateString()}</span>
+                {document.patient_notes && <p><strong>Patient note:</strong> {document.patient_notes}</p>}
+                {document.extracted_summary && <p><strong>Extracted summary:</strong> {document.extracted_summary}</p>}
+                {document.extracted_facts?.length > 0 && (
+                  <ul>{document.extracted_facts.map((fact, j) => <li key={j}>{fact}</li>)}</ul>
+                )}
+                {document.attention_items?.length > 0 && (
+                  <div className="handoff-red"><strong>Attention:</strong> {document.attention_items.join(' · ')}</div>
+                )}
+              </article>
             ))}
           </section>
         )}

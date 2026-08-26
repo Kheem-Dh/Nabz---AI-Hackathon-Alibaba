@@ -3233,7 +3233,8 @@ textarea.input {
   border-radius: 17px;
   background: rgba(255,255,255,.78);
 }
-.clinical-report-details > summary {
+.clinical-report-details > summary,
+.clinical-report-summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3245,9 +3246,12 @@ textarea.input {
 }
 .clinical-report-details > summary::-webkit-details-marker { display: none; }
 .clinical-report-details > summary:hover { background: var(--teal-050); }
-.clinical-report-details > summary > span:first-child { display: flex; flex-direction: column; gap: 3px; }
-.clinical-report-details > summary strong { color: var(--ink); font-size: 14px; }
-.clinical-report-details > summary small { color: var(--ink-mute); font-size: 10px; font-weight: 400; }
+.clinical-report-details > summary > span:first-child,
+.clinical-report-summary > span:first-child { display: flex; flex-direction: column; gap: 3px; }
+.clinical-report-details > summary strong,
+.clinical-report-summary strong { color: var(--ink); font-size: 14px; }
+.clinical-report-details > summary small,
+.clinical-report-summary small { color: var(--ink-mute); font-size: 10px; font-weight: 400; }
 .details-open-label {
   display: inline-flex;
   align-items: center;
@@ -3262,6 +3266,7 @@ textarea.input {
 }
 .details-open-label::after { content: '↓'; font-size: 12px; }
 .clinical-report-details[open] .details-open-label::after { content: '↑'; }
+.clinical-report-details.always-open .details-open-label::after { content: '✓'; }
 .clinical-report-body {
   padding: 4px 16px 18px;
   border-top: 1px solid var(--line);
@@ -5656,7 +5661,7 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
     scrollbar-width: thin;
   }
   .workspace-shell .assessment-workspace { overflow: hidden; }
-  .workspace-shell .workspace-conversation:not(.is-new) { overflow-y: auto; }
+  .workspace-shell .workspace-conversation { overflow-y: auto; scrollbar-width: thin; }
 }
 
 @media (min-width: 900px) and (max-width: 1439px) {
@@ -5746,6 +5751,77 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
   .voice-first-copy { margin-top: 9px; }
   .voice-first-copy span { display: none; }
   .triage-start-card .care-composer textarea { min-height: 62px; }
+}
+
+/* Result usability: the center pane owns one deterministic scrollbar even
+   when a compact processing state is replaced by a much taller report. */
+@media (min-width: 900px) {
+  .workspace-shell .workspace-conversation {
+    height: 0;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  .workspace-shell .workspace-conversation > .stack,
+  .workspace-shell .workspace-conversation > .past-encounter {
+    min-height: min-content;
+    flex: 0 0 auto;
+  }
+}
+
+/* Keep the outcome prominent without spending half the viewport on a large,
+   vertically centered status emblem. */
+.result-card { padding: 18px 20px; text-align: left; }
+.result-status-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.result-status-row .result-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin: 0;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 15px;
+  background: rgba(255,255,255,.65);
+  font-size: 25px;
+}
+.result-status-copy { min-width: 0; }
+.result-status-copy .result-level-ur { margin: 0; font-size: 1.2rem; line-height: 1.55; }
+.result-status-copy .result-level-en { font-size: .75rem; }
+.result-status-copy .result-level-sub { font-size: .75rem; }
+.result-card .advice-ur { margin-top: 10px; font-size: .9375rem; line-height: 1.85; }
+.result-card .advice-en { margin-top: 3px; font-size: .8125rem; line-height: 1.55; }
+.result-card .result-actions { margin-top: 11px; }
+.result-card .result-actions .btn { min-height: 40px; font-size: .75rem; }
+.clinical-report-summary { min-height: 58px; padding-block: 11px; }
+.clinical-report-body { padding: 14px; }
+.vault-evidence-used {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #cfe5df;
+  border-radius: 12px;
+  background: #f1f8f6;
+}
+.vault-evidence-used > strong { color: var(--teal-dark); font-size: .8125rem; }
+.vault-evidence-used > p { margin: 3px 0 7px; color: var(--ink-mute); font-size: .6875rem; line-height: 1.5; }
+.vault-evidence-used ul { margin: 0; padding-left: 18px; color: var(--ink-soft); font-size: .75rem; line-height: 1.6; }
+.medication-confirmation { display: grid; gap: 3px; margin-top: 10px; line-height: 1.5; }
+
+.doctor-handoff-ready { color: var(--teal-dark); font-size: .75rem; font-weight: 700; }
+.doctor-handoff-qr-error { color: #9b3131; font-size: .75rem; font-weight: 700; }
+.handoff-vault-evidence { padding: 10px 12px; border-radius: 10px; background: #eef8f5; }
+
+@media (max-width: 640px) {
+  .result-card { padding: 15px; }
+  .result-status-row { align-items: flex-start; }
+  .result-status-row .result-icon { width: 42px; height: 42px; font-size: 22px; }
+  .clinical-report-summary { align-items: flex-start; min-height: 0; padding: 12px; }
+  .clinical-report-summary small { line-height: 1.45; }
 }
 
 @media print {

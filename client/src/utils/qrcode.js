@@ -7,10 +7,11 @@
 import QRCode from 'qrcode'
 
 const DEFAULT_OPTS = {
-  errorCorrectionLevel: 'M',
+  errorCorrectionLevel: 'Q',
   type: 'svg',
   margin: 2,
-  color: { dark: '#0F9D8A', light: '#00000000' },  // transparent light
+  // Camera scanners are most reliable with opaque, high-contrast modules.
+  color: { dark: '#102825', light: '#FFFFFF' },
   width: 240,
 }
 

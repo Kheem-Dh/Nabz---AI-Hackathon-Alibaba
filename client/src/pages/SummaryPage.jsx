@@ -128,6 +128,30 @@ export default function SummaryPage() {
                   <strong>{data.recent_triage.level}</strong>
                   {data.recent_triage.reason ? ` — ${data.recent_triage.reason}` : ''}
                 </p>
+                {data.recent_triage.patient_facing_impression_english && (
+                  <p><strong>Impression:</strong> {data.recent_triage.patient_facing_impression_english}</p>
+                )}
+                {data.recent_triage.supporting_findings?.length > 0 && (
+                  <div><strong>Supporting findings</strong><ul>{data.recent_triage.supporting_findings.map((item, index) => <li key={index}>{item}</li>)}</ul></div>
+                )}
+                {data.recent_triage.findings_against?.length > 0 && (
+                  <div><strong>Findings against / uncertainty</strong><ul>{data.recent_triage.findings_against.map((item, index) => <li key={index}>{item}</li>)}</ul></div>
+                )}
+                {data.recent_triage.doctor_differential?.length > 0 && (
+                  <div><strong>Clinician differential</strong><ol>{data.recent_triage.doctor_differential.map((item, index) => <li key={index}>{item}</li>)}</ol></div>
+                )}
+                {data.recent_triage.unresolved_questions?.length > 0 && (
+                  <div><strong>Still unresolved</strong><ul>{data.recent_triage.unresolved_questions.map((item, index) => <li key={index}>{item}</li>)}</ul></div>
+                )}
+                {data.recent_triage.escalation_signs?.length > 0 && (
+                  <div className="handoff-red"><strong>Escalate care if:</strong> {data.recent_triage.escalation_signs.join(' · ')}</div>
+                )}
+                {data.recent_triage.vault_context_used?.length > 0 && (
+                  <p><strong>Vault context used:</strong> {data.recent_triage.vault_context_used.join(' · ')}</p>
+                )}
+                {data.recent_triage.doctor_handoff_english && (
+                  <p><strong>Doctor-ready handoff:</strong> {data.recent_triage.doctor_handoff_english}</p>
+                )}
               </div>
             )}
 
@@ -172,6 +196,12 @@ export default function SummaryPage() {
                       <strong>{document.title}</strong> ({document.type})
                       {document.notes ? ` — ${document.notes}` : ''}
                       {document.extracted_summary ? ` — Extracted context: ${document.extracted_summary}` : ''}
+                      {document.extracted_facts?.length > 0 && (
+                        <ul>{document.extracted_facts.map((fact, factIndex) => <li key={factIndex}>{fact}</li>)}</ul>
+                      )}
+                      {document.attention_items?.length > 0 && (
+                        <div className="handoff-red"><strong>Attention:</strong> {document.attention_items.join(' · ')}</div>
+                      )}
                     </li>
                   ))}
                 </ul>

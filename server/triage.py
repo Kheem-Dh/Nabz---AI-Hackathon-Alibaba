@@ -177,6 +177,9 @@ def _profile_context(profile: dict[str, Any]) -> dict[str, Any]:
                 "extracted_document_context": _bounded_text(
                     raw.get("extracted_document_context"), 1200
                 ) or None,
+                "extracted_document_facts": _short_string_list(
+                    raw.get("extracted_document_facts"), 10, 400
+                ),
                 "document_attention_items": _short_string_list(
                     raw.get("document_attention_items"), 6, 300
                 ),
@@ -223,7 +226,10 @@ def _profile_context(profile: dict[str, Any]) -> dict[str, Any]:
 
 def _conversation_context(turns: list[dict]) -> list[dict[str, Any]]:
     context: list[dict[str, Any]] = []
-    for turn in turns[-14:]:
+    # Preserve the complete ordinary intake plus a useful run of follow-ups.
+    # The caller already bounds input to 24 turns; do not silently cut it to
+    # 14 here or a continued chat can lose its original symptom context.
+    for turn in turns[-24:]:
         item: dict[str, Any] = {
             "speaker": "assistant" if turn.get("role") == "assistant" else "patient",
             "text": _bounded_text(turn.get("text"), 2000),
@@ -292,6 +298,15 @@ Clinical synthesis:
   and Vault facts. Never convert an unknown into a negative.
 - Vault notes and prior episodes provide context; they do not prove the current
   complaint is the same condition.
+- When a relevant Vault document or prior encounter exists, explicitly connect
+  the current answer to its dated extracted facts in the impression, supporting
+  findings, doctor handoff, and vault_context_used. Distinguish patient-entered
+  notes, AI-extracted document text, clinician-confirmed prescriptions, and the
+  current transcript. Never claim to have inspected raw pixels or a full file
+  when only an extracted summary is supplied.
+- Make the final explanation detailed enough to show which current facts and
+  relevant history support the ranking, which facts argue against it, what is
+  still unknown, and exactly when the patient should escalate care.
 - If any emergency red flag is present, return EMERGENCY immediately with no
   medication candidates and direct the patient to emergency services.
 - When uncertain between urgency levels, choose the safer higher level.
@@ -314,6 +329,10 @@ Medication candidates:
   mild_fever_adult/paracetamol, allergic_rhinitis_adult/cetirizine.
 - The server emits only options with a separately reviewed Drugs@FDA approval
   record. Put hydration and skin-barrier care in non-drug suggestions instead.
+- For a non-emergency adult result, actively consider the allowed pairs and
+  nominate a common generic symptom-relief option when the collected symptoms
+  explicitly match one. Do not force an option for cough, sore throat, or any
+  other pattern not covered by the reviewed catalog.
 - Do not nominate an adult option unless the profile confirms an adult.
 - Never nominate an option that conflicts with a recorded allergy, duplicates
   a current medicine, or is inappropriate because of the transcript.
@@ -421,7 +440,12 @@ but never strengthen it into a prescription. Do not advise starting, stopping,
 or changing a confirmed Vault medicine. If the new question reports a possible
 emergency feature, direct the patient to emergency care now. If the transcript
 does not contain the answer, say what is unknown and what a clinician should
-check. Answer the actual question concisely in natural Urdu and English.
+check. When relevant Vault documents or prior encounters are present, identify
+the dated extracted facts actually used and explain how they do or do not
+change the current answer. Distinguish patient notes, extracted document text,
+and clinician-confirmed medicines. Give a direct answer first, then enough
+detail to explain the evidence, uncertainty, next step, and safety limits in
+natural Urdu and English. Keep unrelated history out of the answer.
 
 Return strict JSON only:
 {
@@ -823,8 +847,8 @@ def qwen_followup_chat(
     ]
     try:
         data = json.loads(_strip_fences(_call_qwen(messages)))
-        answer_urdu = _bounded_text(data.get("answer_urdu"), 2400)
-        answer_english = _bounded_text(data.get("answer_english"), 2400)
+        answer_urdu = _bounded_text(data.get("answer_urdu"), 4000)
+        answer_english = _bounded_text(data.get("answer_english"), 4000)
         safety_note = _bounded_text(data.get("safety_note"), 600)
         if not answer_urdu or not answer_english or not safety_note:
             raise ValueError("incomplete_followup_chat")

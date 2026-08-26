@@ -741,6 +741,22 @@ def test_document_extraction_is_bounded_and_available_to_doctor_summary(
     recent = doctor_summary["recent_documents"][0]
     assert "no acute chest finding" in recent["extracted_summary"].lower()
 
+    issued = client.post(
+        f"/api/summary/{self_id}/handoff",
+        headers={**headers, "Origin": "https://app.nabz.example"},
+    )
+    assert issued.status_code == 200, issued.text
+    grant = issued.json()
+    assert grant["url"].startswith("https://app.nabz.example/handoff/")
+
+    # The QR target is public but bounded, and carries the extracted report
+    # context the doctor needs rather than presenting an empty snapshot.
+    snapshot = client.get(f"/api/handoff/{grant['token']}")
+    assert snapshot.status_code == 200, snapshot.text
+    shared_document = snapshot.json()["recent_documents"][0]
+    assert shared_document["title"] == "X-ray"
+    assert shared_document["extracted_facts"][0] == "Report date: 2026-08-20"
+
 
 def test_generic_lab_upload_requires_structured_lab_flow(client, auth):
     headers, _account, self_id = auth
