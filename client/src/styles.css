@@ -6935,3 +6935,18 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
 .landing-v2 .safety-card h3 { font-size: 24px; }
 .landing-v2 .safety-card p { font-size: 14px; margin-bottom: 14px; }
 .landing-v2 .landing-final-cta p { font-size: 15px; margin-top: 4px; }
+
+/* On the authed chat page we want natural body scroll, not the legacy
+   inner-scroll trap that clipped the full assessment. Override the
+   .workspace-shell height:100dvh + overflow:hidden on ancestors. */
+@media (min-width: 1200px) {
+  .app-shell:has(.authed-chat-page) .app-container,
+  .app-shell:has(.authed-chat-page) .app-main {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+  }
+  .app-shell:has(.authed-chat-page) .authed-chat-page {
+    min-height: 0;
+  }
+}
