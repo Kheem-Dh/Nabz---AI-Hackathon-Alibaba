@@ -22,6 +22,10 @@ build/
 server/.env
 server/nabz.db
 server/nabz.db-journal
+server/nabz.db-wal
+server/nabz.db-shm
+server/_alembic_tmp.db
+server/_mig_test.db
 server/uploads/
 
 # OS / editors

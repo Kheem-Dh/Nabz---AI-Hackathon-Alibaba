@@ -1,0 +1,315 @@
+<title>Nabz Data Model</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Nastaliq+Urdu:wght@600&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+  :root {
+    --bg: #f6f4ef; --surface: #ffffff; --surface-2: #f0ede6;
+    --ink: #1d2b2a; --ink-soft: #55645f; --ink-mute: #8a9793; --line: #e2ddd3;
+    --accent: #0f9d8a; --accent-ink: #0b6d60; --accent-050: #e7f6f3; --amber: #c47a00;
+    --shadow: 0 2px 4px rgba(20,40,36,.04), 0 10px 30px rgba(20,40,36,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#0e1615; --surface:#16201e; --surface-2:#1c2a27;
+      --ink:#e9efec; --ink-soft:#a9b7b2; --ink-mute:#6f817d; --line:#27332f;
+      --accent:#2fc7b3; --accent-ink:#7fe0d2; --accent-050:#143029; --amber:#f0b13f;
+      --shadow:0 2px 4px rgba(0,0,0,.3),0 12px 34px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:#0e1615; --surface:#16201e; --surface-2:#1c2a27;
+    --ink:#e9efec; --ink-soft:#a9b7b2; --ink-mute:#6f817d; --line:#27332f;
+    --accent:#2fc7b3; --accent-ink:#7fe0d2; --accent-050:#143029; --amber:#f0b13f;
+    --shadow:0 2px 4px rgba(0,0,0,.3),0 12px 34px rgba(0,0,0,.4);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"IBM Plex Sans", system-ui, sans-serif; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:52px 24px 90px; }
+
+  .eyebrow { font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent-ink); margin:0 0 12px; }
+  h1 { font-family:"Sora",sans-serif; font-weight:700; font-size:clamp(28px,5.5vw,42px); letter-spacing:-.02em; margin:0 0 8px; display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  h1 .ur { font-family:"Noto Nastaliq Urdu",serif; color:var(--accent); font-size:.8em; }
+  .lede { font-size:17px; color:var(--ink-soft); max-width:68ch; margin:0; }
+  .meta-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; }
+  .tag { font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-soft); background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:5px 12px; }
+  .tag b { color:var(--accent-ink); font-weight:600; }
+
+  section { margin-top:44px; }
+  .sec-head { display:flex; align-items:baseline; gap:12px; border-bottom:1px solid var(--line); padding-bottom:10px; margin-bottom:20px; }
+  .sec-num { font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--accent); font-weight:600; }
+  h2 { font-family:"Sora",sans-serif; font-weight:600; font-size:clamp(19px,3vw,24px); margin:0; }
+
+  /* Diagram card is always light so the dark-on-white SVG stays legible in any theme */
+  figure { margin:0; background:#ffffff; border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:var(--shadow); overflow-x:auto; }
+  figure svg { display:block; width:100%; height:auto; min-width:860px; }
+  figcaption { margin-top:14px; padding-top:12px; border-top:1px dashed var(--line); font-size:13px; color:var(--ink-soft); }
+  figcaption b { color:var(--ink); }
+
+  .legend { display:flex; flex-wrap:wrap; gap:16px 22px; margin-top:16px; }
+  .legend span { font-size:12.5px; color:var(--ink-soft); font-family:"IBM Plex Mono",monospace; }
+  .legend b { color:var(--ink); }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:15px 17px; box-shadow:var(--shadow); }
+  .card h3 { font-family:"IBM Plex Mono",monospace; font-size:13.5px; margin:0 0 6px; color:var(--accent-ink); }
+  .card p { margin:0; font-size:13px; color:var(--ink-soft); }
+  .card p b { color:var(--ink); }
+
+  footer { margin-top:52px; padding-top:18px; border-top:1px solid var(--line); color:var(--ink-mute); font-size:13px; display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  footer .ur { font-family:"Noto Nastaliq Urdu",serif; color:var(--ink-soft); }
+
+  @media print {
+    @page { size:A3 landscape; margin:10mm; }
+    body { background:#fff; } .wrap { max-width:none; padding:0; }
+    figure { box-shadow:none; overflow:visible; } figure svg { min-width:0; }
+    .card { box-shadow:none; break-inside:avoid; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Database · Entity-Relationship</p>
+    <h1>Nabz Data Model <span class="ur">نبض</span></h1>
+    <p class="lede">
+      SQLite via SQLAlchemy (swappable to Postgres/MySQL through <code>DATABASE_URL</code>). One
+      account owns many patient profiles; clinical records hang off a profile; identity, consent and
+      operational tables hang off the account. Uploaded files live in object storage — only their
+      reference is kept here.
+    </p>
+    <div class="meta-row">
+      <span class="tag"><b>Engine</b> SQLite · SQLAlchemy ORM</span>
+      <span class="tag"><b>File</b> server/nabz.db</span>
+      <span class="tag"><b>Tables</b> 11</span>
+      <span class="tag"><b>Files</b> local uploads/ or S3/R2</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2>Entity-relationship diagram</h2></div>
+    <figure>
+      <svg viewBox="0 0 1080 1060" role="img"
+        aria-label="Entity-relationship diagram. The accounts table is the hub: it owns profiles (one-to-many) and has one location_preferences (one-to-one) plus many verification_codes, consent_records, audit_events, usage_sessions, and a soft link to request_logs. The profiles table owns many medicines, timeline_entries, and triage_sessions. Foreign keys cascade on delete.">
+        <defs>
+          <marker id="dot" markerWidth="8" markerHeight="8" refX="4" refY="4">
+            <circle cx="4" cy="4" r="3" fill="#0b7d6e" />
+          </marker>
+          <marker id="crow" markerWidth="14" markerHeight="14" refX="11" refY="7" orient="auto">
+            <path d="M11,1 L1,7 L11,13" fill="none" stroke="#0b7d6e" stroke-width="1.4" />
+          </marker>
+        </defs>
+
+        <!-- ============ RELATIONSHIP LINES (drawn first, under boxes) ============ -->
+        <!-- accounts hub right edge ~ (310,579) -->
+        <!-- accounts -> profiles (one-to-many) -->
+        <path d="M310,560 C360,400 360,180 400,79" fill="none" stroke="#0b7d6e" stroke-width="1.5" marker-start="url(#dot)" marker-end="url(#crow)" />
+        <!-- accounts -> location_preferences (one-to-one) -->
+        <path d="M310,568 C360,480 360,300 400,227" fill="none" stroke="#0b7d6e" stroke-width="1.5" marker-start="url(#dot)" marker-end="url(#dot)" />
+        <!-- accounts -> verification_codes -->
+        <path d="M310,575 C365,480 365,420 400,375" fill="none" stroke="#0b7d6e" stroke-width="1.5" marker-start="url(#dot)" marker-end="url(#crow)" />
+        <!-- accounts -> consent_records -->
+        <path d="M310,584 C365,540 365,540 400,523" fill="none" stroke="#0b7d6e" stroke-width="1.5" marker-start="url(#dot)" marker-end="url(#crow)" />
+        <!-- accounts -> audit_events -->
+        <path d="M310,591 C365,640 365,640 400,671" fill="none" stroke="#0b7d6e" stroke-width="1.5" marker-start="url(#dot)" marker-end="url(#crow)" />
+        <!-- accounts -> usage_sessions -->
+        <path d="M310,598 C360,720 360,760 400,819" fill="none" stroke="#0b7d6e" stroke-width="1.5" marker-start="url(#dot)" marker-end="url(#crow)" />
+        <!-- accounts -> request_logs (soft, dashed) -->
+        <path d="M310,606 C355,800 355,900 400,967" fill="none" stroke="#9aa8a3" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#crow)" />
+
+        <!-- profiles right edge ~ (680,79) -> col3 children -->
+        <path d="M680,86 C720,100 730,60 770,79" fill="none" stroke="#0b7d6e" stroke-width="1.5" marker-start="url(#dot)" marker-end="url(#crow)" />
+        <path d="M680,100 C725,160 730,200 770,227" fill="none" stroke="#0b7d6e" stroke-width="1.5" marker-start="url(#dot)" marker-end="url(#crow)" />
+        <path d="M680,112 C725,240 730,300 770,375" fill="none" stroke="#0b7d6e" stroke-width="1.5" marker-start="url(#dot)" marker-end="url(#crow)" />
+
+        <!-- cardinality labels -->
+        <text x="336" y="452" font-family="IBM Plex Mono" font-size="11" fill="#0b7d6e">1</text>
+        <text x="384" y="92" font-family="IBM Plex Mono" font-size="11" fill="#0b7d6e">N</text>
+        <text x="384" y="214" font-family="IBM Plex Mono" font-size="11" fill="#0b7d6e">1</text>
+        <text x="700" y="70" font-family="IBM Plex Mono" font-size="11" fill="#0b7d6e">N</text>
+
+        <!-- ============ ENTITY BOXES ============ -->
+        <!-- helper style: box white, teal name, mono fields; dark text -->
+
+        <!-- accounts (hub) x=30 y=520 -->
+        <g font-family="IBM Plex Mono, monospace">
+          <rect x="30" y="520" width="280" height="122" rx="12" fill="#ffffff" stroke="#0f9d8a" stroke-width="1.6" />
+          <text x="46" y="543" font-family="Sora, sans-serif" font-size="14.5" font-weight="700" fill="#0b6d60">accounts</text>
+          <line x1="40" y1="552" x2="300" y2="552" stroke="#e2ddd3" />
+          <text x="46" y="572" font-size="12" fill="#24322f">id <tspan fill="#9aa8a3">PK</tspan></text>
+          <text x="46" y="591" font-size="12" fill="#24322f">phone <tspan fill="#9aa8a3">UK</tspan></text>
+          <text x="46" y="610" font-size="12" fill="#24322f">email · password_hash</text>
+          <text x="46" y="629" font-size="12" fill="#24322f">phone_verified · email_verified</text>
+        </g>
+
+        <!-- profiles x=400 y=20 -->
+        <g font-family="IBM Plex Mono, monospace">
+          <rect x="400" y="20" width="280" height="118" rx="12" fill="#ffffff" stroke="#0f9d8a" stroke-width="1.6" />
+          <text x="416" y="43" font-family="Sora, sans-serif" font-size="14.5" font-weight="700" fill="#0b6d60">profiles</text>
+          <line x1="410" y1="52" x2="670" y2="52" stroke="#e2ddd3" />
+          <text x="416" y="72" font-size="12" fill="#24322f">id <tspan fill="#9aa8a3">PK</tspan> · account_id <tspan fill="#9aa8a3">FK</tspan></text>
+          <text x="416" y="91" font-size="12" fill="#24322f">display_name · date_of_birth</text>
+          <text x="416" y="110" font-size="12" fill="#24322f">chronic_conditions <tspan fill="#9aa8a3">json</tspan></text>
+          <text x="416" y="129" font-size="12" fill="#24322f">allergies <tspan fill="#9aa8a3">json</tspan> · is_self</text>
+        </g>
+
+        <!-- location_preferences x=400 y=168 -->
+        <g>
+          <rect x="400" y="168" width="280" height="118" rx="12" fill="#ffffff" stroke="#cfc9bd" stroke-width="1.3" />
+          <text x="416" y="191" font-family="Sora, sans-serif" font-size="14" font-weight="700" fill="#0b6d60">location_preferences</text>
+          <line x1="410" y1="200" x2="670" y2="200" stroke="#e2ddd3" />
+          <text x="416" y="220" font-family="IBM Plex Mono" font-size="12" fill="#24322f">id <tspan fill="#9aa8a3">PK</tspan> · account_id <tspan fill="#9aa8a3">FK·UK</tspan></text>
+          <text x="416" y="239" font-family="IBM Plex Mono" font-size="12" fill="#24322f">label · city · province</text>
+          <text x="416" y="258" font-family="IBM Plex Mono" font-size="12" fill="#24322f">latitude · longitude</text>
+          <text x="416" y="277" font-family="IBM Plex Mono" font-size="12" fill="#24322f">manual</text>
+        </g>
+
+        <!-- verification_codes x=400 y=316 -->
+        <g>
+          <rect x="400" y="316" width="280" height="118" rx="12" fill="#ffffff" stroke="#cfc9bd" stroke-width="1.3" />
+          <text x="416" y="339" font-family="Sora, sans-serif" font-size="14" font-weight="700" fill="#0b6d60">verification_codes</text>
+          <line x1="410" y1="348" x2="670" y2="348" stroke="#e2ddd3" />
+          <text x="416" y="368" font-family="IBM Plex Mono" font-size="12" fill="#24322f">id <tspan fill="#9aa8a3">PK</tspan> · account_id <tspan fill="#9aa8a3">FK</tspan></text>
+          <text x="416" y="387" font-family="IBM Plex Mono" font-size="12" fill="#24322f">channel · code_hash</text>
+          <text x="416" y="406" font-family="IBM Plex Mono" font-size="12" fill="#24322f">expires_at · attempts</text>
+          <text x="416" y="425" font-family="IBM Plex Mono" font-size="12" fill="#24322f">consumed</text>
+        </g>
+
+        <!-- consent_records x=400 y=464 -->
+        <g>
+          <rect x="400" y="464" width="280" height="108" rx="12" fill="#ffffff" stroke="#cfc9bd" stroke-width="1.3" />
+          <text x="416" y="487" font-family="Sora, sans-serif" font-size="14" font-weight="700" fill="#0b6d60">consent_records</text>
+          <line x1="410" y1="496" x2="670" y2="496" stroke="#e2ddd3" />
+          <text x="416" y="516" font-family="IBM Plex Mono" font-size="12" fill="#24322f">id <tspan fill="#9aa8a3">PK</tspan> · account_id <tspan fill="#9aa8a3">FK</tspan></text>
+          <text x="416" y="535" font-family="IBM Plex Mono" font-size="12" fill="#24322f">consent_type · policy_version</text>
+          <text x="416" y="554" font-family="IBM Plex Mono" font-size="12" fill="#24322f">granted · changed_at</text>
+        </g>
+
+        <!-- audit_events x=400 y=612 -->
+        <g>
+          <rect x="400" y="612" width="280" height="118" rx="12" fill="#ffffff" stroke="#cfc9bd" stroke-width="1.3" />
+          <text x="416" y="635" font-family="Sora, sans-serif" font-size="14" font-weight="700" fill="#0b6d60">audit_events</text>
+          <line x1="410" y1="644" x2="670" y2="644" stroke="#e2ddd3" />
+          <text x="416" y="664" font-family="IBM Plex Mono" font-size="12" fill="#24322f">id <tspan fill="#9aa8a3">PK</tspan> · account_id <tspan fill="#9aa8a3">FK</tspan></text>
+          <text x="416" y="683" font-family="IBM Plex Mono" font-size="12" fill="#24322f">profile_id <tspan fill="#9aa8a3">(soft)</tspan></text>
+          <text x="416" y="702" font-family="IBM Plex Mono" font-size="12" fill="#24322f">event_type · resource_type</text>
+          <text x="416" y="721" font-family="IBM Plex Mono" font-size="12" fill="#24322f">event_metadata <tspan fill="#9aa8a3">json</tspan></text>
+        </g>
+
+        <!-- usage_sessions x=400 y=760 -->
+        <g>
+          <rect x="400" y="760" width="280" height="118" rx="12" fill="#ffffff" stroke="#cfc9bd" stroke-width="1.3" />
+          <text x="416" y="783" font-family="Sora, sans-serif" font-size="14" font-weight="700" fill="#0b6d60">usage_sessions</text>
+          <line x1="410" y1="792" x2="670" y2="792" stroke="#e2ddd3" />
+          <text x="416" y="812" font-family="IBM Plex Mono" font-size="12" fill="#24322f">id <tspan fill="#9aa8a3">PK</tspan> · account_id <tspan fill="#9aa8a3">FK</tspan></text>
+          <text x="416" y="831" font-family="IBM Plex Mono" font-size="12" fill="#24322f">session_key</text>
+          <text x="416" y="850" font-family="IBM Plex Mono" font-size="12" fill="#24322f">active_seconds · page_views</text>
+          <text x="416" y="869" font-family="IBM Plex Mono" font-size="12" fill="#24322f">last_path</text>
+        </g>
+
+        <!-- request_logs x=400 y=908 -->
+        <g>
+          <rect x="400" y="908" width="280" height="118" rx="12" fill="#ffffff" stroke="#cfc9bd" stroke-width="1.3" stroke-dasharray="5 4" />
+          <text x="416" y="931" font-family="Sora, sans-serif" font-size="14" font-weight="700" fill="#0b6d60">request_logs</text>
+          <line x1="410" y1="940" x2="670" y2="940" stroke="#e2ddd3" />
+          <text x="416" y="960" font-family="IBM Plex Mono" font-size="12" fill="#24322f">id <tspan fill="#9aa8a3">PK</tspan> · account_id <tspan fill="#9aa8a3">soft</tspan></text>
+          <text x="416" y="979" font-family="IBM Plex Mono" font-size="12" fill="#24322f">method · path</text>
+          <text x="416" y="998" font-family="IBM Plex Mono" font-size="12" fill="#24322f">status_code · latency_ms</text>
+          <text x="416" y="1017" font-family="IBM Plex Mono" font-size="11" fill="#9aa8a3">no bodies · no tokens</text>
+        </g>
+
+        <!-- medicines x=770 y=20 -->
+        <g>
+          <rect x="770" y="20" width="280" height="108" rx="12" fill="#ffffff" stroke="#cfc9bd" stroke-width="1.3" />
+          <text x="786" y="43" font-family="Sora, sans-serif" font-size="14" font-weight="700" fill="#0b6d60">medicines</text>
+          <line x1="780" y1="52" x2="1040" y2="52" stroke="#e2ddd3" />
+          <text x="786" y="72" font-family="IBM Plex Mono" font-size="12" fill="#24322f">id <tspan fill="#9aa8a3">PK</tspan> · profile_id <tspan fill="#9aa8a3">FK</tspan></text>
+          <text x="786" y="91" font-family="IBM Plex Mono" font-size="12" fill="#24322f">name · strength · frequency</text>
+          <text x="786" y="110" font-family="IBM Plex Mono" font-size="12" fill="#24322f">source <tspan fill="#9aa8a3">(manual|rx)</tspan></text>
+        </g>
+
+        <!-- timeline_entries x=770 y=168 -->
+        <g>
+          <rect x="770" y="168" width="280" height="118" rx="12" fill="#ffffff" stroke="#cfc9bd" stroke-width="1.3" />
+          <text x="786" y="191" font-family="Sora, sans-serif" font-size="14" font-weight="700" fill="#0b6d60">timeline_entries</text>
+          <line x1="780" y1="200" x2="1040" y2="200" stroke="#e2ddd3" />
+          <text x="786" y="220" font-family="IBM Plex Mono" font-size="12" fill="#24322f">id <tspan fill="#9aa8a3">PK</tspan> · profile_id <tspan fill="#9aa8a3">FK</tspan></text>
+          <text x="786" y="239" font-family="IBM Plex Mono" font-size="12" fill="#24322f">kind · title · level</text>
+          <text x="786" y="258" font-family="IBM Plex Mono" font-size="12" fill="#24322f">payload <tspan fill="#9aa8a3">json</tspan> (+ file ref)</text>
+          <text x="786" y="277" font-family="IBM Plex Mono" font-size="12" fill="#24322f">created_at</text>
+        </g>
+
+        <!-- triage_sessions x=770 y=316 -->
+        <g>
+          <rect x="770" y="316" width="280" height="118" rx="12" fill="#ffffff" stroke="#cfc9bd" stroke-width="1.3" />
+          <text x="786" y="339" font-family="Sora, sans-serif" font-size="14" font-weight="700" fill="#0b6d60">triage_sessions</text>
+          <line x1="780" y1="348" x2="1040" y2="348" stroke="#e2ddd3" />
+          <text x="786" y="368" font-family="IBM Plex Mono" font-size="12" fill="#24322f">id <tspan fill="#9aa8a3">PK</tspan> · profile_id <tspan fill="#9aa8a3">FK</tspan></text>
+          <text x="786" y="387" font-family="IBM Plex Mono" font-size="12" fill="#24322f">turns <tspan fill="#9aa8a3">json</tspan> · analysis <tspan fill="#9aa8a3">json</tspan></text>
+          <text x="786" y="406" font-family="IBM Plex Mono" font-size="12" fill="#24322f">status · result_level</text>
+          <text x="786" y="425" font-family="IBM Plex Mono" font-size="12" fill="#24322f">result_payload <tspan fill="#9aa8a3">json</tspan></text>
+        </g>
+      </svg>
+      <figcaption>
+        <b>Solid teal lines are foreign keys</b> (all <b>ON DELETE CASCADE</b>): a filled dot marks the
+        <em>one</em> side, the fork marks the <em>many</em> side. <code>accounts → location_preferences</code>
+        is one-to-one. The <b>dashed line to request_logs</b> is a soft link (nullable, not a FK), and
+        <code>audit_events.profile_id</code> is intentionally not a FK — so deleting a profile never erases
+        the proof it was deleted.
+      </figcaption>
+    </figure>
+
+    <div class="legend">
+      <span><b>PK</b> primary key</span>
+      <span><b>FK</b> foreign key (cascade)</span>
+      <span><b>UK</b> unique</span>
+      <span><b>●─&lt;</b> one-to-many</span>
+      <span><b>●─●</b> one-to-one</span>
+      <span><b>json</b> flexible/nested column</span>
+      <span><b>dashed</b> soft link (no FK)</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">02</span><h2>How &amp; where things are stored</h2></div>
+    <div class="grid">
+      <div class="card">
+        <h3>Identity &amp; access</h3>
+        <p><b>accounts</b>, <b>verification_codes</b> — passwords are <b>bcrypt</b> hashes; OTP codes are <b>HMAC</b> hashes. Never plaintext.</p>
+      </div>
+      <div class="card">
+        <h3>Family vault</h3>
+        <p><b>profiles → medicines / timeline_entries / triage_sessions</b>. Personalization pulls from the active profile alone; cascade-deletes with it.</p>
+      </div>
+      <div class="card">
+        <h3>Uploaded files</h3>
+        <p>Lab/prescription/scan images are <b>not in the DB</b> — stored in local <code>uploads/</code> or <b>S3 / Cloudflare R2</b> (encrypted). A <b>timeline_entry</b> holds only the reference in its JSON payload.</p>
+      </div>
+      <div class="card">
+        <h3>Care routing</h3>
+        <p><b>location_preferences</b> — one per account; coordinates kept only to rank nearby facilities, city/province persist.</p>
+      </div>
+      <div class="card">
+        <h3>Consent &amp; audit</h3>
+        <p><b>consent_records</b> (versioned, append-only) and <b>audit_events</b> (privacy-safe security trail — no clinical text or file contents).</p>
+      </div>
+      <div class="card">
+        <h3>Operational</h3>
+        <p><b>usage_sessions</b> (owner analytics) and <b>request_logs</b> (method/path/status/latency only — <b>no bodies, query strings, or tokens</b>).</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Nabz · data model — server/nabz.db</span>
+    <span class="ur">یہ ڈاکٹر کا متبادل نہیں ہے — This is not a substitute for a doctor.</span>
+  </footer>
+</div>

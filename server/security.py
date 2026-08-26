@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -13,6 +14,34 @@ from db import get_db
 from models_db import Account
 
 _pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def canonical_phone(raw: str) -> str:
+    """Canonicalize a Pakistan mobile number to a single form: +92XXXXXXXXXX.
+
+    Accepts 03XX-XXXXXXX, 03XXXXXXXXX, +923XXXXXXXXX, 923XXXXXXXXX, 00923...,
+    or a bare 3XXXXXXXXX. This is the single source of truth used at BOTH
+    registration (store + duplicate check) and login (match), so a number
+    registered in one format still logs in when typed in another.
+
+    Anything that doesn't look like a PK mobile (e.g. an email) is returned
+    stripped + lower-cased, so this is safe to call on a login identifier.
+    """
+    if not raw:
+        return ""
+    s = raw.strip()
+    if "@" in s:  # an email identifier, not a phone
+        return s.lower()
+    digits = re.sub(r"\D", "", s)
+    if digits.startswith("0092"):
+        digits = digits[2:]  # 0092... -> 92...
+    if digits.startswith("92") and len(digits) == 12:
+        digits = digits[2:]  # 92XXXXXXXXXX -> XXXXXXXXXX
+    elif digits.startswith("0") and len(digits) == 11:
+        digits = digits[1:]  # 0XXXXXXXXXX -> XXXXXXXXXX
+    if len(digits) == 10 and digits.startswith("3"):
+        return "+92" + digits
+    return s.lower()  # unrecognized — return as-is so unknowns never collide
 
 JWT_ALG = "HS256"
 JWT_TTL_HOURS = 24 * 7  # one week
@@ -93,8 +122,9 @@ def _admin_identifiers() -> set[str]:
 
 
 def is_admin_account(account: Account) -> bool:
-    allowed = _admin_identifiers()
-    candidates = {account.phone.strip().lower()}
+    # Canonicalize both sides so an admin phone matches regardless of format.
+    allowed = {canonical_phone(item) for item in _admin_identifiers()}
+    candidates = {account.phone.strip().lower(), canonical_phone(account.phone)}
     if account.email:
         candidates.add(account.email.strip().lower())
     return bool(allowed.intersection(candidates))

@@ -13,3 +13,4 @@ gTTS>=2.5,<3
 pymupdf>=1.24,<2   # PDF → PNG for lab/prescription uploads (pip-only, no system deps)
 boto3>=1.35,<2     # optional private S3 / Cloudflare R2 medical-document storage
 pytest==8.3.4
+alembic>=1.13,<2

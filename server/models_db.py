@@ -11,10 +11,13 @@ from sqlalchemy import (
     Date,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
+    func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -359,3 +362,16 @@ class VerificationCode(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
     account: Mapped[Account] = relationship(back_populates="verification_codes")
+
+
+# Case-insensitive UNIQUE email, partial so multiple NULL emails are allowed.
+# Registered on the metadata so create_all (fresh SQLite) and Alembic
+# autogenerate (Postgres) both emit it. Existing SQLite DBs get it via
+# db._ensure_indexes().
+Index(
+    "uq_accounts_email_lower",
+    func.lower(Account.email),
+    unique=True,
+    sqlite_where=text("email IS NOT NULL"),
+    postgresql_where=text("email IS NOT NULL"),
+)

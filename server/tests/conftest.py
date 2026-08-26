@@ -20,6 +20,15 @@ os.environ.pop("OPENAI_API_KEY", None)
 os.environ["JWT_SECRET"] = "test-secret-nabz"
 os.environ["NABZ_ADMIN_IDENTIFIERS"] = "admin@nabz.test"
 
+# Neutralize any real SMS/SMTP provider from the developer's server/.env so the
+# suite is hermetic: OTP delivery must fall back to `dev_code`, never send real
+# email/SMS. Set to empty (not pop) so main.py's load_dotenv can't re-populate.
+for _provider_var in (
+    "SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM",
+    "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM",
+):
+    os.environ[_provider_var] = ""
+
 _TMP_DB = Path(tempfile.gettempdir()) / f"nabz_test_{uuid.uuid4().hex}.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{_TMP_DB}"
 _TMP_UPLOADS = Path(tempfile.gettempdir()) / f"nabz_uploads_{uuid.uuid4().hex}"
