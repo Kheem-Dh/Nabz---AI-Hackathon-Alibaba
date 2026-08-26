@@ -6685,3 +6685,36 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
 .authed-chat-workspace .service-warning { margin-bottom: 14px; padding: 10px 14px; border-radius: 12px; }
 .authed-chat-workspace .service-warning strong { display: block; font-size: 14px; }
 .authed-chat-workspace .service-warning small { font-size: 12px; color: #6b7c79; }
+
+/* Readability pass — 2026-08-27
+   Many small labels were 9-11px which is unreadable on mid-range PK phones.
+   Bump the minimum to 12-13px across Vault, Documents, Profile, Clinics. */
+.p-meta { font-size: 13px !important; line-height: 1.5; }
+.badge { font-size: 12px !important; padding: 3px 8px !important; }
+.section-title .en { font-size: 13px !important; }
+.tile-en, .a-title-en, .tl-date { font-size: 12px !important; }
+.document-info span { font-size: 13px !important; }
+.document-info small { font-size: 12px !important; color: #4a5b58 !important; }
+.document-extraction small { font-size: 12px !important; }
+.document-extraction p { font-size: 14px !important; line-height: 1.5; margin: 6px 0; }
+.document-extraction ul { font-size: 13px !important; line-height: 1.55; padding-left: 20px; }
+.document-attention { font-size: 12px !important; padding: 6px 10px; background: #fff3d6; border-radius: 6px; margin-top: 6px; }
+.document-type small { font-size: 12px !important; }
+.document-row strong { font-size: 15px !important; }
+.empty-documents, .clinic-empty p { font-size: 14px !important; line-height: 1.55; }
+.clinic-empty strong { font-size: 15px !important; }
+.c-name { font-size: 15px !important; font-weight: 700; }
+.c-meta { font-size: 13px !important; color: #4a5b58 !important; }
+.c-reason { font-size: 12px !important; }
+.kv .k { font-size: 12px !important; text-transform: none !important; }
+.kv .v { font-size: 15px !important; }
+.pd-record-item strong, .pd-evidence article strong { font-size: 14px !important; }
+.pd-summary-en { font-size: 13px !important; line-height: 1.55; }
+.privacy-current, .privacy-event small, .privacy-control-head > small { font-size: 11px !important; }
+.privacy-event b { font-size: 13px !important; }
+.privacy-control-head h2 { font-size: 20px !important; }
+.privacy-choice small { font-size: 13px !important; line-height: 1.55; }
+.top-nav button small, .urdu-btn small, .app-header nav button small { font-size: 10px !important; }
+.ai-service-state strong { font-size: 12px !important; }
+.ai-service-state small { font-size: 11px !important; }
+.encounter-user small { font-size: 11px !important; }

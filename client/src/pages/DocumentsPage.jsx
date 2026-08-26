@@ -99,7 +99,7 @@ export default function DocumentsPage() {
 
   return (
     <div className="page">
-      <button className="back-link" onClick={() => navigate(`/profile/${id}`)}>‹ Patient record</button>
+      <button className="back-link" onClick={() => navigate(`/profile/${id}`)}>‹ <span className="urdu" dir="rtl">مریض کا ریکارڈ</span></button>
       <div className="section-title">
         <span className="ur urdu">{profile?.display_name} کی دستاویزات</span>
         <span className="en">Private document vault — only this patient</span>
@@ -164,11 +164,15 @@ export default function DocumentsPage() {
         )}
         {error && <div className="form-error">{error}</div>}
         <button className="btn btn-primary" disabled={busy}>
-          {documentType === 'prescription'
-            ? '📝 Open prescription confirmation'
-            : documentType === 'lab'
-              ? '🧪 Open lab extraction'
-            : busy ? 'Saving…' : '🔒 Save to this patient’s vault'}
+          {documentType === 'prescription' ? (
+            <>📝 <span className="urdu" dir="rtl">نسخہ کی تصدیق کھولیں</span></>
+          ) : documentType === 'lab' ? (
+            <>🧪 <span className="urdu" dir="rtl">لیب رپورٹ کھولیں</span></>
+          ) : busy ? (
+            <span className="urdu" dir="rtl">محفوظ ہو رہا ہے…</span>
+          ) : (
+            <>🔒 <span className="urdu" dir="rtl">والٹ میں محفوظ کریں</span></>
+          )}
         </button>
       </form>
 
@@ -207,8 +211,8 @@ export default function DocumentsPage() {
                 )}
               </div>
               <div className="document-actions">
-                <button onClick={() => openDocument(document)} aria-label="View document">View</button>
-                {document.deletable && <button className="danger-link" onClick={() => onDelete(document)} aria-label="Delete document">Delete</button>}
+                <button onClick={() => openDocument(document)} aria-label="View document"><span className="urdu" dir="rtl">دیکھیں</span></button>
+                {document.deletable && <button className="danger-link" onClick={() => onDelete(document)} aria-label="Delete document"><span className="urdu" dir="rtl">حذف</span></button>}
               </div>
             </div>
           ))}

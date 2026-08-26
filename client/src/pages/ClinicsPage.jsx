@@ -87,12 +87,12 @@ export default function ClinicsPage() {
             <span className="en">Nearby facilities</span>
           </div>
           <p className="clinics-loc-note">
-            Based on: <strong>{label}</strong>
+            <span className="urdu" dir="rtl">مقام:</span> <strong>{label}</strong>
             {data?.location?.source === 'manual' && (
-              <span className="loc-source-badge">manual city</span>
+              <span className="loc-source-badge">manual</span>
             )}
             {data?.location?.source === 'reverse-geocode' && (
-              <span className="loc-source-badge live">live location</span>
+              <span className="loc-source-badge live">live</span>
             )}
           </p>
         </div>
@@ -102,9 +102,11 @@ export default function ClinicsPage() {
           onClick={useMyLocation}
           disabled={refreshingLocation || geo.status === 'detecting'}
         >
-          {refreshingLocation || geo.status === 'detecting'
-            ? 'Detecting…'
-            : '📍 Use my current location'}
+          {refreshingLocation || geo.status === 'detecting' ? (
+            <><span className="urdu" dir="rtl">مقام پتہ کر رہا ہوں…</span></>
+          ) : (
+            <>📍 <span className="urdu" dir="rtl">میری موجودہ جگہ استعمال کریں</span></>
+          )}
         </button>
       </div>
 

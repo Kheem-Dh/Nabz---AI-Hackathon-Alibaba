@@ -49,7 +49,7 @@ export default function ProfilePage() {
     return (
       <div className="page">
         <button className="back-link" onClick={() => navigate('/vault')}>
-          ‹ Vault
+          ‹ <span className="urdu" dir="rtl">والٹ</span>
         </button>
         <div className="form-error">{error}</div>
       </div>
@@ -80,10 +80,10 @@ export default function ProfilePage() {
       {missingDetails.length > 0 && (
         <div className="profile-completion-card">
           <div>
-            <strong>Complete your health profile</strong>
-            <span>Add {missingDetails.join(', ')} so Nabz can use safer, more relevant context.</span>
+            <strong className="urdu" dir="rtl">پروفائل مکمل کریں</strong>
+            <span><span className="urdu" dir="rtl">درج کریں:</span> {missingDetails.join(', ')} — better AI context.</span>
           </div>
-          <button className="btn btn-primary" onClick={() => navigate(`/profile/${id}/edit`)}>Complete now</button>
+          <button className="btn btn-primary" onClick={() => navigate(`/profile/${id}/edit`)}><span className="urdu" dir="rtl">مکمل کریں</span></button>
         </div>
       )}
 
@@ -96,19 +96,19 @@ export default function ProfilePage() {
         </div>
         <div className="kv-grid">
           <div className="kv">
-            <div className="k">Blood group</div>
+            <div className="k"><span className="urdu" dir="rtl">بلڈ گروپ</span></div>
             <div className="v">{profile.blood_group || '—'}</div>
           </div>
           <div className="kv">
-            <div className="k">Conditions</div>
+            <div className="k"><span className="urdu" dir="rtl">امراض</span></div>
             <div className="v">{(profile.chronic_conditions || []).length || '—'}</div>
           </div>
         </div>
         <div className="profile-vitals-summary">
-          {profile.date_of_birth && <span>DOB <strong>{profile.date_of_birth}</strong></span>}
-          {profile.weight_kg && <span>Weight <strong>{profile.weight_kg} kg</strong></span>}
+          {profile.date_of_birth && <span><span className="urdu" dir="rtl">تاریخ پیدائش</span> <strong>{profile.date_of_birth}</strong></span>}
+          {profile.weight_kg && <span><span className="urdu" dir="rtl">وزن</span> <strong>{profile.weight_kg} kg</strong></span>}
           {profile.bp_systolic && profile.bp_diastolic && (
-            <span>Latest BP <strong>{profile.bp_systolic}/{profile.bp_diastolic}</strong>{profile.bp_recorded_at ? ` · ${profile.bp_recorded_at}` : ''}</span>
+            <span><span className="urdu" dir="rtl">بلڈ پریشر</span> <strong>{profile.bp_systolic}/{profile.bp_diastolic}</strong>{profile.bp_recorded_at ? ` · ${profile.bp_recorded_at}` : ''}</span>
           )}
         </div>
       </div>
