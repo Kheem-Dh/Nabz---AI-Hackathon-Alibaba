@@ -305,6 +305,36 @@ export default function TriageResult({
         </section>
       )}
 
+      {turn.treatment_class_suggestions?.length > 0 && (
+        <section className="tx-class-card">
+          <div className="tx-class-head">
+            <span className="tx-class-icon">💊</span>
+            <div>
+              <strong>Pharmacy-counter ideas — not a prescription</strong>
+              <small>Ask a pharmacist about these classes; they will pick the right one for you.</small>
+            </div>
+          </div>
+          {turn.treatment_class_suggestions.map((cls, i) => (
+            <div className="tx-class-item" key={i}>
+              <div className="tx-class-name">
+                <strong>{cls.class_name_english}</strong>
+                {cls.class_name_urdu && <span className="urdu" dir="rtl"> · {cls.class_name_urdu}</span>}
+              </div>
+              {cls.example_generics?.length > 0 && (
+                <div className="tx-class-examples">
+                  Examples: {cls.example_generics.join(', ')}
+                </div>
+              )}
+              <p className="tx-class-purpose">{cls.purpose_english}</p>
+              {cls.purpose_urdu && (
+                <p className="tx-class-purpose urdu" dir="rtl">{cls.purpose_urdu}</p>
+              )}
+              <small className="tx-class-verify">⚠ {cls.pharmacist_verify_note_english}</small>
+            </div>
+          ))}
+        </section>
+      )}
+
       {(turn.suggestions_urdu?.length > 0 || turn.suggestions_english?.length > 0) && (
         <section className="care-plan-card">
           <div className="care-plan-head">

@@ -545,6 +545,24 @@ class MedicationPlan(BaseModel):
     disclaimer: str
 
 
+class TreatmentClassSuggestion(BaseModel):
+    """A plain-language OTC treatment class the model proposes for a real GP
+    or pharmacist to confirm. No brand names, no doses, no prescription-only
+    drugs — the frontend renders each with a 'discuss with your pharmacist'
+    caveat. This is the "smart pharmacy-counter conversation" a Pakistani GP
+    would give a walk-in with a benign complaint."""
+
+    class_name_english: str
+    class_name_urdu: str = ""
+    example_generics: list[str] = Field(default_factory=list, max_length=4)
+    purpose_english: str
+    purpose_urdu: str = ""
+    pharmacist_verify_note_english: str = (
+        "Confirm with your pharmacist or doctor before taking — they will "
+        "check age, weight, allergies, pregnancy, and other medications."
+    )
+
+
 class TriageAnalysis(BaseModel):
     collected: list[CollectedFact] = Field(default_factory=list)
     still_checking_urdu: str = ""
@@ -624,6 +642,13 @@ class TriageTurn(BaseModel):
     # can be suggested. Populated only by the server-side evidence resolver.
     medication_options: list[MedicationOption] = Field(default_factory=list)
     medication_plan: Optional[MedicationPlan] = None
+
+    # Model-generated over-the-counter treatment classes with plain-language
+    # rationale — no brand names, no doses, never prescription-only. These are
+    # NOT server-validated against DailyMed; they're clearly labelled as
+    # "discuss with your pharmacist" ideas so the patient has a starting point
+    # to walk into a pharmacy or clinic with. Empty for emergencies.
+    treatment_class_suggestions: list["TreatmentClassSuggestion"] = Field(default_factory=list)
 
     # Hints the frontend for facility filtering:
     #   emergency_hospital | clinic_or_bhu | optional

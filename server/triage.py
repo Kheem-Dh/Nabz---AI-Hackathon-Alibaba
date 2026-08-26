@@ -299,10 +299,18 @@ Choose the question that most changes emergency risk, urgency, the working
 clinical impression, or the usefulness of the doctor handoff.
 
 Interview behaviour (act like a real Pakistani GP):
-- Ask a minimum of 4 targeted questions before producing a result, unless
-  (a) an emergency red flag is present — then produce EMERGENCY immediately,
-  or (b) the presentation is clearly benign AND you have collected onset,
-  duration, severity, associated symptoms, and relevant negatives.
+- HARD RULE: count the user turns in ENCOUNTER_TRANSCRIPT_DATA (each "role":
+  "user" entry, including the initial complaint). If that count is less than
+  5, you MUST return `type: "question"` — never a result — UNLESS an emergency
+  red flag is present, in which case return EMERGENCY immediately. The user
+  turn count is the interview depth budget; do not shortcut it.
+- Once you have >= 5 user turns AND you have covered onset, duration/course,
+  severity/character, associated symptoms, at least one relevant negative,
+  and one past-history / medication / allergy check, you MAY produce a
+  result. If any of those are still unknown, ask for the highest-value
+  missing one instead.
+- Never stop after 2 or 3 questions on a non-emergency presentation. Two
+  questions is not an interview; it is a triage failure.
 - For any presentation, cover, over the course of the interview: onset and
   duration, character and location (OPQRST where applicable), severity,
   associated symptoms, aggravating/relieving factors, prior episodes, past
@@ -395,6 +403,29 @@ Medication candidates:
 - Every result whose `medication_options` is non-empty MUST also include an
   explicit "verify this with your pharmacist or doctor before taking" line in
   both `advice_urdu` and `advice_english`.
+
+Treatment-class suggestions (this fills the "what would a Pakistani
+pharmacist reasonably discuss with a walk-in" gap that the strict evidence
+catalog cannot cover):
+- For any non-emergency result, populate `treatment_class_suggestions` with
+  1–3 items describing drug CLASSES (never brand names, never doses, never
+  prescription-only classes). Examples of allowed classes: oral analgesic
+  (paracetamol / ibuprofen — mention both as example_generics), oral
+  antihistamine (loratadine / cetirizine), topical antiseptic
+  (povidone-iodine / chlorhexidine), oral rehydration salts, topical NSAID
+  gel (diclofenac gel), topical corticosteroid — MILD only if truly benign,
+  cough lozenge, nasal saline spray, zinc supplement for acute diarrhoea.
+- Never suggest a class that is prescription-only in Pakistan (systemic
+  antibiotics, systemic steroids, opioids, benzodiazepines, insulin,
+  chemotherapy). Those belong only in `doctor_handoff_english` for the
+  clinician.
+- Each item must state, in `purpose_english`, WHY this class is being
+  suggested for THIS patient in one sentence, and mention that a pharmacist
+  or doctor should confirm suitability given age/allergies/pregnancy/other
+  meds. Use `pharmacist_verify_note_english` for that final safety line.
+- Skip this field for EMERGENCY results and for presentations where nothing
+  OTC-appropriate makes sense (e.g. suspected fracture, severe abdominal
+  pain, active bleeding). An empty list is preferable to a bad suggestion.
 
 Care plan and doctor handoff (this is where Nabz saves clinician time):
 - Populate `suggestions_english` / `suggestions_urdu` with concrete self-care
@@ -496,6 +527,14 @@ RESULT JSON:
   "unresolved_questions": [], "red_flags_present": [],
   "red_flags_denied": [], "escalation_signs": [],
   "medication_options": [{"generic_name":"...","condition_key":"...","why_it_is_relevant_to_this_patient":"..."}],
+  "treatment_class_suggestions": [{
+    "class_name_english": "e.g. Oral analgesic",
+    "class_name_urdu": "e.g. زبانی درد کش دوا",
+    "example_generics": ["paracetamol", "ibuprofen"],
+    "purpose_english": "Why this class fits this patient in one sentence.",
+    "purpose_urdu": "اردو میں ایک جملہ کہ یہ کلاس اس مریض کے لیے کیوں مناسب ہے۔",
+    "pharmacist_verify_note_english": "Confirm with your pharmacist or doctor before taking — they will check age, weight, allergies, pregnancy, and other medications."
+  }],
   "suggestions_urdu": [], "suggestions_english": [],
   "exercise_suggestions_urdu": [], "exercise_suggestions_english": [],
   "doctor_handoff_english": "physician-ready SBAR with situation, relevant background, assessment evidence/uncertainty, and recommended clinical checks",
@@ -771,6 +810,34 @@ def _turn_from_qwen_json(
         candidates, profile=profile, urgency=level.value,
     )
 
+    treatment_class_suggestions: list[dict[str, Any]] = []
+    if level.value != "EMERGENCY":
+        raw_classes = data.get("treatment_class_suggestions") or []
+        if isinstance(raw_classes, list):
+            for raw in raw_classes[:4]:
+                if not isinstance(raw, dict):
+                    continue
+                class_name_english = _bounded_text(raw.get("class_name_english"), 100)
+                purpose_english = _bounded_text(raw.get("purpose_english"), 400)
+                if not class_name_english or not purpose_english:
+                    continue
+                example_generics = _short_string_list(raw.get("example_generics"), 4, 60)
+                treatment_class_suggestions.append({
+                    "class_name_english": class_name_english,
+                    "class_name_urdu": _bounded_text(raw.get("class_name_urdu"), 100),
+                    "example_generics": example_generics,
+                    "purpose_english": purpose_english,
+                    "purpose_urdu": _bounded_text(raw.get("purpose_urdu"), 400),
+                    "pharmacist_verify_note_english": _bounded_text(
+                        raw.get("pharmacist_verify_note_english"),
+                        500,
+                    ) or (
+                        "Confirm with your pharmacist or doctor before taking — "
+                        "they will check age, weight, allergies, pregnancy, and "
+                        "other medications."
+                    ),
+                })
+
     advice_urdu = _bounded_text(data.get("advice_urdu"), 2000)
     advice_english = _bounded_text(data.get("advice_english"), 2000)
     reason_english = _bounded_text(data.get("reason_english"), 1000)
@@ -802,6 +869,7 @@ def _turn_from_qwen_json(
         escalation_signs=_short_string_list(data.get("escalation_signs"), 10),
         clinical_state=clinical_state, medication_options=medication_options,
         medication_plan=medication_plan,
+        treatment_class_suggestions=treatment_class_suggestions,
         analysis=analysis, response_source="live_ai", mock=False,
     )
 
