@@ -904,10 +904,16 @@ def _call_provider_stream(
                 "extra_body": {"enable_thinking": False},
             })
         else:
+            # gpt-4o-mini (and the whole gpt-4o family) rejects reasoning_effort
+            # — that argument is only valid for the o-series reasoning models.
+            # Only forward it when the operator explicitly sets a real value.
             common.update({
                 "max_completion_tokens": max_output_tokens,
-                "reasoning_effort": os.getenv("NABZ_OPENAI_REASONING_EFFORT", "none").strip() or "none",
+                "temperature": _temperature(),
             })
+            reasoning_effort = os.getenv("NABZ_OPENAI_REASONING_EFFORT", "").strip().lower()
+            if reasoning_effort in {"low", "medium", "high"}:
+                common["reasoning_effort"] = reasoning_effort
         stream = client.chat.completions.create(**common)
         parts: list[str] = []
         usage = None

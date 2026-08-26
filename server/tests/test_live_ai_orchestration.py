@@ -205,6 +205,7 @@ def test_no_key_never_activates_a_canned_clinical_answer(monkeypatch):
     import triage
 
     monkeypatch.delenv("DASHSCOPE_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     turn = triage.qwen_next_turn(_profile(), 80, [{"role": "user", "text": "headache"}])
     assert turn.response_source == "ai_unavailable"
     assert turn.medication_options == []
