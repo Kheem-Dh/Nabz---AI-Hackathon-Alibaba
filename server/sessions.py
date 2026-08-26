@@ -541,6 +541,47 @@ async def answer_with_clinical_image(
         "text_english": observations["summary_english"],
         "image_analysis": observations,
     }]
+
+    # Auto-save the clinical image to the patient's Vault so future encounters
+    # (and the treating doctor via handoff) can see it. Best-effort: a storage
+    # failure must not break the triage turn the patient is waiting on.
+    if observations.get("quality_acceptable"):
+        try:
+            from storage import store_upload, content_type_for_filename
+            from models_db import TimelineEntry
+            stored_ref = store_upload(
+                profile.id, image_bytes, filename,
+                prefix="triage_image", content_type=mime,
+            )
+            title = (
+                (observations.get("summary_english") or "").split(".")[0][:120]
+                or "Triage clinical photo"
+            )
+            db.add(TimelineEntry(
+                profile_id=profile.id,
+                kind="document",
+                title=title,
+                subtitle="Clinical photo (triage)",
+                payload={
+                    "document_type": "clinical_image",
+                    "stored_ref": stored_ref,
+                    "original_filename": filename[:255],
+                    "content_type": content_type_for_filename(filename),
+                    "size_bytes": len(image_bytes),
+                    "extraction_status": "completed",
+                    "extracted_summary": observations.get("summary_english"),
+                    "extracted_summary_urdu": observations.get("summary_urdu"),
+                    "triage_session_id": session.id,
+                    "notes": (
+                        f"Auto-saved from triage encounter for: {session.initial_text[:200]}"
+                    ),
+                },
+            ))
+            db.commit()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Triage image auto-Vault-save failed: %s", exc)
+            db.rollback()
+
     return _turn_from_session(db, session, profile)
 
 

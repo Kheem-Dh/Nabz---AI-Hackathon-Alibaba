@@ -427,10 +427,15 @@ def test_ai_requested_image_is_observed_and_added_to_same_transcript(client, aut
     assert image_turn["image_analysis"]["quality_acceptable"] is True
     assert "flat localized" in image_turn["text_english"].lower()
 
+    # Triage-time clinical images now auto-save to Vault so the treating
+    # doctor (via handoff) and future encounters can reference them.
     documents = client.get(
         f"/api/documents?profile_id={self_id}", headers=headers,
     ).json()
-    assert documents == []
+    assert len(documents) == 1
+    triage_doc = documents[0]
+    assert triage_doc["document_type"] == "clinical_image"
+    assert "triage" in (triage_doc.get("notes") or "").lower()
 
 
 def test_skin_mark_gets_skin_specific_questions(client, auth):
