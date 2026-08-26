@@ -14,6 +14,29 @@ Nabz is a web application. Its desktop workspace keeps three things visible toge
 
 ---
 
+## Feature overview
+
+Twelve capabilities, all backed by validated model output and server-side safety:
+
+| # | Feature | Where |
+| --- | --- | --- |
+| 1 | **Voice-first triage** — Urdu / Roman Urdu / English, cloud STT + browser fallback | `voice_stt.py`, `triage.py` |
+| 2 | **Symptom-photo triage** — one AI-requested clinical image → structured VL observations feed the transcript | `sessions.py`, `vision.py` |
+| 3 | **Family Vault** — one account, separate profiles per family member with private history | `profiles.py`, `documents.py` |
+| 4 | **Lab report explainer** — Qwen-VL extracts flagged values with plain-Urdu explanation | `labreport.py` |
+| 5 | **Prescription scan + confirm** — model drafts, patient confirms every field before Vault write | `prescription.py` |
+| 6 | **Doctor QR handoff** — 2 h JWT-signed public snapshot; scan → SBAR report in 30 s | `handoff.py`, `HandoffPage.jsx` |
+| 7 | **Nearby care** — curated PK facilities (hospitals + pharmacies + blood banks) ranked by distance | `facilities.py`, `clinics.py` |
+| 8 | **PK-context differential ranking** — season × province weighted (dengue July-Nov, malaria south) | `pk_context.py` |
+| 9 | **Cross-session memory** — recent triage summaries injected into next assessment prompt | `sessions.py`, `triage.py` |
+| 10 | **Medication safety** — WHO/FDA-catalog only, allergy/pregnancy/duplicate filter, live DailyMed labels | `medicine_evidence.py`, `dailymed.py` |
+| 11 | **Treatment-class suggestions** — model-generated OTC drug classes with pharmacist-verify note | `triage.py`, `TriageResult.jsx` |
+| 12 | **Emergency escalation** — deterministic red-flag detector routes to Rescue 1122 + nearest ER | `triage.py:_mental_health_turn` |
+
+Plus: **live safety-eval dashboard** (`/api/health/safety` — 26 adversarial cases every request), **guest mode** (JWT-scoped anonymous session, 3-follow-up cap), **per-user USD budget ledger** with Qwen → OpenAI failover, and an **owner-only admin dashboard** (`/admin`) with per-user AI cost tracking.
+
+---
+
 ## Current experience
 
 After login, the user sees only the health record linked to their own account. There is no patient-switch control in the main workspace.
@@ -207,16 +230,74 @@ flowchart LR
 
 The DashScope API key and JWT secret stay on the backend. They are never sent to the browser.
 
-### Main technology
+### Tech stack
 
-- React 18 and Vite;
-- FastAPI and Pydantic;
-- SQLAlchemy and SQLite for the hackathon build;
-- Alibaba Cloud Model Studio / DashScope;
-- `qwen3.7-plus` for live conversational assessment;
-- Qwen-VL for lab and prescription extraction;
-- browser speech recognition and speech synthesis;
-- JWT authentication.
+**Frontend — Progressive Web App**
+
+| Layer | Choice | Why |
+| --- | --- | --- |
+| Framework | **React 18** + **Vite 5** | Fast HMR, small production bundle (~140 KB gz) |
+| Routing | **React Router v6** | Client-side navigation, deep-linkable handoff pages |
+| State | Context + hooks (no Redux) | Small app, clear ownership per feature |
+| Voice input | Cloud STT via `MediaRecorder` → `/api/voice/transcribe` (Qwen3.5-Omni), `webkitSpeechRecognition` fallback | Real Urdu accuracy Chrome can't match |
+| Voice output | Server-side gTTS (`/api/tts`) with `SpeechSynthesis` fallback | Actual Urdu pronunciation |
+| QR generation | `qrcode` npm package (client-side SVG) | Zero-cost doctor handoff QRs |
+| Styling | Plain CSS + custom design tokens (`--radius-*`, `--shadow-*`, `--focus-ring`) | Full control, no runtime cost |
+| PWA | Manifest + service worker + PNG icons + apple-touch-icon | Installable on Android/iOS home screen |
+| Mobile shell | **Capacitor** scaffold (Android APK build) | Same web codebase → native wrapper |
+
+**Backend — FastAPI service**
+
+| Layer | Choice | Why |
+| --- | --- | --- |
+| Framework | **FastAPI** + **Pydantic v2** | Async, strict schema validation everywhere |
+| ORM | **SQLAlchemy 2.0** | Typed models, transactional guardrails |
+| Database | **SQLite** (dev + single-VM prod) → managed SQL for multi-replica | Zero-config for hackathon, upgradable |
+| Object storage | **Local disk** (dev) / **S3-compatible** (`NABZ_STORAGE_BACKEND=s3`) | Vault documents, triage images |
+| Auth | **JWT** (HS256, `python-jose`) + **bcrypt** (passlib) | Two token kinds: `account` and `handoff` |
+| Streaming | Server-Sent Events for triage progress (`/api/triage/stream/*`) | Live typing progress in the browser |
+| PDF handling | **PyMuPDF** (lab reports + prescriptions rendered to PNG) | Robust text + image extraction |
+
+**AI providers — provider-agnostic OpenAI-compatible client**
+
+| Role | Primary | Fallback | Fired when |
+| --- | --- | --- | --- |
+| Text triage | **Alibaba Qwen3.7-plus** (DashScope) | **OpenAI `gpt-4o`** | Quota, auth, rate-limit, timeout, or unrepairable JSON |
+| Image analysis | **Qwen-VL** | **OpenAI `gpt-4o` vision** | Same triggers |
+| Audio STT | **Qwen3.5-Omni** | (browser `webkitSpeechRecognition`) | Server unavailable |
+| TTS | Server gTTS | Browser `SpeechSynthesis` | gTTS unreachable |
+
+- Fallback is **automatic and audited** — every call is logged with `provider`, `model`, `tokens`, `cost_microusd`, `fallback_reason` in the Admin ledger. Never fabricates a response.
+- **Per-user USD cap** — registered account $1.00, guest session $0.30 (env-overridable). Reservation → provider call → reconcile. Concurrent-safe via atomic `UPDATE ... WHERE used + reserved + amount <= limit`. Cap exhaustion returns `AIBudgetExceeded` before any provider is called.
+- **JWT-scoped guest sessions** — anonymous MediaRecorder + Qwen with 2 h TTL and 3-followup limit.
+
+**Clinical safety layers (backend)**
+
+| Layer | Purpose |
+| --- | --- |
+| `_IMMEDIATE_MENTAL_HEALTH_PATTERNS` + `_mental_health_turn` | Deterministic escalation on suicidal / self-harm keywords (Urdu + Roman Urdu + English) → EMERGENCY with Rescue 1122 + Umang helpline, no medication |
+| Emergency red-flag validator | Model-declared red flags force EMERGENCY + strip medication |
+| `resolve_medication_candidates` | Only WHO/FDA-catalog `(condition_key, generic_name)` pairs pass; DailyMed v2 label linked live |
+| Allergy + duplicate + pregnancy filter | Server-side, before any medication reaches the UI |
+| `treatment_class_suggestions` | Model-generated OTC **classes** (not brand, not dose, not prescription-only) with pharmacist-verify caption |
+| PK-context differential ranker | Season × province weighted (dengue Jul-Nov Punjab/Sindh, malaria Sindh/Balochistan, TB, typhoid monsoon) |
+| Doctor QR handoff | Short-lived (2 h) HS256 JWT with `kind: "handoff"` — public read, no auth needed. Bounded snapshot only, no transcript / location / phone |
+| Live safety-eval dashboard | `/api/health/safety` — 26 adversarial cases (emergency + mental-health + drug-refusal + allergy + prompt-injection + evidence URLs) run every request in ~0.5 ms |
+
+**Ops + observability**
+
+- Structured JSON access logs (`observability.RequestTelemetryMiddleware`) — never records bodies, transcripts, or tokens.
+- Admin dashboard `/admin` (owner-only, allowlisted phones/emails) shows per-user AI spend, provider mix, fallback reasons, aggregate consent coverage.
+- Health endpoints: `/api/health/live` (process), `/api/health/ready` (deps), `/api/health/detail` (dev-only), `/api/health/safety` (deterministic).
+- Consent ledger — append-only versioned records for `health_data_storage` + `ai_processing`.
+- Startup contract (`runtime.validate_startup_configuration`) — production **fails closed** if any of {DASHSCOPE key, DB URL, JWT secret, S3 bucket, admin identifiers} is missing.
+
+**Infrastructure**
+
+- **Local dev:** `uvicorn main:app --reload` + `npm run dev` (Vite on 5173).
+- **Prod (single-VM):** Docker Compose (`compose.prod.yaml`) — FastAPI + SQLite volume + S3-compatible object storage. `docs/ALIBABA_CLOUD_DEPLOY.md` for ECS + HTTPS + backups.
+- **Prod (managed):** Render.com — backend Web Service (Docker), frontend Static Site.
+- **CI-free** — repo runs `pytest` + `npm run build` locally; both are single-command smoke gates before commit.
 
 ---
 
@@ -326,10 +407,19 @@ All personal health routes require a valid login token.
 | `POST` | `/api/prescription` | Read a prescription for confirmation |
 | `POST` | `/api/prescription/confirm` | Save patient-confirmed prescription data |
 | `GET` | `/api/summary/{profile_id}` | Create the doctor handoff |
+| `POST` | `/api/summary/{profile_id}/handoff` | Mint a short-lived (2h) doctor-QR JWT + URL |
+| `GET` | `/api/handoff/{token}` | Public bounded read of the handoff snapshot (no auth) |
 | `GET` | `/api/facilities/nearby` | Find care appropriate to the urgency |
+| `POST` | `/api/voice/transcribe` | Cloud Urdu STT via Qwen3.5-Omni |
+| `GET` | `/api/tts?text=…&lang=ur` | Server-rendered Urdu TTS (gTTS) |
+| `POST` | `/api/guest/triage/start` | Anonymous JWT-scoped guest triage (2 h TTL) |
+| `POST` | `/api/guest/triage/answer` | Guest answer turn |
+| `POST` | `/api/guest/triage/chat` | Guest follow-up chat (capped at 3) |
 | `GET` | `/api/health/detail` | Show backend and AI readiness |
 | `GET` | `/api/health/live` | Process liveness probe |
 | `GET` | `/api/health/ready` | Configuration, database, storage, and AI readiness |
+| `GET` | `/api/health/safety` | 26-case deterministic safety-eval report |
+| `GET` | `/api/admin/overview` | Owner dashboard: users, AI cost ledger, consent coverage |
 
 ---
 
@@ -345,7 +435,7 @@ MOCK_MODE=true venv/bin/python -m pytest tests/ -q
 Current expected result:
 
 ```text
-55 passed
+110 passed
 ```
 
 Build the web application:
