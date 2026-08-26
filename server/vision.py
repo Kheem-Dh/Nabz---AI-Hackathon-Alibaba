@@ -218,38 +218,69 @@ def analyze_image(
 
     Returns (parsed_json_or_none, raw). Never raises.
     """
-    api_key = os.getenv("DASHSCOPE_API_KEY", "").strip()
-    if not api_key:
-        return None, ""
-
     parts, err = _image_parts_from_upload(image_bytes, filename, content_type)
     if err or not parts:
         logger.info("Vision upload rejected: %s", err)
         return None, err or "no_image_parts"
 
-    try:
-        from openai import OpenAI
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {
+            "role": "user",
+            "content": [{"type": "text", "text": user_prompt}, *parts],
+        },
+    ]
 
-        client = OpenAI(
-            api_key=api_key,
-            base_url=DASHSCOPE_BASE_URL,
-            timeout=REQUEST_TIMEOUT_SECONDS,
-        )
-        completion = client.chat.completions.create(
-            model=get_vl_model(),
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {
-                    "role": "user",
-                    "content": [{"type": "text", "text": user_prompt}, *parts],
-                },
-            ],
-            temperature=0.1,
-            response_format={"type": "json_object"},
-        )
-        raw = completion.choices[0].message.content or ""
-    except Exception as exc:  # noqa: BLE001
-        logger.error("Qwen-VL call failed: %s", exc, exc_info=True)
+    qwen_key = os.getenv("DASHSCOPE_API_KEY", "").strip()
+    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if not qwen_key and not openai_key:
+        return None, ""
+
+    raw = ""
+    from openai import OpenAI
+
+    if qwen_key:
+        try:
+            client = OpenAI(
+                api_key=qwen_key,
+                base_url=DASHSCOPE_BASE_URL,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+            completion = client.chat.completions.create(
+                model=get_vl_model(),
+                messages=messages,
+                temperature=0.1,
+                response_format={"type": "json_object"},
+            )
+            raw = completion.choices[0].message.content or ""
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Qwen-VL failed (%s: %s) — trying OpenAI vision fallback",
+                type(exc).__name__, exc,
+            )
+            raw = ""
+
+    if not raw and openai_key:
+        try:
+            openai_model = (
+                os.getenv("NABZ_OPENAI_VISION_MODEL", "").strip()
+                or os.getenv("NABZ_OPENAI_FALLBACK_MODEL", "").strip()
+                or "gpt-4o-mini"
+            )
+            client = OpenAI(api_key=openai_key, timeout=REQUEST_TIMEOUT_SECONDS)
+            completion = client.chat.completions.create(
+                model=openai_model,
+                messages=messages,
+                temperature=0.1,
+                response_format={"type": "json_object"},
+            )
+            raw = completion.choices[0].message.content or ""
+            logger.info("Vision fallback used OpenAI model=%s", openai_model)
+        except Exception as exc:  # noqa: BLE001
+            logger.error("OpenAI vision fallback also failed: %s", exc, exc_info=True)
+            return None, ""
+
+    if not raw:
         return None, ""
 
     try:
