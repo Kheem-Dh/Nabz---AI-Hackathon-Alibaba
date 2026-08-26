@@ -26,7 +26,18 @@ function normalizeCause(cause) {
 }
 
 // Color-coded triage result card (RED / AMBER / GREEN by status only).
-export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry, ttsSupported, chatSlot }) {
+export default function TriageResult({
+  turn,
+  onReplay,
+  speaking,
+  onNew,
+  onRetry,
+  ttsSupported,
+  chatSlot,
+  showNearby = true,
+  onSave,
+  guest = false,
+}) {
   const cfg = levelConfig(turn.level)
   const [showWhy, setShowWhy] = useState(false)
   const navigate = useNavigate()
@@ -125,7 +136,7 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
           <span>
             <strong>Full assessment and care plan</strong>
             <small>
-              {turn.possible_causes?.length || 0} ranked explanations · {medicationSteps.length || 0} medication options · doctor handoff · nearby care
+              {turn.possible_causes?.length || 0} ranked explanations · {medicationSteps.length || 0} medication options · doctor handoff{showNearby ? ' · nearby care' : ''}
             </small>
           </span>
           <span className="details-open-label">Evidence open</span>
@@ -332,7 +343,7 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
       {turn.doctor_handoff_english && (
         <section className="handoff-card">
           <div className="handoff-head">
-            <div><strong>Doctor-ready handoff</strong><span>Built from this conversation + relevant Vault history</span></div>
+            <div><strong>Doctor-ready handoff</strong><span>{guest ? 'Built from this temporary conversation' : 'Built from this conversation + relevant Vault history'}</span></div>
             <button onClick={copyHandoff}>Copy</button>
           </div>
           <p>{turn.doctor_handoff_english}</p>
@@ -350,7 +361,7 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
         </a>
       )}
 
-      <NearbyCare urgency={turn.level || 'DOCTOR_24H'} />
+      {showNearby && <NearbyCare urgency={turn.level || 'DOCTOR_24H'} />}
 
         </div>
       </section>
@@ -358,9 +369,12 @@ export default function TriageResult({ turn, onReplay, speaking, onNew, onRetry,
       {chatSlot}
 
       <div className="btn-row no-print">
-        <button className="btn btn-outline" onClick={() => navigate('/clinics')}>
+        {showNearby && <button className="btn btn-outline" onClick={() => navigate('/clinics')}>
           📍 قریبی کلینک
-        </button>
+        </button>}
+        {onSave && <button className="btn btn-primary" onClick={onSave}>
+          Save future care in a private Vault
+        </button>}
         <button className="btn btn-primary" onClick={onNew}>
           نیا سوال · New
         </button>

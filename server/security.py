@@ -22,6 +22,21 @@ def _secret() -> str:
     return os.getenv("JWT_SECRET", "change-me-nabz-dev-secret")
 
 
+def canonical_phone(raw: str) -> str:
+    """Return one storage/login form for accepted Pakistan mobile numbers."""
+    value = "".join(ch for ch in (raw or "").strip() if ch.isdigit() or ch == "+")
+    digits = value.lstrip("+")
+    if digits.startswith("0092"):
+        digits = digits[2:]
+    if digits.startswith("92") and len(digits) == 12:
+        return f"+{digits}"
+    if digits.startswith("0") and len(digits) == 11:
+        return f"+92{digits[1:]}"
+    if digits.startswith("3") and len(digits) == 10:
+        return f"+92{digits}"
+    return value
+
+
 def hash_password(raw: str) -> str:
     return _pwd.hash(raw)
 

@@ -346,6 +346,38 @@ class TriageAnswerRequest(BaseModel):
         return v
 
 
+class GuestTriageStartRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=2000)
+    consent: bool
+
+    @field_validator("text")
+    @classmethod
+    def _guest_text_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("text must not be blank")
+        return v
+
+
+class GuestTriageAnswerRequest(BaseModel):
+    state_token: str = Field(..., min_length=32, max_length=160)
+    text: str = Field(..., min_length=1, max_length=2000)
+
+    @field_validator("text")
+    @classmethod
+    def _guest_answer_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("text must not be blank")
+        return v
+
+
+class GuestTriageRetryRequest(BaseModel):
+    state_token: str = Field(..., min_length=32, max_length=160)
+
+
+class GuestTriageChatRequest(GuestTriageAnswerRequest):
+    pass
+
+
 class TriageChatRequest(BaseModel):
     session_id: int
     text: str = Field(..., min_length=1, max_length=2000)
@@ -596,6 +628,18 @@ class TriageTurn(BaseModel):
     # Hints the frontend for facility filtering:
     #   emergency_hospital | clinic_or_bhu | optional
     facility_intent: Optional[str] = None
+
+
+class GuestTriageTurnResponse(BaseModel):
+    state_token: str
+    expires_at: datetime
+    turn: TriageTurn
+
+
+class GuestTriageChatResponse(BaseModel):
+    state_token: str
+    expires_at: datetime
+    answer: TriageChatResponse
 
 
 class TriageSessionListItem(BaseModel):

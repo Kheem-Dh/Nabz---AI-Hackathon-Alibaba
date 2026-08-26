@@ -183,6 +183,24 @@ export const listTriageHistory = (profileId) =>
 export const getTriageHistory = (sessionId) =>
   jsonReq(`/api/triage/history/${encodeURIComponent(sessionId)}`, 'GET')
 
+// Anonymous assessments use an opaque, expiring state token. They are never
+// attached to an account or Vault unless the person later signs in and starts
+// a saved encounter.
+export const guestTriageStart = (text, consent, signal) =>
+  jsonReq('/api/guest/triage/start', 'POST', { text, consent }, { signal, timeoutMs: 75_000 })
+
+export const guestTriageAnswer = (state_token, text, signal) =>
+  jsonReq('/api/guest/triage/answer', 'POST', { state_token, text }, { signal, timeoutMs: 75_000 })
+
+export const retryGuestTriage = (state_token, signal) =>
+  jsonReq('/api/guest/triage/retry', 'POST', { state_token }, { signal, timeoutMs: 75_000 })
+
+export const guestTriageChat = (state_token, text, signal) =>
+  jsonReq('/api/guest/triage/chat', 'POST', { state_token, text }, { signal, timeoutMs: 75_000 })
+
+export const clearGuestTriage = (stateToken) =>
+  jsonReq(`/api/guest/triage/${encodeURIComponent(stateToken)}`, 'DELETE')
+
 // --- Documents ---------------------------------------------------------------
 
 async function uploadFile(path, profileId, file) {

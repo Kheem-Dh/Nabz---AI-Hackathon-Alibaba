@@ -185,6 +185,32 @@ class TriageSession(Base):
     profile: Mapped[Profile] = relationship(back_populates="triage_sessions")
 
 
+class GuestTriageSession(Base):
+    """Short-lived, anonymous assessment state.
+
+    Guest conversations intentionally have no account/profile foreign key. The
+    browser receives a random opaque token while only its SHA-256 digest is
+    stored here, so a database read cannot be used to recover active grants.
+    """
+
+    __tablename__ = "guest_triage_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    token_hash: Mapped[str] = mapped_column(
+        String(64), unique=True, index=True, nullable=False
+    )
+    turns: Mapped[list[dict]] = mapped_column(JSON, default=list, nullable=False)
+    analysis: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="open", nullable=False)
+    result_payload: Mapped[dict | None] = mapped_column(JSON)
+    consented_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+
 class UsageSession(Base):
     """Privacy-safe, authenticated product usage for the owner dashboard."""
 

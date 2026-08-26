@@ -25,6 +25,7 @@ import LandingPage from './pages/LandingPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import HandoffPage from './pages/HandoffPage'
+import GuestChatPage from './pages/GuestChatPage'
 import { stopAllSpeech } from './hooks/useTextToSpeech'
 import { getConsentStatus } from './api'
 import { useProfiles } from './context/ProfileContext'
@@ -79,6 +80,10 @@ export default function App() {
 
   if (loading) return <Loading />
 
+  // Public try-now flow: guests can complete one temporary assessment before
+  // deciding whether they want an account and persistent family Vault.
+  if (location.pathname === '/chat' && !account) return <GuestChatPage />
+
   // Keep the public product home available after sign-in. The Nabz brand in
   // the application header always returns here without ending the session.
   if (location.pathname === '/welcome') return <LandingPage />
@@ -95,6 +100,7 @@ export default function App() {
   // First-run gate (winning plan §3): location before anything else.
   // The location screen itself is always accessible so users can update it.
   const isPrintRoute = location.pathname.startsWith('/summary')
+  const isVerifyRoute = location.pathname.startsWith('/verify')
   const isAdminRoute = location.pathname.startsWith('/admin')
   const onLocationScreen = location.pathname.startsWith('/location')
   const onOnboarding = location.pathname.startsWith('/onboarding')
@@ -154,14 +160,15 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell ${location.pathname === '/' ? 'workspace-shell' : ''}`}>
+    <div className={`app-shell ${location.pathname === '/' ? 'workspace-shell' : ''} ${isVerifyRoute ? 'verify-shell' : ''}`}>
       <div className="app-container">
-        {!isPrintRoute && <TopBar />}
-        {!isPrintRoute && !onLocationScreen && !isAdminRoute && <TrustBar />}
-        {!isPrintRoute && !onLocationScreen && !isAdminRoute && <VerifyBanner />}
-        <main className={`app-main ${isAdminRoute ? 'admin-main' : ''}`}>
+        {!isPrintRoute && !isVerifyRoute && <TopBar />}
+        {!isPrintRoute && !isVerifyRoute && !onLocationScreen && !isAdminRoute && <TrustBar />}
+        {!isPrintRoute && !isVerifyRoute && !onLocationScreen && !isAdminRoute && <VerifyBanner />}
+        <main className={`app-main ${isAdminRoute ? 'admin-main' : ''} ${isVerifyRoute ? 'verify-main' : ''}`}>
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/chat" element={<Navigate to="/" replace />} />
             <Route path="/location" element={<LocationSetupPage />} />
             <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/verify" element={<VerifyPage />} />
@@ -180,7 +187,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
-        {!isPrintRoute && !isAdminRoute && (
+        {!isPrintRoute && !isVerifyRoute && !isAdminRoute && (
           <>
             <Disclaimer />
             <BottomNav />

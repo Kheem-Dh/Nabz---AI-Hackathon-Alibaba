@@ -59,6 +59,7 @@ from triage_stream import router as triage_stream_router  # noqa: E402
 from voice_stt import router as voice_stt_router  # noqa: E402
 from summary import router as summary_router  # noqa: E402
 from handoff import router as handoff_router  # noqa: E402
+from guest_triage import router as guest_triage_router  # noqa: E402
 from safety_eval import router as safety_eval_router  # noqa: E402
 from triage import (  # noqa: E402
     get_model_name,
@@ -246,6 +247,7 @@ def create_app(settings: RuntimeSettings | None = None) -> FastAPI:
     application.include_router(location_router)
     application.include_router(facilities_router)
     application.include_router(triage_router)
+    application.include_router(guest_triage_router)
     application.include_router(triage_stream_router)
     application.include_router(voice_stt_router)
     application.include_router(chat_attach_router)

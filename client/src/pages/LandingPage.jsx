@@ -92,6 +92,7 @@ export default function LandingPage() {
   const navigate = useNavigate()
   const { account } = useAuth()
   const openAuth = (mode) => navigate(account ? '/' : `/auth?mode=${mode}`)
+  const openChat = () => navigate(account ? '/' : '/chat')
 
   return (
     <div className="landing-page">
@@ -107,8 +108,8 @@ export default function LandingPage() {
         </nav>
         <div className="landing-nav-actions">
           {!account && <button className="landing-login" onClick={() => openAuth('login')}>Log in</button>}
-          <button className="landing-nav-cta" onClick={() => openAuth('register')}>
-            {account ? 'Open workspace' : 'Start free'} <Icon name="arrow" />
+          <button className="landing-nav-cta" onClick={openChat}>
+            {account ? 'Open workspace' : 'Try Nabz now'} <Icon name="arrow" />
           </button>
         </div>
       </header>
@@ -121,7 +122,7 @@ export default function LandingPage() {
             <p className="landing-hero-urdu urdu">اپنی زبان میں بات کریں، واضح اگلا قدم پائیں</p>
             <p className="landing-lead">Talk through symptoms, organise medical records and find nearby care—with a bilingual AI health guide that remembers who you are caring for.</p>
             <div className="landing-hero-actions">
-              <button className="landing-primary" onClick={() => openAuth('register')}>{account ? 'Continue to your workspace' : 'Start a health conversation'} <Icon name="arrow" /></button>
+              <button className="landing-primary" onClick={openChat}>{account ? 'Continue to your workspace' : 'Start a health conversation'} <Icon name="arrow" /></button>
               <button className="landing-secondary" onClick={() => document.querySelector('#how')?.scrollIntoView({ behavior: 'smooth' })}>See how Nabz works</button>
             </div>
             <div className="landing-assurances">
@@ -197,7 +198,7 @@ export default function LandingPage() {
             <small>IF SOMETHING FEELS SERIOUS</small>
             <h3>Do not wait for an AI response.</h3>
             <p>Call Rescue <strong>1122</strong>, Police <strong>15</strong>, or go to the nearest emergency department.</p>
-            <button onClick={() => openAuth('register')}>Open Nabz health guide <Icon name="arrow" /></button>
+            <button onClick={openChat}>Open Nabz health guide <Icon name="arrow" /></button>
           </div>
         </section>
 
@@ -207,7 +208,7 @@ export default function LandingPage() {
             <h2>Start with what you are feeling.</h2>
             <p className="urdu">جو بھی مسئلہ ہے، اپنی زبان میں بتائیں</p>
           </div>
-          <button className="landing-primary" onClick={() => openAuth('register')}>{account ? 'Return to your health space' : 'Create your family health space'} <Icon name="arrow" /></button>
+          <button className="landing-primary" onClick={openChat}>{account ? 'Return to your health space' : 'Try a temporary assessment'} <Icon name="arrow" /></button>
         </section>
       </main>
 

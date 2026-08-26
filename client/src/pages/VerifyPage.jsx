@@ -14,12 +14,13 @@ export default function VerifyPage() {
   const [channel, setChannel] = useState('phone')
   const [stage, setStage] = useState('idle') // idle | sent
   const [devCode, setDevCode] = useState(null)
-  const [code, setCode] = useState('')
+  const [code, setCode] = useState(() => Array(6).fill(''))
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [cooldown, setCooldown] = useState(0)
   const timerRef = useRef(null)
+  const digitRefs = useRef([])
 
   const verified =
     channel === 'phone' ? account?.phone_verified : account?.email_verified
@@ -28,7 +29,7 @@ export default function VerifyPage() {
     // Reset transient state when switching channel.
     setStage('idle')
     setDevCode(null)
-    setCode('')
+    setCode(Array(6).fill(''))
     setError('')
     setMessage('')
   }, [channel])
@@ -80,7 +81,7 @@ export default function VerifyPage() {
     setBusy(true)
     setError('')
     try {
-      const updated = await verifyOtp(channel, code.trim())
+      const updated = await verifyOtp(channel, code.join(''))
       applyAccount(updated)
       setMessage('')
     } catch (e2) {
@@ -105,59 +106,88 @@ export default function VerifyPage() {
     }
   }
 
+  function setDigit(index, value) {
+    const nextValue = value.replace(/\D/g, '')
+    if (nextValue.length > 1) {
+      const pasted = nextValue.slice(0, 6)
+      setCode(Array.from({ length: 6 }, (_, digitIndex) => pasted[digitIndex] || ''))
+      digitRefs.current[Math.min(pasted.length, 5)]?.focus()
+      return
+    }
+    const digits = [...code]
+    digits[index] = nextValue
+    setCode(digits)
+    if (nextValue && index < 5) digitRefs.current[index + 1]?.focus()
+  }
+
+  function digitKeyDown(index, event) {
+    if (event.key === 'Backspace' && !code[index] && index > 0) {
+      digitRefs.current[index - 1]?.focus()
+    }
+  }
+
   return (
-    <div className="page">
-      <button className="back-link" onClick={() => navigate(-1)}>
-        ‹ واپس · Back
-      </button>
-      <div className="section-title">
-        <span className="ur urdu">اکاؤنٹ کی تصدیق</span>
-        <span className="en">Verify your account</span>
-      </div>
+    <div className="verify-experience">
+      <section className="verify-visual" aria-hidden="true">
+        <div className="verify-grid" />
+        <div className="verify-shield">
+          <svg viewBox="0 0 160 180">
+            <path className="shield-body" d="M80 8 145 34v48c0 43-24 75-65 92C39 157 15 125 15 82V34L80 8Z" />
+            <path className="shield-pulse" d="M37 91h27l10-28 18 54 11-27h21" />
+            <path className="shield-check" d="m56 91 16 16 34-38" />
+          </svg>
+          <span className="verify-orbit orbit-a" /><span className="verify-orbit orbit-b" />
+        </div>
+        <div className="verify-visual-copy">
+          <span>NABZ · SECURE ACCESS</span>
+          <h1>One quick check.<br/><em>Your Vault stays yours.</em></h1>
+          <p>Verification protects family profiles, medical documents and saved care conversations.</p>
+        </div>
+      </section>
 
-      {/* Channel tabs */}
-      <div className="auth-tabs" role="tablist">
-        <button
-          className={`auth-tab ${channel === 'phone' ? 'active' : ''}`}
-          onClick={() => setChannel('phone')}
-        >
-          📱 فون · Phone
-        </button>
-        <button
-          className={`auth-tab ${channel === 'email' ? 'active' : ''}`}
-          onClick={() => setChannel('email')}
-          disabled={!hasEmail}
-          title={hasEmail ? '' : 'No email on this account'}
-          style={!hasEmail ? { opacity: 0.5 } : undefined}
-        >
-          ✉️ ای میل · Email
-        </button>
-      </div>
+      <section className="verify-panel">
+        <div className="verify-panel-inner">
+          <button className="back-link" onClick={() => navigate(-1)}>← Back to workspace</button>
+          <div className="verify-brand"><span>نبض</span><b>NABZ</b></div>
+          <div className="verify-title">
+            <span>SECURE VERIFICATION</span>
+            <h2>{verified ? 'Verification complete' : stage === 'sent' ? 'Check your messages' : 'Verify your account'}</h2>
+            <p className="urdu">اپنے نجی ہیلتھ والٹ کو محفوظ بنائیں</p>
+          </div>
 
-      <div className="card stack">
+          <div className="verify-channels" role="tablist" aria-label="Verification method">
+            <button className={channel === 'phone' ? 'active' : ''} onClick={() => setChannel('phone')}>
+              <span>◉</span><div><strong>Phone</strong><small>{account?.phone}</small></div>
+            </button>
+            <button className={channel === 'email' ? 'active' : ''} onClick={() => setChannel('email')} disabled={!hasEmail} title={hasEmail ? '' : 'No email on this account'}>
+              <span>✉</span><div><strong>Email</strong><small>{hasEmail ? account?.email : 'Not added'}</small></div>
+            </button>
+          </div>
+
+          <div className="verify-card stack">
         {verified ? (
-          <div className="center-state" style={{ padding: '20px 0' }}>
-            <div style={{ fontSize: 42 }}>✅</div>
+          <div className="center-state verify-success">
+            <div className="verify-success-icon">✓</div>
             <p className="cs-ur urdu">تصدیق مکمل ہو گئی۔</p>
             <p className="cs-en">
               Your {channel} is verified{channel === 'phone' ? ` (${account?.phone})` : ` (${account?.email})`}.
             </p>
             <button className="btn btn-primary" onClick={() => navigate('/')}>
-              ہوم · Go home
+              Continue to Nabz →
             </button>
           </div>
         ) : (
           <>
-            <p className="muted" style={{ fontSize: 13, margin: 0 }}>
-              We’ll send a 6-digit code to{' '}
-              <b>{channel === 'phone' ? account?.phone : account?.email}</b>.
-            </p>
+            <div className="verify-destination">
+              <span>{channel === 'phone' ? 'SMS CODE' : 'EMAIL CODE'}</span>
+              <p>We’ll send a 6-digit code to <b>{channel === 'phone' ? account?.phone : account?.email}</b>.</p>
+            </div>
 
             {error && <div className="form-error">{error}</div>}
 
             {stage === 'idle' ? (
-              <button className="btn btn-primary" disabled={busy || cooldown > 0} onClick={send}>
-                {busy ? '…' : cooldown > 0 ? `Resend in ${cooldown}s` : '📨 کوڈ بھیجیں · Send code'}
+              <button className="btn btn-primary verify-main-action" disabled={busy || cooldown > 0} onClick={send}>
+                {busy ? 'Sending…' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Send secure code →'}
               </button>
             ) : (
               <form className="stack" onSubmit={submit}>
@@ -170,38 +200,44 @@ export default function VerifyPage() {
                     </div>
                   </div>
                 )}
-                <div className="field" style={{ margin: 0 }}>
-                  <label>Enter code</label>
-                  <input
-                    className="input"
-                    inputMode="numeric"
-                    maxLength={6}
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                    placeholder="123456"
-                    style={{ fontSize: 22, letterSpacing: 6, textAlign: 'center' }}
-                  />
+                <div className="verify-code-field">
+                  <label>Enter the 6-digit code</label>
+                  <div className="verify-digits" onPaste={(event) => {
+                    const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+                    if (pasted) {
+                      event.preventDefault()
+                      setCode(Array.from({ length: 6 }, (_, index) => pasted[index] || ''))
+                      digitRefs.current[Math.min(pasted.length, 5)]?.focus()
+                    }
+                  }}>
+                    {Array.from({ length: 6 }, (_, index) => (
+                      <input
+                        key={index}
+                        ref={(node) => { digitRefs.current[index] = node }}
+                        inputMode="numeric"
+                        autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                        maxLength={1}
+                        value={code[index] || ''}
+                        onChange={(event) => setDigit(index, event.target.value)}
+                        onKeyDown={(event) => digitKeyDown(index, event)}
+                        aria-label={`Code digit ${index + 1}`}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <button className="btn btn-primary" disabled={busy || code.length < 4}>
-                  {busy ? '…' : '✔ تصدیق کریں · Verify'}
+                <button className="btn btn-primary verify-main-action" disabled={busy || code.some((digit) => !digit)}>
+                  {busy ? 'Verifying…' : 'Verify and continue →'}
                 </button>
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  disabled={cooldown > 0 || busy}
-                  onClick={send}
-                >
-                  {cooldown > 0 ? `Resend in ${cooldown}s` : 'دوبارہ بھیجیں · Resend code'}
-                </button>
+                <div className="verify-resend">Didn’t receive it? <button type="button" disabled={cooldown > 0 || busy} onClick={send}>{cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}</button></div>
               </form>
             )}
           </>
         )}
-      </div>
-
-      <p className="muted" style={{ fontSize: 12, textAlign: 'center' }}>
-        Verifying is optional right now — you can keep using Nabz either way.
-      </p>
+          </div>
+          <div className="verify-foot"><span>◇ Single-use code</span><span>⌁ Expires automatically</span><span>▣ No medical data in SMS</span></div>
+          <button className="verify-skip" onClick={() => navigate('/')}>Not now — continue without verification</button>
+        </div>
+      </section>
     </div>
   )
 }
