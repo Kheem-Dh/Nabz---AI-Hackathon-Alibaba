@@ -6638,3 +6638,34 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
 .tx-class-purpose { margin: 6px 0; color: #2a2a2a; line-height: 1.5; }
 .tx-class-purpose.urdu { color: #333; }
 .tx-class-verify { display: block; margin-top: 8px; padding: 8px 10px; background: #fff3d6; border-left: 3px solid #c9962b; color: #6b4a00; font-size: 12px; border-radius: 4px; }
+
+/* Urdu-primary hero + feature strip + tightened chrome (2026-08-27 UI overhaul) */
+.urdu-hero { font-size: clamp(28px, 5vw, 44px) !important; line-height: 1.4; margin: 0 0 6px !important; color: var(--nabz-primary, #0F9D8A); }
+.guest-welcome-sub { font-size: 14px; color: #6b7c79; margin: 0 0 18px; }
+.urdu-cta { font-size: 18px; margin-top: 8px; display: block; }
+.guest-consent-tight { padding: 10px 14px; }
+.guest-consent-tight span { font-size: 14px; }
+.guest-consent-tight small { display: block; margin-top: 4px; font-size: 11px; color: #7a8b88; }
+
+.guest-feature-strip {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  margin: 6px auto 20px; max-width: 520px;
+}
+.guest-feature-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 8px; border: 1px solid #e1ebe8; border-radius: 14px;
+  background: #f8fbfa; font-size: 12px;
+}
+.guest-feature-chip span { font-size: 22px; }
+.guest-feature-chip b { font-size: 13px; color: #0F9D8A; }
+.guest-feature-chip small { font-size: 10px; color: #7a8b88; text-transform: uppercase; letter-spacing: .05em; }
+@media (max-width: 480px) {
+  .guest-feature-strip { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Urdu-primary top-nav buttons (authed) */
+.urdu-btn { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 12px; }
+.urdu-btn .urdu { font-size: 14px; }
+.top-nav button small,
+.nav-links button small,
+.app-header nav button small { display: block; font-size: 9px; opacity: .65; text-transform: uppercase; letter-spacing: .06em; margin-top: 1px; }

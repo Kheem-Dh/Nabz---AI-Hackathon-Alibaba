@@ -94,7 +94,9 @@ export default function App() {
     if (location.pathname.startsWith('/privacy')) {
       return <div className="public-legal"><PrivacyPage /></div>
     }
-    return <LandingPage />
+    // Land unauth visitors directly on the chat surface — no marketing shell.
+    // /welcome is preserved for anyone who wants the classic landing page.
+    return <GuestChatPage />
   }
 
   // First-run gate (winning plan §3): location before anything else.
@@ -232,9 +234,9 @@ function TopBar({ minimal = false }) {
         </button>
         {!minimal && (
           <nav className="desktop-nav" aria-label="Primary navigation">
-            <button className={navClass('/')} onClick={() => navigate('/')}>Workspace</button>
-            <button className={navClass('/vault')} onClick={() => navigate('/vault')}>Medical Vault</button>
-            <button className={navClass('/clinics')} onClick={() => navigate('/clinics')}>Find care</button>
+            <button className={navClass('/')} onClick={() => navigate('/')}><span className="urdu" dir="rtl">گفتگو</span><small>Chat</small></button>
+            <button className={navClass('/vault')} onClick={() => navigate('/vault')}><span className="urdu" dir="rtl">والٹ</span><small>Vault</small></button>
+            <button className={navClass('/clinics')} onClick={() => navigate('/clinics')}><span className="urdu" dir="rtl">قریبی مراکز</span><small>Care</small></button>
             {account?.is_admin && <button className={navClass('/admin')} onClick={() => navigate('/admin')}>Admin</button>}
           </nav>
         )}

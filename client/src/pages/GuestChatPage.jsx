@@ -469,12 +469,12 @@ export default function GuestChatPage() {
       <main className="guest-chat-main">
         <header className="guest-chat-header">
           <div className="guest-mobile-brand"><span><PulseIcon /></span><strong>Nabz</strong></div>
-          <div className="guest-guide-status"><span className="guest-ai-avatar"><PulseIcon /></span><div><strong>Nabz health guide</strong><small><i /> Ready · Guest assessment</small></div></div>
+          <div className="guest-guide-status"><span className="guest-ai-avatar"><PulseIcon /></span><div><strong className="urdu" dir="rtl">نبض</strong><small>Nabz · Guest</small></div></div>
           <div className="guest-header-actions">
-            {started && <button onClick={reset}>Clear chat</button>}
-            <button onClick={() => navigate('/auth?mode=login')}>Log in</button>
-            <button className="primary" onClick={() => navigate('/auth?mode=register')}>
-              <span className="guest-vault-wide">Create private Vault</span><span className="guest-vault-short">Create Vault</span>
+            {started && <button onClick={reset} title="Clear chat">✕</button>}
+            <button onClick={() => navigate('/auth?mode=login')} className="urdu-btn"><span className="urdu" dir="rtl">لاگ اِن</span></button>
+            <button className="primary urdu-btn" onClick={() => navigate('/auth?mode=register')}>
+              <span className="urdu" dir="rtl">والٹ بنائیں</span>
             </button>
           </div>
         </header>
@@ -482,22 +482,28 @@ export default function GuestChatPage() {
         <div className={`guest-chat-scroll ${started ? 'has-conversation' : ''}`}>
           {!started && (
             <section className="guest-welcome">
-              <span className="guest-welcome-kicker">START WITHOUT AN ACCOUNT</span>
-              <h1>What’s worrying you today?</h1>
-              <p className="urdu" dir="rtl">اپنی تکلیف بتائیں، نبض ایک ڈاکٹر کی طرح اہم سوالات پوچھے گا</p>
-              <p className="guest-welcome-lead">Describe what you feel in Urdu, Roman Urdu or English. Nabz will ask only the follow-up questions needed to clarify urgency and the next safe step.</p>
-              <label className="guest-consent">
+              <h1 className="urdu urdu-hero" dir="rtl">آج آپ کو کیا تکلیف ہے؟</h1>
+              <p className="guest-welcome-sub">What's worrying you today?</p>
+              <div className="guest-feature-strip" aria-label="Nabz features">
+                <div className="guest-feature-chip"><span>🎙️</span><b className="urdu" dir="rtl">آواز</b><small>Voice</small></div>
+                <div className="guest-feature-chip"><span>📷</span><b className="urdu" dir="rtl">تصویر</b><small>Photo</small></div>
+                <div className="guest-feature-chip"><span>👨‍👩‍👧</span><b className="urdu" dir="rtl">فیملی والٹ</b><small>Vault</small></div>
+                <div className="guest-feature-chip"><span>👨‍⚕️</span><b className="urdu" dir="rtl">ڈاکٹر ہینڈ آف</b><small>Handoff</small></div>
+              </div>
+              <label className="guest-consent guest-consent-tight">
                 <input type="checkbox" checked={consent} onChange={(event) => { setConsent(event.target.checked); setError('') }} />
-                <span><strong>Use my words for this temporary AI assessment</strong><small>Not added to a medical Vault. The anonymous session expires in about 2 hours. Do not use Nabz for an emergency.</small></span>
+                <span className="urdu" dir="rtl">میں اپنی بات AI کو دینے پر رضامند ہوں <small>· Temporary, no Vault, not for emergencies</small></span>
               </label>
               <div className="guest-voice-first">
                 <div className="guest-voice-rings"><i /><i /></div>
                 <MicButton listening={speech.listening} disabled={busy || !speech.supported || !consent} onClick={toggleVoice} />
-                <strong>{speech.listening ? 'Listening — speak naturally' : 'Start with your voice'}</strong>
-                <span className="urdu" dir="rtl">اردو، رومن اردو یا انگریزی میں بولیں</span>
-                <small>{consent ? 'Your words appear below so you can review them before sending.' : 'Confirm the privacy note to enable voice.'}</small>
+                <small className="guest-voice-hint">
+                  {consent
+                    ? (speech.listening ? 'Listening — speak naturally' : 'Tap the mic and speak')
+                    : 'Confirm the privacy note to enable voice'}
+                </small>
               </div>
-              <div className="guest-starter-label"><span>OR CHOOSE A COMMON CONCERN</span></div>
+              <div className="guest-starter-label"><span className="urdu" dir="rtl">یا ایک عام شکایت چنیں</span></div>
               <div className="guest-starters">
                 {STARTERS.map(([urdu, english]) => (
                   <button key={english} onClick={() => start(english, { urdu, english })} disabled={busy}>
