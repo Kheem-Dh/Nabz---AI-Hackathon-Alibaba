@@ -93,13 +93,34 @@ export default function SummaryPage() {
           </div>
 
           <div className="summary-doc">
-            <h2>Clinical Handoff Summary</h2>
-            <div className="ref">
-              {data.reference} · Generated {fmt(data.generated_at)}
+            <header className="summary-clinical-header">
+              <div>
+                <span>Patient-shared · read-only clinical snapshot</span>
+                <h2>Clinical Handoff Summary</h2>
+              </div>
+              <div className="ref">
+                <strong>{data.reference}</strong>
+                <span>Generated {fmt(data.generated_at)}</span>
+              </div>
+            </header>
+
+            <div className="summary-clinical-strip">
+              <article>
+                <span>Urgency</span>
+                <strong>{data.recent_triage?.level?.replace('_', ' ') || 'Not assessed'}</strong>
+              </article>
+              <article className={data.allergies.length > 0 ? 'summary-alert' : ''}>
+                <span>Allergies</span>
+                <strong>{data.allergies.length > 0 ? data.allergies.join(', ') : 'None recorded'}</strong>
+              </article>
+              <article>
+                <span>Chief complaint</span>
+                <strong>{data.chief_complaint}</strong>
+              </article>
             </div>
 
             <div className="summary-section">
-              <h3>Patient</h3>
+              <h3>01 · Patient identifiers</h3>
               <p>
                 <strong>{p.name}</strong>
                 {p.relation ? ` (${p.relation})` : ''} — {p.age != null ? `${p.age} yrs` : 'age n/a'},{' '}
@@ -112,18 +133,13 @@ export default function SummaryPage() {
             </div>
 
             <div className="summary-section">
-              <h3>Chief complaint</h3>
-              <p>{data.chief_complaint}</p>
-            </div>
-
-            <div className="summary-section">
-              <h3>History</h3>
+              <h3>02 · Relevant background</h3>
               <p>{data.history}</p>
             </div>
 
             {data.recent_triage && (
               <div className="summary-section">
-                <h3>Latest triage</h3>
+                <h3>03 · Assessment and clinical uncertainty</h3>
                 <p>
                   <strong>{data.recent_triage.level}</strong>
                   {data.recent_triage.reason ? ` — ${data.recent_triage.reason}` : ''}
@@ -156,7 +172,7 @@ export default function SummaryPage() {
             )}
 
             <div className="summary-section">
-              <h3>Current medications</h3>
+              <h3>04 · Confirmed current medicines</h3>
               {data.current_medications.length > 0 ? (
                 <ul>
                   {data.current_medications.map((m, i) => (
@@ -168,14 +184,9 @@ export default function SummaryPage() {
               )}
             </div>
 
-            <div className="summary-section">
-              <h3>Allergies</h3>
-              <p>{data.allergies.length > 0 ? data.allergies.join(', ') : 'None recorded.'}</p>
-            </div>
-
             {data.recent_labs?.length > 0 && (
               <div className="summary-section">
-                <h3>Recent labs</h3>
+                <h3>05 · Recent investigations</h3>
                 {data.recent_labs.map((l, i) => (
                   <p key={i}>
                     <strong>{l.title}</strong>
@@ -189,7 +200,7 @@ export default function SummaryPage() {
 
             {data.recent_documents?.length > 0 && (
               <div className="summary-section">
-                <h3>Recent Vault documents</h3>
+                <h3>06 · Relevant Vault documents</h3>
                 <ul>
                   {data.recent_documents.map((document, index) => (
                     <li key={index}>
@@ -210,7 +221,7 @@ export default function SummaryPage() {
 
             {data.medicine_evidence?.length > 0 && (
               <div className="summary-section">
-                <h3>WHO references for clinician-confirmed medicines</h3>
+                <h3>07 · Medicine evidence references</h3>
                 {data.medicine_evidence.map((evidence) => (
                   <div key={evidence.medicine_id}>
                     <p><strong>{evidence.medicine_name}</strong> — {evidence.source_status}</p>

@@ -44,7 +44,8 @@ export default function PatientDashboard({ profile, onOpenVault, onOpenSummary }
       <div className="pd-head">
         <div>
           <div className="pd-eyebrow">PRIVATE HEALTH VIEW</div>
-          <div className="pd-name urdu">{dashboard.patient_name} کا صحت ریکارڈ</div>
+          <div className="pd-name">{dashboard.patient_name}&apos;s health record</div>
+          <div className="pd-name-ur urdu" lang="ur">{dashboard.patient_name} کا صحت ریکارڈ</div>
           <div className="pd-meta">
             {[dashboard.age != null ? `${dashboard.age} yrs` : null, dashboard.gender, dashboard.blood_group]
               .filter(Boolean)

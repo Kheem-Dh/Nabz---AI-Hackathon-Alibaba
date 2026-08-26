@@ -2,10 +2,17 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useProfiles } from '../context/ProfileContext'
 
 const STATIC_ITEMS = [
-  { to: '/', icon: '🏠', ur: 'ہوم', en: 'Home', match: (p) => p === '/' },
-  { to: '/vault', icon: '🗂️', ur: 'والٹ', en: 'Vault', match: (p) => p.startsWith('/vault') },
-  { to: '/clinics', icon: '📍', ur: 'کلینک', en: 'Clinics', match: (p) => p.startsWith('/clinics') },
+  { to: '/', icon: 'home', en: 'Home', match: (p) => p === '/' },
+  { to: '/vault', icon: 'vault', en: 'Vault', match: (p) => p.startsWith('/vault') },
+  { to: '/clinics', icon: 'care', en: 'Care', match: (p) => p.startsWith('/clinics') },
 ]
+
+function NavIcon({ name }) {
+  if (name === 'home') return <svg viewBox="0 0 24 24"><path d="m3 11 9-7 9 7v9h-6v-6H9v6H3v-9Z" /></svg>
+  if (name === 'vault') return <svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" /></svg>
+  if (name === 'care') return <svg viewBox="0 0 24 24"><path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z" /><circle cx="12" cy="9" r="2.3" /></svg>
+  return <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4.5 21a7.5 7.5 0 0 1 15 0" /></svg>
+}
 
 export default function BottomNav() {
   const { pathname } = useLocation()
@@ -15,15 +22,13 @@ export default function BottomNav() {
   const profileItem = active
     ? {
         to: `/profile/${active.id}`,
-        icon: '👤',
-        ur: 'پروفائل',
+        icon: 'profile',
         en: 'Profile',
         match: (p) => p.startsWith('/profile'),
       }
     : {
         to: '/profile/new',
-        icon: '👤',
-        ur: 'پروفائل',
+        icon: 'profile',
         en: 'Profile',
         match: (p) => p.startsWith('/profile'),
       }
@@ -43,11 +48,9 @@ export default function BottomNav() {
             aria-current={isActive ? 'page' : undefined}
           >
             <span className="nav-ico" aria-hidden="true">
-              {it.icon}
+              <NavIcon name={it.icon} />
             </span>
-            <span className="urdu" style={{ lineHeight: 1 }}>
-              {it.ur}
-            </span>
+            <span>{it.en}</span>
           </button>
         )
       })}

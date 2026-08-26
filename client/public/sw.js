@@ -8,7 +8,7 @@
  *   - Network-first for /api/* so health data is never stale — the SW never
  *     caches JWT-bearing responses.
  */
-const CACHE = 'nabz-shell-v5-responsive-production-ui'
+const CACHE = 'nabz-shell-v6-responsive-clinical-ui'
 const SHELL = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-maskable.svg']
 
 self.addEventListener('install', (event) => {
@@ -36,6 +36,24 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (url.origin !== self.location.origin) return
+
+  // HTML navigations must prefer the deployed app so a phone does not keep an
+  // old UI bundle after a release. The cached shell remains an offline-only
+  // fallback; hashed JS/CSS assets can still use cache-first below.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then((resp) => {
+          if (resp && resp.status === 200) {
+            const copy = resp.clone()
+            caches.open(CACHE).then((c) => c.put('/', copy))
+          }
+          return resp
+        })
+        .catch(() => caches.match(req).then((cached) => cached || caches.match('/'))),
+    )
+    return
+  }
 
   event.respondWith(
     caches.match(req).then((cached) => {

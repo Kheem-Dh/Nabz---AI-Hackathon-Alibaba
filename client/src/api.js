@@ -47,7 +47,9 @@ async function handle(resp) {
           ? 'This file format is not supported, or the file does not match its extension.'
           : detail === 'pdf_render_failed'
             ? 'This PDF could not be opened. It may be damaged or password protected.'
-            : detail
+            : detail.startsWith('consent_required')
+              ? 'Your privacy consent needs to be refreshed before this health action. Open Privacy & consent from the account menu, review the choices, and save them again.'
+              : detail
     const err = new Error(friendly)
     err.status = resp.status
     err.detail = detail
@@ -287,8 +289,30 @@ export const createDoctorHandoff = (profileId) =>
   jsonReq(`/api/summary/${profileId}/handoff`, 'POST')
 
 export async function readDoctorHandoff(token) {
-  const resp = await fetch(`${API_BASE}/api/handoff/${encodeURIComponent(token)}`)
-  return handle(resp)
+  const url = `${API_BASE}/api/handoff/${encodeURIComponent(token)}`
+  let lastError = null
+  // Public Render services can occasionally be waking while the web page is
+  // already visible. Retry one transient network/5xx failure, but never retry
+  // a rejected or expired grant.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const resp = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } })
+      if (resp.status >= 500 && attempt === 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, 650))
+        continue
+      }
+      const contentType = resp.headers.get('content-type') || ''
+      if (resp.ok && !contentType.includes('application/json')) {
+        throw new Error('handoff_service_misrouted')
+      }
+      return handle(resp)
+    } catch (error) {
+      lastError = error
+      if (error?.status || attempt > 0) throw error
+      await new Promise((resolve) => window.setTimeout(resolve, 650))
+    }
+  }
+  throw lastError || new Error('handoff_service_unavailable')
 }
 export const getDashboard = (profileId) => jsonReq(`/api/dashboard/${profileId}`, 'GET')
 export const seedDemoProfile = (profileId) => jsonReq(`/api/demo/seed/${profileId}`, 'POST')

@@ -119,7 +119,7 @@ export default function LocationSetupPage({ redirectTo = '/' }) {
   const manualCities = regions.find((item) => item.name === manualProvince)?.cities || []
 
   return (
-    <div className="page">
+    <div className="page location-setup-page">
       <div className="loc-hero location-permission-hero">
         <div className="loc-hero-icon" aria-hidden="true">⌖</div>
         <span className="location-step-kicker">STEP 1 · CURRENT LOCATION</span>
@@ -142,16 +142,16 @@ export default function LocationSetupPage({ redirectTo = '/' }) {
             disabled={!geo.supported || geo.status === 'detecting' || saving}
           >
             {geo.status === 'detecting' ? (
-              <>
-                <span className="spinner-inline" />{' '}
-                <span className="urdu">جگہ معلوم ہو رہی ہے…</span>{' '}
-                <span>Detecting…</span>
-              </>
+              <span className="location-action-copy">
+                <strong><span className="spinner-inline" /> Detecting your location…</strong>
+                <small className="urdu" lang="ur">آپ کی جگہ معلوم کی جا رہی ہے…</small>
+              </span>
             ) : (
-              <>
-                <span className="urdu">میری موجودہ جگہ استعمال کریں</span>
-                <span className="btn-sub">Use my current location (recommended)</span>
-              </>
+              <span className="location-action-copy">
+                <strong>Use my current location</strong>
+                <small className="urdu" lang="ur">میری موجودہ جگہ استعمال کریں</small>
+                <span className="location-recommended">Recommended</span>
+              </span>
             )}
           </button>
 
@@ -183,22 +183,28 @@ export default function LocationSetupPage({ redirectTo = '/' }) {
           )}
           <div className="confirm-actions">
             <button className="btn btn-primary" onClick={handleConfirmDetected} disabled={saving}>
-              <span className="urdu">تصدیق کریں</span> · Confirm
+              <strong>Confirm location</strong><small className="urdu" lang="ur">جگہ کی تصدیق کریں</small>
             </button>
             <button
               className="btn btn-ghost"
               onClick={() => setResolved(null)}
               disabled={saving}
             >
-              <span className="urdu">تبدیل کریں</span> · Change
+              <strong>Change</strong><small className="urdu" lang="ur">تبدیل کریں</small>
             </button>
           </div>
         </div>
       )}
 
       {!resolved && !manualOpen && (
-        <button className="location-manual-link" onClick={() => setManualOpen(true)}>
-          Can’t share location? Choose province and city manually
+        <button type="button" className="location-manual-link" onClick={() => setManualOpen(true)}>
+          <span className="location-manual-icon" aria-hidden="true">⌖</span>
+          <span className="location-manual-copy">
+            <strong>Choose province and city instead</strong>
+            <small>Can’t share your location? Continue without GPS.</small>
+            <span className="urdu" lang="ur">موجودہ جگہ شیئر نہیں کر سکتے؟ صوبہ اور شہر منتخب کریں</span>
+          </span>
+          <span className="location-manual-arrow" aria-hidden="true">→</span>
         </button>
       )}
 
@@ -209,7 +215,7 @@ export default function LocationSetupPage({ redirectTo = '/' }) {
         </div>
         <div className="form-row">
           <label className="form-label" htmlFor="province">
-            <span className="urdu">صوبہ</span> · Province / territory
+            <strong>Province / territory</strong><small className="urdu" lang="ur">صوبہ</small>
           </label>
           <select
             id="province"
@@ -228,7 +234,7 @@ export default function LocationSetupPage({ redirectTo = '/' }) {
         </div>
         <div className="form-row">
           <label className="form-label" htmlFor="city">
-            <span className="urdu">شہر</span> · City
+            <strong>City</strong><small className="urdu" lang="ur">شہر</small>
           </label>
           <select
             id="city"
@@ -248,7 +254,7 @@ export default function LocationSetupPage({ redirectTo = '/' }) {
           onClick={handleManualSave}
           disabled={!manualProvince || !manualCity || saving}
         >
-          <span className="urdu">محفوظ کریں</span> · Save
+          <strong>Save location</strong><small className="urdu" lang="ur">جگہ محفوظ کریں</small>
         </button>
         <p className="hero-hint-en" style={{ marginTop: 8 }}>
           GPS gives the most accurate nearby results. Manual selection uses the selected city centre.

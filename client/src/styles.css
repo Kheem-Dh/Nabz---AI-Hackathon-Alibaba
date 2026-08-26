@@ -5829,3 +5829,307 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
   .handoff-page { background: #fff; padding: 0; }
   .handoff-wrap { border: none; box-shadow: none; padding: 0; }
 }
+
+/* ============================================================
+   Responsive application refinement — 2026-08-26 review
+   ============================================================ */
+
+:root {
+  /* Never fall back to a Latin serif when the hosted Nastaliq face is slow or
+     unavailable in an Android WebView. */
+  --font-ur: 'Noto Nastaliq Urdu', 'Noto Naskh Arabic', 'Noto Sans Arabic', Tahoma, Arial, sans-serif;
+}
+
+/* One professional account control keeps the header quiet and predictable. */
+.account-menu { position: relative; flex: 0 0 auto; }
+.account-menu > summary {
+  min-height: 44px;
+  padding: 5px 9px 5px 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  border: 1px solid rgba(255,255,255,.24);
+  border-radius: 13px;
+  background: rgba(255,255,255,.11);
+  color: #fff;
+  cursor: pointer;
+}
+.account-menu > summary::-webkit-details-marker { display: none; }
+.account-menu > summary > svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  transition: transform .16s ease;
+}
+.account-menu[open] > summary > svg { transform: rotate(180deg); }
+.account-menu-label { display: grid; line-height: 1.15; text-align: left; }
+.account-menu-label strong { max-width: 120px; overflow: hidden; font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.account-menu-label small { margin-top: 3px; font-size: .625rem; opacity: .72; }
+.account-menu-popover {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: 0;
+  z-index: 90;
+  width: min(290px, calc(100vw - 24px));
+  padding: 8px;
+  overflow: hidden;
+  border: 1px solid #dce7e4;
+  border-radius: 17px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 24px 60px rgba(16,40,37,.22);
+}
+.account-menu-identity { padding: 10px 11px 12px; border-bottom: 1px solid var(--line); }
+.account-menu-identity strong,
+.account-menu-identity small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-menu-identity strong { font-size: .875rem; }
+.account-menu-identity small { margin-top: 3px; color: var(--ink-mute); font-size: .6875rem; }
+.account-menu-popover > button {
+  width: 100%;
+  min-height: 51px;
+  padding: 8px 11px;
+  display: grid;
+  gap: 2px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.account-menu-popover > button:hover { background: var(--teal-050); }
+.account-menu-popover > button span { font-size: .8125rem; font-weight: 700; }
+.account-menu-popover > button small { color: var(--ink-mute); font-size: .6875rem; }
+.account-menu-popover > .account-menu-signout { color: #9b3131; }
+.account-menu-location { padding: 7px 5px; border-bottom: 1px solid var(--line); }
+.account-menu-location .loc-chip { width: 100%; max-width: none; min-height: 40px; justify-content: flex-start; }
+
+/* Location: the non-GPS path is a real secondary action, not footer text. */
+.location-setup-page { width: min(980px, 100%) !important; gap: 14px; }
+.location-setup-page .location-permission-hero { padding-block: clamp(28px, 5vh, 48px); }
+.location-action-copy { position: relative; display: grid; justify-items: center; gap: 1px; }
+.location-action-copy strong { font-size: .9375rem; }
+.location-action-copy small { font-size: 1rem; line-height: 1.8; }
+.location-recommended {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.16);
+  font-size: .625rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  transform: translateY(-50%);
+}
+.location-manual-link {
+  min-height: 88px;
+  padding: 13px 16px !important;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 22px;
+  align-items: center;
+  gap: 13px;
+  border: 1px solid #b9dcd5 !important;
+  border-radius: 17px;
+  background: #fff !important;
+  box-shadow: 0 8px 24px rgba(16,40,37,.07);
+  color: #173b35 !important;
+  text-align: left;
+}
+.location-manual-link:hover { border-color: var(--teal) !important; background: var(--teal-050) !important; }
+.location-manual-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; background: var(--teal-050); color: var(--teal-dark); font-size: 24px; }
+.location-manual-copy { min-width: 0; display: grid; gap: 2px; }
+.location-manual-copy strong { color: var(--teal-dark); font-size: .875rem; }
+.location-manual-copy small { color: var(--ink-soft); font-size: .75rem; }
+.location-manual-copy .urdu { color: var(--ink); font-size: .875rem; line-height: 1.8; text-align: left; }
+.location-manual-arrow { color: var(--teal-dark); font-size: 20px; }
+.confirm-actions .btn,
+.location-manual-card > .btn { display: grid; justify-items: center; gap: 1px; }
+.confirm-actions .btn small,
+.location-manual-card > .btn small { font-size: .8125rem; line-height: 1.65; }
+.form-label { display: grid; gap: 0; }
+.form-label small { color: var(--ink-soft); font-size: .8125rem; line-height: 1.7; }
+
+/* Use the viewport well while keeping the reading column calm. */
+@media (min-width: 900px) {
+  .app-container { max-width: none; padding-inline: clamp(16px, 2vw, 38px); }
+  .desktop-health-workspace { width: 100%; max-width: 1760px; }
+  .workspace-header { margin-bottom: 14px; padding-bottom: 13px; }
+  .assessment-workspace { padding: clamp(17px, 1.5vw, 24px); }
+  .triage-start-card { padding: clamp(18px, 2vw, 26px); }
+  .voice-first-start { min-height: clamp(150px, 21vh, 225px); }
+  .triage-start-card .symptom-composer { width: min(900px, 100%); }
+  .doctor-handoff-buttons .btn { width: auto; flex: 0 0 auto; }
+}
+
+@media (min-width: 1440px) {
+  .workspace-shell .desktop-health-workspace {
+    grid-template-columns: minmax(205px, 235px) minmax(650px, 1fr) minmax(285px, 315px) !important;
+    gap: clamp(14px, 1.2vw, 22px) !important;
+  }
+}
+
+/* QR panel: concise controls, no full signed token consuming the page. */
+.doctor-handoff-card { padding: clamp(16px, 2vw, 22px); }
+.doctor-handoff-qr { min-width: 210px; min-height: 210px; }
+.doctor-handoff-qr svg { width: 190px; height: 190px; }
+.doctor-handoff-url {
+  position: relative;
+  max-width: 680px;
+  overflow: hidden;
+  color: transparent;
+  white-space: nowrap;
+}
+.doctor-handoff-url::after {
+  content: 'Secure patient-shared link · hidden for privacy';
+  position: absolute;
+  inset: 0;
+  padding: 8px 10px;
+  color: var(--ink-soft);
+  font-family: var(--font-en);
+}
+.doctor-handoff-buttons .btn { min-height: 42px; padding-inline: 17px; }
+
+/* Physician-facing pages use dense, scannable document typography. */
+.handoff-wrap { max-width: 1040px; padding: clamp(20px, 3vw, 38px); border-radius: 18px; }
+.handoff-header { padding-bottom: 14px; border-bottom: 2px solid #173b35; }
+.handoff-brand { letter-spacing: .04em; text-transform: uppercase; }
+.handoff-patient-card { border-left: 5px solid var(--teal); background: #f2f8f6; }
+.handoff-block { padding: 18px 0; }
+.handoff-block h2 { margin-bottom: 11px; font-size: .8125rem; color: #173b35; }
+.handoff-line { font-size: .875rem; }
+.handoff-sbar { padding: 13px 14px; border-left: 4px solid var(--teal); background: #f1f7f5; }
+.handoff-red { padding: 10px 12px; border-left: 4px solid #d64545; }
+.summary-doc { max-width: 1080px; margin-inline: auto; padding: clamp(22px, 3vw, 40px); border-top: 5px solid #173b35; }
+.summary-doc > h2 { margin-bottom: 2px; color: #173b35; font-size: clamp(1.45rem, 2vw, 2rem); }
+.summary-doc .ref { margin-bottom: 18px; }
+.summary-section { padding: 15px 0; border-top: 1px solid #dce5e2; }
+.summary-section h3 { margin: 0 0 8px; color: #0b7568; font-size: .75rem; letter-spacing: .09em; text-transform: uppercase; }
+.summary-section p { margin: 5px 0; line-height: 1.65; }
+.summary-clinical-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
+.summary-clinical-header > div:first-child > span { color: var(--teal-dark); font-size: .6875rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.summary-clinical-header .ref { display: grid; gap: 3px; margin: 2px 0 0; color: var(--ink-mute); text-align: right; }
+.summary-clinical-header .ref strong { color: var(--ink); font-size: .75rem; }
+.summary-clinical-header .ref span { font-size: .6875rem; }
+.summary-clinical-strip { margin-bottom: 20px; display: grid; grid-template-columns: .75fr 1fr 2fr; gap: 8px; }
+.summary-clinical-strip article { min-width: 0; padding: 12px 13px; display: grid; align-content: start; gap: 4px; border: 1px solid #dce5e2; border-radius: 10px; background: #f7faf9; }
+.summary-clinical-strip article > span { color: var(--ink-mute); font-size: .625rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.summary-clinical-strip article > strong { overflow-wrap: anywhere; font-size: .8125rem; line-height: 1.45; }
+.summary-clinical-strip .summary-alert { border-color: #e6c8ae; background: #fff7ed; color: #8a3b13; }
+.handoff-document-label { margin-bottom: 5px; color: var(--teal-dark); font-size: .625rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.handoff-report-meta { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--ink-mute); font-size: .6875rem; }
+.handoff-report-meta strong { color: var(--ink); }
+
+@media (max-width: 899px) {
+  html { min-width: 0; overflow-x: hidden; }
+  body { min-width: 0; overflow-x: hidden; }
+  .app-container { width: 100%; min-width: 0; padding: 0 !important; }
+  .app-main { width: 100%; min-width: 0; padding: 12px 12px calc(var(--nav-h) + 18px) !important; }
+  .topbar { margin: 0; padding: 9px 12px; border-radius: 0; }
+  .topbar-row { min-height: 45px; flex-wrap: nowrap !important; }
+  .brand-home { min-width: 0; flex: 1; }
+  .brand-app-mark { width: 36px; height: 36px; }
+  .brand-title .brand-ur { font-size: 1.12rem; line-height: 1.25; }
+  .brand-title .brand-en { font-size: .625rem; }
+  .brand-pulse { display: none; }
+  .account-menu-label { display: none; }
+  .account-menu > summary { width: 43px; min-height: 43px; padding: 5px; justify-content: center; }
+  .account-menu > summary > svg { display: none; }
+  .account-menu .profile-header-avatar { width: 31px; height: 31px; }
+  .account-menu-popover { position: fixed; top: 61px; right: 10px; }
+  .verify-banner { min-height: 38px; padding: 6px 12px !important; white-space: normal; }
+  .desktop-health-workspace { width: 100%; min-width: 0; gap: 0 !important; }
+  .family-sidebar { display: none !important; }
+  .assessment-workspace {
+    width: 100%;
+    min-width: 0;
+    min-height: calc(100dvh - 160px) !important;
+    padding: 0 !important;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .workspace-header { margin: 0 0 8px; padding: 0 0 8px; }
+  .workspace-actions { gap: 7px; }
+  .workspace-actions button { min-height: 38px; padding-inline: 10px; font-size: .6875rem; }
+  .workspace-conversation { min-width: 0; overflow: visible; }
+  .triage-start-card,
+  .q-card { min-width: 0; border-radius: 17px; }
+  .triage-start-card { padding: 16px 13px; }
+  .triage-start-card .hero-greet-ur { font-size: clamp(1.2rem, 6vw, 1.45rem); line-height: 1.7; }
+  .voice-first-start { min-height: 190px; padding: 12px 8px; }
+  .voice-first-start .mic-button { width: 88px; height: 88px; }
+  .voice-start-rings { width: 122px; height: 122px; }
+  .care-composer,
+  .claude-composer { min-width: 0; margin-inline: 0 !important; }
+  .care-composer textarea,
+  .claude-composer textarea { min-width: 0; font-family: var(--font-en); font-size: .875rem; line-height: 1.55; }
+  .q-card .urdu,
+  .chip .urdu { font-size: 1rem; line-height: 1.8; }
+  .chips { grid-template-columns: 1fr !important; }
+  .chip { width: 100%; min-width: 0; min-height: 60px; padding: 9px 12px; overflow-wrap: anywhere; }
+  .chip-en { display: block; margin-top: 1px; font-size: .6875rem; line-height: 1.35; }
+  .patient-dashboard { overflow: hidden; }
+  .pd-name { font-size: 1rem; }
+  .pd-name-ur { margin-top: 1px; font-size: .8125rem; line-height: 1.6; }
+  .pd-summary-ur { display: none; }
+  .pd-summary-en { font-size: .75rem; }
+  .pd-head-actions { flex-direction: row; }
+  .pd-vault-btn { padding: 6px 8px; font-size: .625rem; }
+  .disclaimer { display: none !important; }
+  .bottom-nav {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: calc(60px + env(safe-area-inset-bottom));
+    max-width: none;
+    padding-bottom: env(safe-area-inset-bottom);
+    transform: none;
+  }
+  .nav-item { min-width: 0; gap: 3px; font-size: .625rem; }
+  .nav-item .nav-ico { width: 21px; height: 21px; display: grid; place-items: center; }
+  .nav-item .nav-ico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-item.active::after { content: ''; width: 18px; height: 2px; border-radius: 99px; background: currentColor; }
+  .location-setup-page { gap: 11px; }
+  .location-setup-page .location-permission-hero { padding: 24px 16px; border-radius: 19px; }
+  .loc-hero-title { font-size: 1.55rem; }
+  .loc-hero-sub { font-size: .9rem; line-height: 1.8; }
+  .btn-hero { min-height: 69px; padding: 9px 12px; }
+  .location-recommended { position: static; margin-top: 2px; transform: none; }
+  .location-manual-link { min-height: 100px; grid-template-columns: 38px minmax(0, 1fr) 16px; padding: 11px 12px !important; }
+  .location-manual-icon { width: 38px; height: 38px; }
+  .location-manual-copy .urdu { font-size: .8125rem; }
+  .confirm-actions { flex-direction: column; }
+  .doctor-handoff-head { flex-direction: column; }
+  .doctor-handoff-head > .btn { width: 100%; }
+  .doctor-handoff-body { gap: 13px; }
+  .doctor-handoff-qr { width: min(230px, 100%); min-width: 0; }
+  .doctor-handoff-buttons { display: grid; grid-template-columns: 1fr 1fr; }
+  .doctor-handoff-buttons .btn { width: 100%; min-width: 0; padding-inline: 8px; }
+  .doctor-handoff-buttons .btn:last-child { grid-column: 1 / -1; }
+  .handoff-page { padding: 0; }
+  .handoff-wrap { min-height: 100dvh; padding: 16px; border: 0; border-radius: 0; box-shadow: none; }
+  .handoff-header { align-items: flex-start; gap: 12px; }
+  .handoff-header .btn { width: auto; }
+  .handoff-patient-card h1 { font-size: 1.25rem; }
+  .handoff-block { padding: 14px 0; }
+  .summary-doc { padding: 18px 15px; border-radius: 12px; }
+  .summary-clinical-header { display: grid; gap: 8px; }
+  .summary-clinical-header .ref { text-align: left; }
+  .summary-clinical-strip { grid-template-columns: 1fr 1fr; }
+  .summary-clinical-strip article:last-child { grid-column: 1 / -1; }
+  .field label { display: grid; gap: 1px; font-family: var(--font-en); font-size: .75rem; line-height: 1.35; }
+  .field label .urdu { font-size: .8125rem; line-height: 1.6; }
+}
+
+@media (max-width: 380px) {
+  .brand-title .brand-en { display: none; }
+  .location-manual-copy small { display: none; }
+  .workspace-actions button { font-size: .625rem; }
+}

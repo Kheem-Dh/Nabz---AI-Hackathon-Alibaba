@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createDoctorHandoff } from '../api'
+import { createDoctorHandoff, readDoctorHandoff } from '../api'
 import { toSvg } from '../utils/qrcode'
 
 // One-tap doctor handoff: issues a short-lived JWT link, renders a QR code
@@ -23,9 +23,17 @@ export default function DoctorHandoffCard({ profileId }) {
       // The API may run on a different Render service. Always make the QR
       // open the public React handoff route on the web origin.
       const publicUrl = `${window.location.origin}/handoff/${encodeURIComponent(h.token)}`
+      // Do not display a QR until its public, unauthenticated read endpoint has
+      // successfully returned the physician snapshot. This catches routing,
+      // deployment and signing problems before the patient reaches the clinic.
+      await readDoctorHandoff(h.token)
       setHandoff({ ...h, url: publicUrl })
     } catch (e) {
-      setError(e?.message || 'Could not create a handoff link.')
+      setError(
+        e?.message === 'handoff_service_misrouted'
+          ? 'The doctor-view service is not routed correctly yet. Please try again after the deployment finishes.'
+          : e?.message || 'Could not create and verify a doctor handoff link.',
+      )
     } finally {
       setBusy(false)
     }
@@ -98,7 +106,7 @@ export default function DoctorHandoffCard({ profileId }) {
             </div>
           )}
           <div className="doctor-handoff-actions">
-            <div className="doctor-handoff-ready">✓ Report snapshot ready for the doctor</div>
+            <div className="doctor-handoff-ready">✓ Link verified · report ready for the doctor</div>
             <div className="doctor-handoff-url" title={handoff.url}>{handoff.url}</div>
             <div className="doctor-handoff-buttons">
               <button className="btn btn-outline" onClick={copyLink}>

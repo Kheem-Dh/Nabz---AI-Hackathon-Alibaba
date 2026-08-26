@@ -28,7 +28,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   const imageInputRef = useRef(null)
   const [clinicalImage, setClinicalImage] = useState(null)
   const [imagePreview, setImagePreview] = useState('')
-  const [voiceLang, setVoiceLang] = useState('ur-PK')
+  const voiceLang = 'ur-PK'
 
   // Chrome uses interim browser recognition for a true live transcript. Other
   // browsers use the cloud recorder fallback. A short silence closes the turn,
@@ -122,6 +122,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
 
   async function doStart(text) {
     if (!text || !text.trim()) return
+    tts.cancel()
     setPhase('starting')
     setError('')
     setStreamStage({ stage: 'queued', message: 'Sending…' })
@@ -168,6 +169,10 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
 
   async function doAnswer(text) {
     if (!text || !text.trim()) return
+    // A selected answer ends the current assistant turn immediately. Cancel
+    // its audio before the network request so it never speaks over the next
+    // question or the processing state.
+    tts.cancel()
     setPhase('thinking')
     setError('')
     setStreamStage({ stage: 'queued', message: 'Sending…' })
@@ -213,6 +218,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
 
   async function retryAssessment() {
     if (!sessionId) return
+    tts.cancel()
     setPhase('thinking')
     setError('')
     lastRequestRef.current = { kind: 'retry' }
@@ -334,10 +340,6 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
             </div>
             <div className="hero-greet-en">Tell Nabz how {profile.display_name} feels</div>
           </div>
-          <div className="voice-language" aria-label="Voice language">
-            <button type="button" className={voiceLang === 'ur-PK' ? 'active' : ''} onClick={() => setVoiceLang('ur-PK')}>اردو</button>
-            <button type="button" className={voiceLang === 'en-PK' ? 'active' : ''} onClick={() => setVoiceLang('en-PK')}>English</button>
-          </div>
         </div>
 
         {!speech.supported && (
@@ -412,7 +414,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
       <div className="q-card">
         <div className="voice-capture-meta">
           <span className="voice-live-dot" />
-          {speech.backend === 'live' ? 'Live transcript' : 'Cloud recording'} · {voiceLang === 'ur-PK' ? 'Urdu' : 'English'}
+          {speech.backend === 'live' ? 'Live Urdu transcript' : 'Secure Urdu voice recording'}
         </div>
         <MicButton listening onClick={() => speech.stop()} />
         <p className="hero-hint-ur urdu" style={{ marginTop: 12 }}>

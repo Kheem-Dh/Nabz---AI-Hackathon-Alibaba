@@ -7,6 +7,7 @@ import { readDoctorHandoff } from '../api'
 export default function HandoffPage() {
   const { token } = useParams()
   const [state, setState] = useState({ loading: true, error: null, data: null })
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let alive = true
@@ -14,7 +15,7 @@ export default function HandoffPage() {
       .then((data) => alive && setState({ loading: false, error: null, data }))
       .catch((e) => alive && setState({ loading: false, error: e, data: null }))
     return () => { alive = false }
-  }, [token])
+  }, [token, retryKey])
 
   if (state.loading) {
     return (
@@ -26,19 +27,35 @@ export default function HandoffPage() {
   if (state.error) {
     const detail = state.error?.detail || state.error?.message || ''
     const expired = /handoff_expired/.test(detail)
+    const rejected = /invalid_handoff|not_a_handoff|handoff_target_gone/.test(detail)
     return (
       <div className="handoff-page">
         <div className="handoff-error">
-          <h1>{expired ? 'This handoff link has expired.' : 'Handoff link is not valid.'}</h1>
+          <h1>
+            {expired
+              ? 'This handoff link has expired.'
+              : rejected
+                ? 'This handoff link is not valid.'
+                : 'The secure report could not be loaded.'}
+          </h1>
           <p>
-            Ask the patient to generate a fresh QR from the Doctor handoff section
-            of the Nabz app.
+            {expired || rejected
+              ? 'Ask the patient to generate a fresh QR from the Doctor handoff section of the Nabz app.'
+              : 'The link may still be valid. Check the connection and retry; a temporary service error is no longer shown as an invalid QR.'}
           </p>
+          {!expired && !rejected && (
+            <button className="btn btn-primary" onClick={() => {
+              setState({ loading: true, error: null, data: null })
+              setRetryKey((value) => value + 1)
+            }}>
+              Retry secure report
+            </button>
+          )}
         </div>
       </div>
     )
   }
-  const { patient, chronic_conditions, allergies, current_medicines, latest_triage, recent_labs, recent_documents, notice } = state.data || {}
+  const { patient, chronic_conditions, allergies, current_medicines, latest_triage, recent_labs, recent_documents, notice, generated_at, reference } = state.data || {}
 
   return (
     <div className="handoff-page">
@@ -46,12 +63,13 @@ export default function HandoffPage() {
         <header className="handoff-header">
           <div className="handoff-brand">
             <span className="brand-ur">نبض</span>
-            <span>NABZ · Doctor snapshot</span>
+            <span>NABZ · Clinical handoff</span>
           </div>
           <button className="btn btn-outline" onClick={() => window.print()}>Print</button>
         </header>
 
         <section className="handoff-patient-card">
+          <div className="handoff-document-label">Patient-shared · read-only · verify clinically</div>
           <h1>{patient?.name || 'Patient'}</h1>
           <div className="handoff-patient-meta">
             {[
@@ -66,11 +84,15 @@ export default function HandoffPage() {
               ⚠ Allergies: <strong>{allergies.join(', ')}</strong>
             </div>
           )}
+          <div className="handoff-report-meta">
+            {reference && <span>Report ID <strong>{reference}</strong></span>}
+            {generated_at && <span>Generated <strong>{new Date(generated_at).toLocaleString()}</strong></span>}
+          </div>
         </section>
 
         {latest_triage && (
           <section className="handoff-block">
-            <h2>Latest encounter · {new Date(latest_triage.date).toLocaleString()}</h2>
+            <h2>01 · Current encounter · {new Date(latest_triage.date).toLocaleString()}</h2>
             {latest_triage.level && (
               <div className={`handoff-level level-${latest_triage.level.toLowerCase()}`}>
                 {latest_triage.level.replace('_', ' ')}
@@ -183,14 +205,14 @@ export default function HandoffPage() {
 
         {chronic_conditions?.length > 0 && (
           <section className="handoff-block">
-            <h2>Chronic conditions</h2>
+            <h2>02 · Relevant background</h2>
             <div>{chronic_conditions.join(' · ')}</div>
           </section>
         )}
 
         {current_medicines?.length > 0 && (
           <section className="handoff-block">
-            <h2>Confirmed medicines</h2>
+            <h2>03 · Confirmed medicines</h2>
             <ul>
               {current_medicines.map((m, i) => (
                 <li key={i}>
@@ -205,7 +227,7 @@ export default function HandoffPage() {
 
         {recent_labs?.length > 0 && (
           <section className="handoff-block">
-            <h2>Recent labs</h2>
+            <h2>04 · Recent investigations</h2>
             {recent_labs.map((lab, i) => (
               <div key={i}>
                 <strong>{lab.title}</strong> — {new Date(lab.date).toLocaleDateString()}
@@ -229,7 +251,7 @@ export default function HandoffPage() {
 
         {recent_documents?.length > 0 && (
           <section className="handoff-block">
-            <h2>Relevant Vault documents</h2>
+            <h2>05 · Relevant Vault documents</h2>
             {recent_documents.map((document, i) => (
               <article className="handoff-document" key={`${document.title}-${i}`}>
                 <strong>{document.title}</strong>

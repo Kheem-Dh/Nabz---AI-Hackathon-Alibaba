@@ -231,49 +231,37 @@ function TopBar({ minimal = false }) {
             {account?.is_admin && <button className={navClass('/admin')} onClick={() => navigate('/admin')}>Admin</button>}
           </nav>
         )}
-        <div className="row">
-          {!minimal && active && (
-            <button
-              className={`profile-header-btn ${profileComplete ? 'complete' : ''}`}
-              title="Open your profile"
-              onClick={() => navigate(profileComplete ? `/profile/${active.id}` : `/profile/${active.id}/edit`)}
-            >
-              <span className="profile-header-avatar">{(active.display_name || account?.full_name || 'U').charAt(0).toUpperCase()}</span>
-              <span>
-                <strong>{profileComplete ? active.display_name : 'Complete profile'}</strong>
-                <small>{profileComplete ? 'My health profile' : 'Add health details'}</small>
-              </span>
+        <details className="account-menu">
+          <summary aria-label="Open profile and settings">
+            <span className="profile-header-avatar">{(active?.display_name || account?.full_name || 'U').charAt(0).toUpperCase()}</span>
+            <span className="account-menu-label">
+              <strong>{active?.display_name || account?.full_name || 'Account'}</strong>
+              <small>Profile & settings</small>
+            </span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4" /></svg>
+          </summary>
+          <div className="account-menu-popover">
+            <div className="account-menu-identity">
+              <strong>{active?.display_name || account?.full_name || 'Nabz account'}</strong>
+              <small>{account?.email || account?.phone || 'Private health account'}</small>
+            </div>
+            {active && (
+              <button onClick={() => navigate(profileComplete ? `/profile/${active.id}` : `/profile/${active.id}/edit`)}>
+                <span>Profile</span><small>{profileComplete ? 'View health details' : 'Complete health details'}</small>
+              </button>
+            )}
+            {!minimal && <div className="account-menu-location"><LocationChip /></div>}
+            <button onClick={() => { stopAllSpeech() }}>
+              <span>Mute Nabz</span><small>Stop all voice playback</small>
             </button>
-          )}
-          {!minimal && <LocationChip compact />}
-          <button
-            className="audio-stop-btn"
-            title="Stop all Nabz audio"
-            onClick={stopAllSpeech}
-            aria-label="Stop all audio"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.8 8.5H3v7h3.8L11 19V5Zm4.2 4.2 5.6 5.6m0-5.6-5.6 5.6" /></svg>
-            <span className="audio-stop-label">Mute</span>
-          </button>
-          <button
-            className="top-action-btn"
-            title="Privacy"
-            onClick={() => navigate('/privacy')}
-            aria-label="Privacy"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8.1 7 10 4.2-1.9 7-5.4 7-10V6l-7-3Zm-3 9 2 2 4-4" /></svg>
-            <span>Privacy</span>
-          </button>
-          <button
-            className="top-action-btn"
-            title="Log out"
-            onClick={() => { stopAllSpeech(); logout() }}
-            aria-label="Log out"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v14h5m4-4 4-3-4-3m4 3H9" /></svg>
-            <span>Sign out</span>
-          </button>
-        </div>
+            <button onClick={() => navigate('/privacy')}>
+              <span>Privacy & consent</span><small>Manage health-data permissions</small>
+            </button>
+            <button className="account-menu-signout" onClick={() => { stopAllSpeech(); logout() }}>
+              <span>Sign out</span><small>End this session securely</small>
+            </button>
+          </div>
+        </details>
       </div>
     </header>
   )

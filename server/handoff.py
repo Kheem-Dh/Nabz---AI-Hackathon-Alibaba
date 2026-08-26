@@ -141,7 +141,10 @@ def _handoff_snapshot(db: Session, profile: Profile) -> dict[str, Any]:
         for document in list_profile_documents(profile)[:6]
     ]
 
+    generated_at = datetime.now(timezone.utc)
     return {
+        "generated_at": generated_at.isoformat(),
+        "reference": f"NABZ-{profile.id}-{generated_at.strftime('%Y%m%d%H%M')}",
         "patient": {
             "name": profile.display_name,
             "relation": profile.relation,
@@ -190,6 +193,11 @@ def create_handoff(
     if not profile or profile.account_id != account.id:
         raise HTTPException(status_code=404, detail="profile_not_found")
     token, exp = _issue_handoff_token(account.id, profile.id)
+    # Fail at issuance rather than handing the patient an unreadable QR if a
+    # deployment has an inconsistent signing configuration.
+    decoded_account_id, decoded_profile_id = _decode_handoff_token(token)
+    if (decoded_account_id, decoded_profile_id) != (account.id, profile.id):
+        raise HTTPException(status_code=503, detail="handoff_signing_unavailable")
     base = _web_origin(request)
     url = f"{base}/handoff/{token}"
     logger.info(
@@ -210,4 +218,13 @@ def read_handoff(token: str, db: Session = Depends(get_db)) -> dict:
     profile = db.get(Profile, profile_id)
     if not profile or profile.account_id != account_id:
         raise HTTPException(status_code=404, detail="handoff_target_gone")
-    return _handoff_snapshot(db, profile)
+    try:
+        return _handoff_snapshot(db, profile)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(
+            "handoff_snapshot_failed account_id=%s profile_id=%s",
+            account_id, profile_id,
+        )
+        raise HTTPException(status_code=503, detail="handoff_snapshot_unavailable") from exc
