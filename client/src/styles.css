@@ -6670,10 +6670,22 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
 .nav-links button small,
 .app-header nav button small { display: block; font-size: 9px; opacity: .65; text-transform: uppercase; letter-spacing: .06em; margin-top: 1px; }
 
-/* Unified authed workspace — matches guest chat visual style */
-.desktop-health-workspace { grid-template-columns: 260px 260px 1fr !important; }
-@media (max-width: 1024px) { .desktop-health-workspace { grid-template-columns: 1fr !important; } }
-.authed-chat-workspace { padding: 24px 32px 40px; max-width: 900px; margin: 0 auto; }
+/* Unified authed workspace — matches guest chat visual style
+   .authed-chat-page uses the same flex-row shell as .guest-chat-page:
+   one 260px left sidebar (family), main flows to fill the rest. No
+   centered max-width — content sits at the natural width like guest. */
+.authed-chat-page {
+  display: flex !important; grid-template-columns: none !important;
+  min-height: calc(100vh - var(--top-bar-h, 60px));
+  background: var(--card-bg, #fafbfa);
+}
+.authed-chat-page > .family-sidebar { flex: 0 0 260px; }
+.authed-chat-page > .assessment-workspace { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 900px) {
+  .authed-chat-page { flex-direction: column; }
+  .authed-chat-page > .family-sidebar { flex: 0 0 auto; width: 100%; }
+}
+.authed-chat-workspace { padding: 24px 40px 40px; max-width: none; margin: 0; }
 @media (max-width: 768px) { .authed-chat-workspace { padding: 16px; } }
 .authed-chat-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
 .authed-chat-title h1 { margin: 0 !important; font-size: clamp(24px, 3.4vw, 34px); line-height: 1.4; color: var(--nabz-primary, #0F9D8A); }

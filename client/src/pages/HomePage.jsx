@@ -8,7 +8,6 @@ import {
 } from '../api'
 import { useProfiles } from '../context/ProfileContext'
 import TriageConversation from '../components/TriageConversation'
-import EncounterSidebar from '../components/EncounterSidebar'
 import PastEncounter from '../components/PastEncounter'
 import FamilySidebar from '../components/FamilySidebar'
 
@@ -139,19 +138,10 @@ export default function HomePage() {
   }
 
   return (
-    <div className="page home-page desktop-health-workspace">
+    <div className="page home-page authed-chat-page">
       <FamilySidebar
         historyRefreshKey={sessions.map((session) => `${session.id}:${session.updated_at}`).join('|')}
         onOpenSession={openFamilySession}
-      />
-      <EncounterSidebar
-        patient={active}
-        sessions={sessions}
-        selectedId={selectedId}
-        loading={historyLoading}
-        service={service}
-        onSelect={selectEncounter}
-        onNew={newAssessment}
       />
 
       <main className="assessment-workspace authed-chat-workspace">
@@ -165,6 +155,9 @@ export default function HomePage() {
             </p>
           </div>
           <div className="authed-chat-actions">
+            {(selectedId || sessions.length > 0) && (
+              <button onClick={newAssessment} title="New chat">＋ <span className="urdu" dir="rtl">نئی</span></button>
+            )}
             <button onClick={() => navigate(`/profile/${active.id}/documents`)} title="Vault"><span className="urdu" dir="rtl">والٹ</span></button>
             <button onClick={() => navigate(`/summary/${active.id}`)} title="Doctor handoff"><span className="urdu" dir="rtl">ڈاکٹر ہینڈ آف</span></button>
           </div>
