@@ -6669,3 +6669,19 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
 .top-nav button small,
 .nav-links button small,
 .app-header nav button small { display: block; font-size: 9px; opacity: .65; text-transform: uppercase; letter-spacing: .06em; margin-top: 1px; }
+
+/* Unified authed workspace — matches guest chat visual style */
+.desktop-health-workspace { grid-template-columns: 260px 260px 1fr !important; }
+@media (max-width: 1024px) { .desktop-health-workspace { grid-template-columns: 1fr !important; } }
+.authed-chat-workspace { padding: 24px 32px 40px; max-width: 900px; margin: 0 auto; }
+@media (max-width: 768px) { .authed-chat-workspace { padding: 16px; } }
+.authed-chat-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+.authed-chat-title h1 { margin: 0 !important; font-size: clamp(24px, 3.4vw, 34px); line-height: 1.4; color: var(--nabz-primary, #0F9D8A); }
+.authed-chat-sub { margin: 4px 0 0; font-size: 12px; color: #7a8b88; }
+.authed-chat-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.authed-chat-actions button { padding: 8px 12px; border: 1px solid #d9e5e2; border-radius: 999px; background: #fff; cursor: pointer; }
+.authed-chat-actions button:hover { background: #f4faf8; }
+.authed-feature-strip { max-width: none; margin: 8px 0 22px; }
+.authed-chat-workspace .service-warning { margin-bottom: 14px; padding: 10px 14px; border-radius: 12px; }
+.authed-chat-workspace .service-warning strong { display: block; font-size: 14px; }
+.authed-chat-workspace .service-warning small { font-size: 12px; color: #6b7c79; }

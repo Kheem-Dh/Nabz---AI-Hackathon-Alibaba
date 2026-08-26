@@ -8,7 +8,6 @@ import {
 } from '../api'
 import { useProfiles } from '../context/ProfileContext'
 import TriageConversation from '../components/TriageConversation'
-import PatientDashboard from '../components/PatientDashboard'
 import EncounterSidebar from '../components/EncounterSidebar'
 import PastEncounter from '../components/PastEncounter'
 import FamilySidebar from '../components/FamilySidebar'
@@ -22,7 +21,6 @@ export default function HomePage() {
   const [selectedEncounter, setSelectedEncounter] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [conversationKey, setConversationKey] = useState(0)
-  const [dashboardKey, setDashboardKey] = useState(0)
   const [service, setService] = useState(null)
   const [resumeTurn, setResumeTurn] = useState(null)
   const [workspaceError, setWorkspaceError] = useState('')
@@ -91,7 +89,6 @@ export default function HomePage() {
   function sessionChanged(turn) {
     loadHistory()
     if (turn.type === 'result') {
-      setDashboardKey((value) => value + 1)
       resetConversationScroll()
     }
   }
@@ -115,9 +112,6 @@ export default function HomePage() {
           status: turn.response_source === 'ai_unavailable' ? 'open' : 'closed',
           result_level: turn.level,
         }))
-        if (turn.response_source !== 'ai_unavailable') {
-          setDashboardKey((value) => value + 1)
-        }
       }
     } catch (error) {
       setWorkspaceError(error.message || 'Could not retry the live AI assessment.')
@@ -160,33 +154,41 @@ export default function HomePage() {
         onNew={newAssessment}
       />
 
-      <main className="assessment-workspace">
-        <header className="workspace-header">
-          <div>
-            <span className="home-kicker">NABZ AI HEALTH ASSISTANT</span>
-            <h1>{selectedEncounter ? selectedEncounter.title : 'What’s happening today?'}</h1>
-            <p>
-              {selectedEncounter
-                ? 'A saved conversation from your private health record.'
-                : `Talk naturally. Nabz considers your full transcript and ${active.display_name}’s Vault.`}
+      <main className="assessment-workspace authed-chat-workspace">
+        <header className="authed-chat-header">
+          <div className="authed-chat-title">
+            <h1 className="urdu urdu-hero" dir="rtl">
+              {selectedEncounter ? (selectedEncounter.title || 'گفتگو') : 'آج آپ کو کیا تکلیف ہے؟'}
+            </h1>
+            <p className="authed-chat-sub">
+              {selectedEncounter ? 'Saved conversation' : `Chat with Nabz · ${active.display_name}'s Vault`}
             </p>
           </div>
-          <div className="workspace-actions">
-            <button onClick={() => navigate(`/profile/${active.id}/documents`)}>Upload record</button>
-            <button onClick={() => navigate(`/summary/${active.id}`)}>Doctor handoff</button>
+          <div className="authed-chat-actions">
+            <button onClick={() => navigate(`/profile/${active.id}/documents`)} title="Vault"><span className="urdu" dir="rtl">والٹ</span></button>
+            <button onClick={() => navigate(`/summary/${active.id}`)} title="Doctor handoff"><span className="urdu" dir="rtl">ڈاکٹر ہینڈ آف</span></button>
           </div>
         </header>
 
+        {!selectedEncounter && (
+          <div className="guest-feature-strip authed-feature-strip" aria-label="Features">
+            <div className="guest-feature-chip"><span>🎙️</span><b className="urdu" dir="rtl">آواز</b><small>Voice</small></div>
+            <div className="guest-feature-chip"><span>📷</span><b className="urdu" dir="rtl">تصویر</b><small>Photo</small></div>
+            <div className="guest-feature-chip" onClick={() => navigate(`/profile/${active.id}/documents`)} role="button"><span>👨‍👩‍👧</span><b className="urdu" dir="rtl">فیملی والٹ</b><small>Vault</small></div>
+            <div className="guest-feature-chip" onClick={() => navigate(`/summary/${active.id}`)} role="button"><span>👨‍⚕️</span><b className="urdu" dir="rtl">ڈاکٹر ہینڈ آف</b><small>Handoff</small></div>
+          </div>
+        )}
+
         {!service?.unavailable && service?.ai_configured === false && (
           <div className="notice notice-warn service-warning">
-            <strong>Clinical assessment is temporarily unavailable.</strong>
-            Your Vault remains available. Please try again shortly or contact a clinician if you need help now.
+            <strong className="urdu" dir="rtl">اسیسمنٹ فی الحال دستیاب نہیں۔</strong>
+            <small> Clinical assessment temporarily unavailable — your Vault is still open.</small>
           </div>
         )}
         {service?.unavailable && (
           <div className="notice notice-warn service-warning">
-            <strong>Nabz cannot connect right now.</strong>
-            Check your connection and try again. For severe or rapidly worsening symptoms, seek urgent care.
+            <strong className="urdu" dir="rtl">کنیکشن نہیں مل رہا۔</strong>
+            <small> For severe symptoms, seek urgent care.</small>
           </div>
         )}
         {workspaceError && <div className="form-error">{workspaceError}</div>}
@@ -210,29 +212,6 @@ export default function HomePage() {
           )}
         </div>
       </main>
-
-      <aside className="health-insights-column">
-        <div className="insights-title">
-          <div><span>YOUR HEALTH RECORD</span><h2>Vault overview</h2></div>
-          <button onClick={() => navigate(`/profile/${active.id}/documents`)}>View all</button>
-        </div>
-        <PatientDashboard
-          key={`dashboard-${active.id}-${dashboardKey}`}
-          profile={active}
-          onOpenVault={() => navigate(`/profile/${active.id}/documents`)}
-          onOpenSummary={() => navigate(`/summary/${active.id}`)}
-        />
-        <div className="web-quick-actions">
-          <button onClick={() => navigate(`/profile/${active.id}/lab`)}>
-            <span className="quick-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 3h6m-1 0v5l4.5 8.1A3.3 3.3 0 0 1 15.6 21H8.4a3.3 3.3 0 0 1-2.9-4.9L10 8V3m-2 11h8" /></svg></span>
-            <span><strong>Explain lab</strong><small>Understand flagged values</small></span>
-          </button>
-          <button onClick={() => navigate(`/profile/${active.id}/prescription`)}>
-            <span className="quick-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6V3Zm8 0v4h4M9 12h6m-6 4h6" /></svg></span>
-            <span><strong>Add prescription</strong><small>Enrich Vault context</small></span>
-          </button>
-        </div>
-      </aside>
     </div>
   )
 }
