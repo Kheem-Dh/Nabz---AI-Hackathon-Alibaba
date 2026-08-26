@@ -21,6 +21,7 @@ from schemas import (
     RegisterRequest,
 )
 from security import (
+    canonical_phone,
     get_current_account,
     hash_password,
     is_admin_account,
@@ -46,7 +47,8 @@ def _account_out(account: Account) -> AccountOut:
 
 @router.post("/register", response_model=AuthResponse)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> AuthResponse:
-    existing_phone = db.query(Account).filter(Account.phone == payload.phone).first()
+    phone = canonical_phone(payload.phone)
+    existing_phone = db.query(Account).filter(Account.phone == phone).first()
     if existing_phone:
         raise HTTPException(status_code=409, detail="phone_already_registered")
     if payload.email:
@@ -60,7 +62,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> AuthRes
 
     account = Account(
         full_name=payload.full_name.strip(),
-        phone=payload.phone.strip(),
+        phone=phone,
         email=payload.email,
         password_hash=hash_password(payload.password),
     )
@@ -90,11 +92,14 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> AuthRes
 @router.post("/login", response_model=AuthResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)) -> AuthResponse:
     identifier = payload.identifier.strip().lower()
+    # Match a phone in canonical form OR an email (case-insensitive), so the
+    # login format need not equal the signup format.
+    phone_identifier = canonical_phone(identifier)
     account = (
         db.query(Account)
         .filter(
             or_(
-                Account.phone == identifier,
+                Account.phone == phone_identifier,
                 func.lower(Account.email) == identifier,
             )
         )
