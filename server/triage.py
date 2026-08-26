@@ -20,8 +20,16 @@ import re
 import secrets
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
+from ai_billing import (
+    AIBudgetExceeded,
+    AIUsageContext,
+    complete_usage,
+    fail_usage,
+    reserve_usage,
+)
 from medicine_evidence import resolve_medication_candidates
 from schemas import (
     ClinicalState,
@@ -40,7 +48,9 @@ logger = logging.getLogger("nabz.triage")
 
 DASHSCOPE_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 _DEFAULT_TEXT_MODEL = "qwen3.7-plus"
+_DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 DEFAULT_REQUEST_TIMEOUT_SECONDS = 60
+DEFAULT_MAX_OUTPUT_TOKENS = 4096
 MAX_QUESTIONS = 5
 
 # Tests inject a fake model at this seam. Production never installs one.
@@ -63,6 +73,18 @@ def get_model_name() -> str:
     )
 
 
+def get_openai_model_name() -> str:
+    return os.getenv("NABZ_OPENAI_FALLBACK_MODEL", "").strip() or _DEFAULT_OPENAI_MODEL
+
+
+def get_max_output_tokens() -> int:
+    try:
+        configured = int(os.getenv("NABZ_AI_MAX_OUTPUT_TOKENS", str(DEFAULT_MAX_OUTPUT_TOKENS)))
+    except ValueError:
+        configured = DEFAULT_MAX_OUTPUT_TOKENS
+    return min(max(configured, 512), 8192)
+
+
 def get_request_timeout_seconds() -> float:
     """Return a bounded DashScope read timeout.
 
@@ -81,7 +103,15 @@ def get_request_timeout_seconds() -> float:
 
 
 def has_ai_credentials() -> bool:
+    return has_qwen_credentials() or has_openai_credentials()
+
+
+def has_qwen_credentials() -> bool:
     return bool(os.getenv("DASHSCOPE_API_KEY", "").strip())
+
+
+def has_openai_credentials() -> bool:
+    return bool(os.getenv("OPENAI_API_KEY", "").strip())
 
 
 def is_mock_mode() -> bool:
@@ -786,42 +816,184 @@ def _messages_for_turn(
     return [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": content}]
 
 
-def _call_qwen(messages: list[dict[str, str]]) -> str:
-    from openai import OpenAI
+@dataclass(frozen=True)
+class _ModelCallResult:
+    text: str
+    provider: str
+    model: str
 
+
+def _temperature() -> float:
     try:
         temperature = float(os.getenv("NABZ_TRIAGE_TEMPERATURE", "0.65"))
     except ValueError:
         temperature = 0.65
-    temperature = min(max(temperature, 0.0), 1.0)
+    return min(max(temperature, 0.0), 1.0)
+
+
+def _provider_error_category(exc: Exception) -> str:
+    message = str(exc).lower()
+    if isinstance(exc, AIBudgetExceeded):
+        return "budget_exhausted"
+    if "429" in message or "rate limit" in message:
+        return "rate_limit"
+    if "allocationquota" in message or "quota" in message or "insufficient_quota" in message:
+        return "quota_exhausted"
+    if "401" in message or "403" in message or "authentication" in message or "permission" in message:
+        return "authentication"
+    if "timed out" in message or "timeout" in type(exc).__name__.lower():
+        return "timeout"
+    if isinstance(exc, (json.JSONDecodeError, ValueError)):
+        return "invalid_response"
+    return "provider_error"
+
+
+def _call_provider_stream(
+    messages: list[dict[str, str]], provider: str,
+    usage_context: AIUsageContext | None = None,
+    *, fallback_from: str | None = None, fallback_reason: str | None = None,
+) -> _ModelCallResult:
+    from openai import OpenAI
+
+    if provider == "qwen":
+        api_key = os.getenv("DASHSCOPE_API_KEY", "").strip()
+        base_url = DASHSCOPE_BASE_URL
+        model = get_model_name()
+    elif provider == "openai":
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+        base_url = None
+        model = get_openai_model_name()
+    else:
+        raise ValueError("unknown_ai_provider")
+    if not api_key:
+        raise RuntimeError(f"{provider}_api_key_not_configured")
+
+    max_output_tokens = get_max_output_tokens()
+    started = time.perf_counter()
+    reservation = None
+    if usage_context is not None:
+        reservation = reserve_usage(
+            usage_context,
+            provider=provider,
+            model=model,
+            messages=messages,
+            max_output_tokens=max_output_tokens,
+            fallback_from=fallback_from,
+            fallback_reason=fallback_reason,
+            started_at=started,
+        )
+
     client = OpenAI(
-        api_key=os.getenv("DASHSCOPE_API_KEY", "").strip(),
-        base_url=DASHSCOPE_BASE_URL,
+        api_key=api_key,
+        base_url=base_url,
         timeout=get_request_timeout_seconds(),
         max_retries=0,
     )
-    stream = client.chat.completions.create(
-        model=get_model_name(), messages=messages, temperature=temperature,
-        response_format={"type": "json_object"},
-        extra_body={"enable_thinking": False},
-        stream=True,
-    )
-    parts: list[str] = []
     try:
-        for chunk in stream:
-            if not chunk.choices:
-                continue
-            content = chunk.choices[0].delta.content
-            if content:
-                parts.append(content)
-    finally:
-        stream.close()
-    return "".join(parts)
+        common: dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "response_format": {"type": "json_object"},
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+        if provider == "qwen":
+            common.update({
+                "temperature": _temperature(),
+                "max_tokens": max_output_tokens,
+                "extra_body": {"enable_thinking": False},
+            })
+        else:
+            common.update({
+                "max_completion_tokens": max_output_tokens,
+                "reasoning_effort": os.getenv("NABZ_OPENAI_REASONING_EFFORT", "none").strip() or "none",
+            })
+        stream = client.chat.completions.create(**common)
+        parts: list[str] = []
+        usage = None
+        try:
+            for chunk in stream:
+                chunk_usage = getattr(chunk, "usage", None)
+                if chunk_usage is not None:
+                    usage = chunk_usage
+                if not chunk.choices:
+                    continue
+                content = chunk.choices[0].delta.content
+                if content:
+                    parts.append(content)
+        finally:
+            stream.close()
+        text = "".join(parts)
+        if reservation is not None:
+            usage_estimated = usage is None
+            if usage is None:
+                input_tokens = 256 + sum(
+                    len(str(message.get("content") or "").encode("utf-8")) + 16
+                    for message in messages
+                )
+                output_tokens = len(text.encode("utf-8"))
+                cached_input_tokens = 0
+            else:
+                input_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
+                output_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
+                details = getattr(usage, "prompt_tokens_details", None)
+                cached_input_tokens = int(getattr(details, "cached_tokens", 0) or 0)
+            complete_usage(
+                reservation,
+                input_tokens=input_tokens,
+                cached_input_tokens=cached_input_tokens,
+                output_tokens=output_tokens,
+                latency_ms=round((time.perf_counter() - started) * 1000, 1),
+                usage_estimated=usage_estimated,
+            )
+        return _ModelCallResult(text=text, provider=provider, model=model)
+    except Exception as exc:
+        if reservation is not None:
+            fail_usage(
+                reservation,
+                error=exc,
+                latency_ms=round((time.perf_counter() - started) * 1000, 1),
+            )
+        raise
+
+
+def _call_qwen(messages: list[dict[str, str]]) -> str:
+    """Legacy/test seam retained while production calls use the billed path."""
+    return _call_provider_stream(messages, "qwen").text
+
+
+def _call_openai(messages: list[dict[str, str]]) -> str:
+    return _call_provider_stream(messages, "openai").text
+
+
+def _provider_call(
+    messages: list[dict[str, str]], provider: str,
+    usage_context: AIUsageContext | None,
+    *, fallback_from: str | None = None, fallback_reason: str | None = None,
+) -> _ModelCallResult:
+    if usage_context is not None:
+        return _call_provider_stream(
+            messages, provider, usage_context,
+            fallback_from=fallback_from, fallback_reason=fallback_reason,
+        )
+    # Direct unit invocations keep the stable monkeypatch seams.
+    text = _call_qwen(messages) if provider == "qwen" else _call_openai(messages)
+    model = get_model_name() if provider == "qwen" else get_openai_model_name()
+    return _ModelCallResult(text=text, provider=provider, model=model)
+
+
+def _available_text_providers() -> list[str]:
+    providers: list[str] = []
+    if has_qwen_credentials():
+        providers.append("qwen")
+    if has_openai_credentials():
+        providers.append("openai")
+    return providers
 
 
 def qwen_followup_chat(
     profile: dict[str, Any], session_id: int, saved_result: dict[str, Any],
-    turns: list[dict], question: str,
+    turns: list[dict], question: str, usage_context: AIUsageContext | None = None,
 ) -> TriageChatResponse:
     """Answer from one saved transcript + Vault without changing its result."""
     if not has_ai_credentials():
@@ -853,84 +1025,114 @@ def qwen_followup_chat(
             ),
         },
     ]
-    try:
-        data = json.loads(_strip_fences(_call_qwen(messages)))
-        answer_urdu = _bounded_text(data.get("answer_urdu"), 4000)
-        answer_english = _bounded_text(data.get("answer_english"), 4000)
-        safety_note = _bounded_text(data.get("safety_note"), 600)
-        if not answer_urdu or not answer_english or not safety_note:
-            raise ValueError("incomplete_followup_chat")
-        return TriageChatResponse(
-            session_id=session_id,
-            answer_urdu=answer_urdu,
-            answer_english=answer_english,
-            vault_context_used=_short_string_list(data.get("vault_context_used"), 8, 300),
-            safety_note=safety_note,
-            response_source="live_ai",
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.error("Follow-up chat failed for session %s: %s", session_id, exc)
-        return TriageChatResponse(
-            session_id=session_id,
-            answer_urdu="محفوظ گفتگو سے جواب تیار نہیں ہو سکا۔ ڈاکٹر سے اس گفتگو کا جائزہ کروائیں۔",
-            answer_english=(
-                "Nabz could not safely answer from the saved conversation. Please ask a "
-                "clinician to review the transcript."
-            ),
-            transcript_context_used=False,
-            response_source="ai_unavailable",
-            safety_note="No new diagnosis or medication advice was generated.",
-        )
-
-
-def qwen_next_turn(profile: dict[str, Any], session_id: int, turns: list[dict]) -> TriageTurn:
-    """Generate the next clinical turn from Qwen, with one bounded repair."""
-    if not has_ai_credentials():
-        return _ai_unavailable_turn(profile, session_id, turns, "DASHSCOPE_API_KEY is not configured")
-
-    started = time.perf_counter()
-    repair: str | None = None
-    last_error = "unknown validation error"
-    for attempt in range(2):
+    last_error: Exception | None = None
+    fallback_from: str | None = None
+    fallback_reason: str | None = None
+    for provider in _available_text_providers():
         try:
-            raw = _call_qwen(_messages_for_turn(profile, session_id, turns, repair=repair))
-            data = json.loads(_strip_fences(raw))
-            turn = _turn_from_qwen_json(data, profile, session_id, turns)
-            if _count_questions(turns) >= MAX_QUESTIONS and turn.type != "result":
-                raise ValueError("question ceiling reached; return a result")
+            result = _provider_call(
+                messages, provider, usage_context,
+                fallback_from=fallback_from, fallback_reason=fallback_reason,
+            )
+            data = json.loads(_strip_fences(result.text))
+            answer_urdu = _bounded_text(data.get("answer_urdu"), 4000)
+            answer_english = _bounded_text(data.get("answer_english"), 4000)
+            safety_note = _bounded_text(data.get("safety_note"), 600)
+            if not answer_urdu or not answer_english or not safety_note:
+                raise ValueError("incomplete_followup_chat")
             logger.info(
-                "Live AI triage completed (model=%s latency_seconds=%.3f type=%s attempt=%d)",
-                get_model_name(), time.perf_counter() - started, turn.type, attempt + 1,
+                "Follow-up AI completed (session=%s provider=%s model=%s)",
+                session_id, result.provider, result.model,
             )
-            return turn
+            return TriageChatResponse(
+                session_id=session_id,
+                answer_urdu=answer_urdu,
+                answer_english=answer_english,
+                vault_context_used=_short_string_list(data.get("vault_context_used"), 8, 300),
+                safety_note=safety_note,
+                response_source="live_ai",
+            )
         except Exception as exc:  # noqa: BLE001
-            last_error = str(exc)
-            # Authentication, authorization, and quota failures cannot be
-            # repaired by asking the model again. Avoid duplicate paid calls
-            # and surface the outage immediately.
-            non_retryable = any(
-                marker in last_error
-                for marker in ("AllocationQuota", "Error code: 401", "Error code: 403")
-            )
-            # A repaired JSON instruction can fix validation errors. It cannot
-            # fix a network timeout, and repeating a long clinical call makes
-            # the patient wait twice while potentially charging twice.
-            if "timed out" in last_error.lower() or "timeout" in type(exc).__name__.lower():
-                non_retryable = True
-            repair = (
-                f"{last_error}. Re-read the transcript, do not repeat a question, and return "
-                "exactly one valid JSON object matching the required schema."
-            )
+            last_error = exc
+            fallback_from = provider
+            fallback_reason = _provider_error_category(exc)
             logger.warning(
-                "Live AI turn attempt failed (model=%s attempt=%d): %s",
-                get_model_name(), attempt + 1, exc,
+                "Follow-up provider failed (session=%s provider=%s reason=%s)",
+                session_id, provider, fallback_reason,
             )
-            if non_retryable:
-                break
 
     logger.error(
-        "Live AI triage failed after repair (model=%s latency_seconds=%.3f): %s",
-        get_model_name(), time.perf_counter() - started, last_error,
+        "Follow-up chat failed for session %s after provider fallback: %s",
+        session_id, type(last_error).__name__ if last_error else "no_provider",
+    )
+    return TriageChatResponse(
+        session_id=session_id,
+        answer_urdu="محفوظ گفتگو سے جواب تیار نہیں ہو سکا۔ ڈاکٹر سے اس گفتگو کا جائزہ کروائیں۔",
+        answer_english=(
+            "Nabz could not safely answer from the saved conversation. Please ask a "
+            "clinician to review the transcript."
+        ),
+        transcript_context_used=False,
+        response_source="ai_unavailable",
+        safety_note="No new diagnosis or medication advice was generated.",
+    )
+
+
+def qwen_next_turn(
+    profile: dict[str, Any], session_id: int, turns: list[dict],
+    usage_context: AIUsageContext | None = None,
+) -> TriageTurn:
+    """Generate a clinical turn through Qwen, then the OpenAI fallback."""
+    if not has_ai_credentials():
+        return _ai_unavailable_turn(profile, session_id, turns, "No text AI provider is configured")
+
+    started = time.perf_counter()
+    last_error = "unknown validation error"
+    fallback_from: str | None = None
+    fallback_reason: str | None = None
+    for provider in _available_text_providers():
+        repair: str | None = None
+        provider_reason = "provider_error"
+        for attempt in range(2):
+            try:
+                result = _provider_call(
+                    _messages_for_turn(profile, session_id, turns, repair=repair),
+                    provider,
+                    usage_context,
+                    fallback_from=fallback_from,
+                    fallback_reason=fallback_reason,
+                )
+                data = json.loads(_strip_fences(result.text))
+                turn = _turn_from_qwen_json(data, profile, session_id, turns)
+                if _count_questions(turns) >= MAX_QUESTIONS and turn.type != "result":
+                    raise ValueError("question ceiling reached; return a result")
+                logger.info(
+                    "Live AI triage completed (provider=%s model=%s latency_seconds=%.3f type=%s attempt=%d)",
+                    result.provider, result.model, time.perf_counter() - started,
+                    turn.type, attempt + 1,
+                )
+                return turn
+            except Exception as exc:  # noqa: BLE001
+                last_error = str(exc)
+                reason = _provider_error_category(exc)
+                provider_reason = reason
+                repairable = reason == "invalid_response"
+                repair = (
+                    f"{last_error}. Re-read the transcript, do not repeat a question, and return "
+                    "exactly one valid JSON object matching the required schema."
+                )
+                logger.warning(
+                    "Live AI turn attempt failed (provider=%s attempt=%d reason=%s)",
+                    provider, attempt + 1, reason,
+                )
+                if not repairable:
+                    break
+        fallback_from = provider
+        fallback_reason = provider_reason
+
+    logger.error(
+        "Live AI triage failed after provider fallback (latency_seconds=%.3f): %s",
+        time.perf_counter() - started, last_error,
     )
     return _ai_unavailable_turn(profile, session_id, turns, last_error)
 
@@ -1111,7 +1313,10 @@ def _attach_facility_intent(turn: TriageTurn) -> TriageTurn:
     return turn
 
 
-def next_turn(profile: dict[str, Any], session_id: int, turns: list[dict]) -> TriageTurn:
+def next_turn(
+    profile: dict[str, Any], session_id: int, turns: list[dict],
+    usage_context: AIUsageContext | None = None,
+) -> TriageTurn:
     """Use the injected model double in tests; otherwise always use live AI."""
     safety_turn = _mental_health_turn(profile, session_id, turns)
     if safety_turn is not None:
@@ -1121,5 +1326,5 @@ def next_turn(profile: dict[str, Any], session_id: int, turns: list[dict]) -> Tr
         if not turn.response_source:
             turn.response_source = "test_model"
     else:
-        turn = qwen_next_turn(profile, session_id, turns)
+        turn = qwen_next_turn(profile, session_id, turns, usage_context=usage_context)
     return _attach_facility_intent(turn)

@@ -4724,6 +4724,17 @@ textarea.input {
 .admin-filter { display: flex; align-items: center; gap: 6px; color: #657773; font-size: 8px; }
 .admin-filter input { accent-color: var(--teal); }
 .admin-empty { padding: 24px !important; color: #8b9997 !important; text-align: center !important; font-size: 9px; }
+.admin-ai-grid { grid-template-columns: minmax(280px, .65fr) minmax(0, 1.35fr); margin: 0 0 18px; }
+.admin-provider-costs { margin-top: 14px; display: grid; gap: 10px; }
+.admin-provider-costs > div { padding: 14px; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 12px; border: 1px solid #e1ebe8; border-radius: 13px; background: #f8fbfa; }
+.admin-provider-costs strong { justify-self: end; color: #102825; font-size: 17px; }
+.admin-provider-costs small { grid-column: 1 / -1; color: #7b8d89; font-size: 8px; }
+.admin-provider-badge { display: inline-flex; width: max-content; padding: 4px 8px; border-radius: 99px; background: #e5f6f1; color: #087d69; font-size: 7px; font-weight: 850; text-transform: uppercase; letter-spacing: .07em; }
+.admin-provider-badge.openai { background: #ece9fb; color: #5944a7; }
+.admin-cost-note { margin: 13px 0 0; color: #73847f; font-size: 8px; line-height: 1.6; }
+.admin-ai-ledger-wrap { max-height: 285px; overflow: auto; }
+.admin-ai-ledger td strong, .admin-ai-ledger td small { display: block; }
+.admin-ai-ledger td small { margin-top: 2px; color: #899895; font-size: 7px; }
 
 .admin-loading, .admin-denied { min-height: 65vh; display: grid; place-content: center; justify-items: center; text-align: center; }
 .admin-loading i { width: 32px; height: 32px; border: 3px solid #cfe5df; border-top-color: var(--teal); border-radius: 50%; animation: spin .8s linear infinite; }

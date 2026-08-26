@@ -11,6 +11,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
+from ai_billing import account_usage_context
 from db import get_db
 from models_db import Account, Profile, TimelineEntry, TriageSession
 from schemas import (
@@ -286,10 +287,18 @@ def _record_result(db: Session, session: TriageSession, profile: Profile, turn: 
 
 def _turn_from_session(db: Session, session: TriageSession, profile: Profile) -> TriageTurn:
     started = time.perf_counter()
+    usage_context = account_usage_context(
+        db,
+        account_id=profile.account_id,
+        profile_id=profile.id,
+        triage_session_id=session.id,
+        operation="triage_turn",
+    )
     turn = next_turn(
         _profile_payload(profile),
         session_id=session.id,
         turns=list(session.turns or []),
+        usage_context=usage_context,
     )
     # Persist assistant turn.
     if turn.type == "question":
@@ -429,6 +438,13 @@ def chat_about_saved_transcript(
         dict(session.result_payload or {}),
         existing_turns,
         payload.text.strip(),
+        usage_context=account_usage_context(
+            db,
+            account_id=account.id,
+            profile_id=profile.id,
+            triage_session_id=session.id,
+            operation="followup_chat",
+        ),
     )
     session.turns = existing_turns + [
         {"role": "user", "kind": "followup_user", "text": payload.text.strip()},

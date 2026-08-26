@@ -18,6 +18,12 @@ function formatDate(value, withTime = false) {
   }).format(new Date(value))
 }
 
+function formatUsd(value = 0, digits) {
+  const amount = Number(value || 0)
+  const precision = digits ?? (amount > 0 && amount < 0.01 ? 4 : 2)
+  return `$${amount.toFixed(precision)}`
+}
+
 function MetricCard({ label, value, note, tone = '' }) {
   return (
     <article className={`admin-metric ${tone}`}>
@@ -108,6 +114,11 @@ export default function AdminDashboardPage() {
   const { engagement, recent_users: users, series } = overview
   const metrics = overview.overview
   const privacy = overview.privacy || { consent_coverage_rate: 0, audit_events_7d: 0, event_counts_7d: [] }
+  const aiCosts = overview.ai_costs || {
+    total_cost_usd: 0, registered_cost_usd: 0, guest_cost_usd: 0,
+    successful_calls: 0, openai_fallback_calls: 0, providers: [], recent_calls: [],
+    registered_budget_usd: 0.5, guest_budget_usd: 0.3,
+  }
 
   return (
     <section className="admin-dashboard">
@@ -132,6 +143,55 @@ export default function AdminDashboardPage() {
         <MetricCard label="Engagement" value={`${engagement.engagement_rate}%`} note={`${engagement.engaged_users} users started care chats`} />
         <MetricCard label="Successful requests" value={`${requestHealth.rate}%`} note={`${requestHealth.requests.toLocaleString()} tracked API calls / 7 days`} />
         <MetricCard label="Consent coverage" value={`${privacy.consent_coverage_rate}%`} note={`${privacy.audit_events_7d} privacy-safe audit events / 7 days`} />
+        <MetricCard label="Tracked AI cost" value={formatUsd(aiCosts.total_cost_usd)} note={`${aiCosts.successful_calls} token-metered model calls`} />
+        <MetricCard label="OpenAI fallback" value={aiCosts.openai_fallback_calls.toLocaleString()} note={`${formatUsd(aiCosts.guest_cost_usd)} guest · ${formatUsd(aiCosts.registered_cost_usd)} registered`} />
+      </div>
+
+      <div className="admin-grid-lower admin-ai-grid">
+        <article className="admin-panel">
+          <div className="admin-panel-head">
+            <div><span>MODEL ROUTING</span><h2>Provider cost</h2></div>
+            <small>Actual returned tokens × configured USD rates</small>
+          </div>
+          <div className="admin-provider-costs">
+            {aiCosts.providers.map((provider) => (
+              <div key={provider.provider}>
+                <span className={`admin-provider-badge ${provider.provider}`}>{provider.provider}</span>
+                <strong>{formatUsd(provider.cost_usd)}</strong>
+                <small>{provider.calls} successful · {provider.failed_calls} failed</small>
+              </div>
+            ))}
+          </div>
+          <p className="admin-cost-note">
+            Lifetime allowance: {formatUsd(aiCosts.registered_budget_usd)} per registered account and {formatUsd(aiCosts.guest_budget_usd)} per guest session.
+          </p>
+        </article>
+
+        <article className="admin-panel">
+          <div className="admin-panel-head">
+            <div><span>RECENT MODEL CALLS</span><h2>AI usage ledger</h2></div>
+            <small>No prompts or clinical text stored</small>
+          </div>
+          <div className="admin-table-wrap admin-ai-ledger-wrap">
+            <table className="admin-table admin-ai-ledger">
+              <thead><tr><th>Owner</th><th>Provider</th><th>Model / operation</th><th>Tokens</th><th>Cost</th><th>Route</th><th>Time</th></tr></thead>
+              <tbody>
+                {aiCosts.recent_calls.map((call) => (
+                  <tr key={call.id}>
+                    <td>{call.scope_type === 'account' ? `User #${call.account_id}` : `Guest #${call.guest_session_id}`}</td>
+                    <td><span className={`admin-provider-badge ${call.provider}`}>{call.provider}</span></td>
+                    <td><strong>{call.model}</strong><small>{call.operation}</small></td>
+                    <td>{call.input_tokens.toLocaleString()} in · {call.output_tokens.toLocaleString()} out{call.usage_estimated ? ' ~' : ''}</td>
+                    <td>{formatUsd(call.cost_usd, 6)}</td>
+                    <td>{call.fallback_from ? `${call.fallback_from} → ${call.provider}` : 'Primary'}{call.fallback_reason ? ` · ${call.fallback_reason}` : ''}</td>
+                    <td>{formatDate(call.created_at, true)}</td>
+                  </tr>
+                ))}
+                {!aiCosts.recent_calls.length && <tr><td colSpan="7" className="admin-empty">AI calls will appear after a live assessment.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </article>
       </div>
 
       <div className="admin-grid-main">
@@ -163,17 +223,20 @@ export default function AdminDashboardPage() {
         </div>
         <div className="admin-table-wrap">
           <table className="admin-table">
-            <thead><tr><th>User</th><th>Joined</th><th>Verified</th><th>Profiles</th><th>Chats</th><th>Sessions</th><th>Active time</th></tr></thead>
+            <thead><tr><th>User</th><th>Joined</th><th>Verified</th><th>Profiles</th><th>Chats</th><th>AI provider</th><th>AI spend / cap</th><th>Active time</th></tr></thead>
             <tbody>
               {users.map((user) => (
                 <tr key={user.id}>
                   <td><div className="admin-user"><b>{user.name?.slice(0, 1).toUpperCase()}</b><span><strong>{user.name}</strong><small>{user.email || user.phone}</small></span></div></td>
                   <td>{formatDate(user.joined_at)}</td>
                   <td><span className={`admin-status ${user.verified ? 'ok' : ''}`}>{user.verified ? 'Verified' : 'Pending'}</span></td>
-                  <td>{user.profiles}</td><td>{user.chats}</td><td>{user.sessions}</td><td>{formatDuration(user.active_seconds)}</td>
+                  <td>{user.profiles}</td><td>{user.chats}</td>
+                  <td>{user.ai_providers?.length ? user.ai_providers.join(' + ') : '—'}</td>
+                  <td>{formatUsd(user.ai_cost_usd, 6)} / {formatUsd(user.ai_budget_usd)} <small>({user.ai_budget_used_percent}%)</small></td>
+                  <td>{formatDuration(user.active_seconds)}</td>
                 </tr>
               ))}
-              {!users.length && <tr><td colSpan="7" className="admin-empty">No accounts yet.</td></tr>}
+              {!users.length && <tr><td colSpan="8" className="admin-empty">No accounts yet.</td></tr>}
             </tbody>
           </table>
         </div>

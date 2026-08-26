@@ -11,8 +11,19 @@ from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from ai_billing import MICRO_USD_PER_USD, budget_limit_microusd
 from db import get_db
-from models_db import Account, AuditEvent, ConsentRecord, Profile, RequestLog, TriageSession, UsageSession
+from models_db import (
+    AIUsageBudget,
+    AIUsageEvent,
+    Account,
+    AuditEvent,
+    ConsentRecord,
+    Profile,
+    RequestLog,
+    TriageSession,
+    UsageSession,
+)
 from privacy import CONSENT_VERSIONS, consent_is_active
 from security import get_current_account, require_admin
 
@@ -127,6 +138,8 @@ def admin_overview(
     profiles = db.query(Profile).all()
     chats = db.query(TriageSession).all()
     usage = db.query(UsageSession).all()
+    ai_events = db.query(AIUsageEvent).order_by(AIUsageEvent.created_at.desc()).all()
+    ai_budgets = db.query(AIUsageBudget).all()
     consent_rows = (
         db.query(ConsentRecord)
         .order_by(ConsentRecord.changed_at.desc(), ConsentRecord.id.desc())
@@ -208,6 +221,25 @@ def admin_overview(
         )
 
     profile_counts = Counter(profile.account_id for profile in profiles)
+    ai_cost_by_user: Counter[int] = Counter()
+    ai_calls_by_user: Counter[int] = Counter()
+    ai_providers_by_user: dict[int, set[str]] = defaultdict(set)
+    for event in ai_events:
+        if event.status == "success" and event.account_id is not None:
+            ai_cost_by_user[event.account_id] += int(event.cost_microusd or 0)
+            ai_calls_by_user[event.account_id] += 1
+            ai_providers_by_user[event.account_id].add(event.provider)
+    account_budgets = {
+        int(row.scope_key): row
+        for row in ai_budgets
+        if row.scope_type == "account" and row.scope_key.isdigit()
+    }
+    default_account_limit = budget_limit_microusd("account")
+
+    def _account_budget_limit(account_id: int) -> int:
+        row = account_budgets.get(account_id)
+        return int(row.limit_microusd) if row else default_account_limit
+
     recent_users = [
         {
             "id": account.id,
@@ -221,8 +253,68 @@ def admin_overview(
             "messages": messages_by_user[account.id],
             "active_seconds": seconds_by_user[account.id],
             "sessions": sessions_by_user[account.id],
+            "ai_calls": ai_calls_by_user[account.id],
+            "ai_providers": sorted(ai_providers_by_user[account.id]),
+            "ai_cost_usd": round(ai_cost_by_user[account.id] / MICRO_USD_PER_USD, 6),
+            "ai_budget_usd": round(
+                _account_budget_limit(account.id) / MICRO_USD_PER_USD,
+                2,
+            ),
+            "ai_budget_used_percent": round(
+                ai_cost_by_user[account.id] * 100
+                / _account_budget_limit(account.id),
+                1,
+            ) if _account_budget_limit(account.id) else 0,
         }
         for account in accounts[:25]
+    ]
+
+    provider_cost: dict[str, int] = Counter()
+    provider_calls: dict[str, int] = Counter()
+    provider_failures: dict[str, int] = Counter()
+    for event in ai_events:
+        if event.status == "success":
+            provider_cost[event.provider] += int(event.cost_microusd or 0)
+            provider_calls[event.provider] += 1
+        elif event.status == "failed":
+            provider_failures[event.provider] += 1
+    successful_ai_events = [event for event in ai_events if event.status == "success"]
+    total_ai_cost = sum(int(event.cost_microusd or 0) for event in successful_ai_events)
+    registered_ai_cost = sum(
+        int(event.cost_microusd or 0)
+        for event in successful_ai_events if event.scope_type == "account"
+    )
+    guest_ai_cost = total_ai_cost - registered_ai_cost
+    provider_summary = [
+        {
+            "provider": provider,
+            "calls": provider_calls[provider],
+            "failed_calls": provider_failures[provider],
+            "cost_usd": round(provider_cost[provider] / MICRO_USD_PER_USD, 6),
+        }
+        for provider in ("qwen", "openai")
+    ]
+    recent_ai_calls = [
+        {
+            "id": event.id,
+            "account_id": event.account_id,
+            "guest_session_id": event.guest_session_id,
+            "scope_type": event.scope_type,
+            "provider": event.provider,
+            "model": event.model,
+            "operation": event.operation,
+            "status": event.status,
+            "fallback_from": event.fallback_from,
+            "fallback_reason": event.fallback_reason,
+            "input_tokens": event.input_tokens,
+            "cached_input_tokens": event.cached_input_tokens,
+            "output_tokens": event.output_tokens,
+            "cost_usd": round(int(event.cost_microusd or 0) / MICRO_USD_PER_USD, 6),
+            "usage_estimated": event.usage_estimated,
+            "latency_ms": event.latency_ms,
+            "created_at": _iso(event.created_at),
+        }
+        for event in ai_events[:100]
     ]
 
     log_since = now - timedelta(days=7)
@@ -291,6 +383,20 @@ def admin_overview(
         "series": series,
         "recent_users": recent_users,
         "endpoint_stats": endpoint_stats,
+        "ai_costs": {
+            "total_cost_usd": round(total_ai_cost / MICRO_USD_PER_USD, 6),
+            "registered_cost_usd": round(registered_ai_cost / MICRO_USD_PER_USD, 6),
+            "guest_cost_usd": round(guest_ai_cost / MICRO_USD_PER_USD, 6),
+            "successful_calls": len(successful_ai_events),
+            "openai_fallback_calls": sum(
+                1 for event in successful_ai_events
+                if event.provider == "openai" and event.fallback_from == "qwen"
+            ),
+            "registered_budget_usd": round(default_account_limit / MICRO_USD_PER_USD, 2),
+            "guest_budget_usd": round(budget_limit_microusd("guest") / MICRO_USD_PER_USD, 2),
+            "providers": provider_summary,
+            "recent_calls": recent_ai_calls,
+        },
         "privacy": {
             "accounts_with_current_consent": len(consented_accounts),
             "consent_coverage_rate": round(len(consented_accounts) * 100 / len(accounts), 1) if accounts else 0,

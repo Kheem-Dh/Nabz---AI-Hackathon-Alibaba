@@ -18,6 +18,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from sqlalchemy.orm import Session
 
+from ai_billing import guest_usage_context
 from db import get_db
 from models_db import GuestTriageSession
 from schemas import (
@@ -149,7 +150,12 @@ def _append_assistant(session: GuestTriageSession, turn: TriageTurn) -> None:
 
 
 def _next(db: Session, session: GuestTriageSession, token: str) -> GuestTriageTurnResponse:
-    turn = next_turn(_guest_profile(), session.id, list(session.turns or []))
+    turn = next_turn(
+        _guest_profile(), session.id, list(session.turns or []),
+        usage_context=guest_usage_context(
+            db, guest_session_id=session.id, operation="triage_turn"
+        ),
+    )
     _append_assistant(session, turn)
     session.analysis = turn.analysis.model_dump(mode="json")
     if turn.type == "result":
@@ -248,7 +254,10 @@ def chat_about_guest_result(
         raise HTTPException(status_code=409, detail="guest_assessment_not_complete")
     existing = list(session.turns or [])
     answer = qwen_followup_chat(
-        _guest_profile(), session.id, dict(session.result_payload), existing, payload.text.strip()
+        _guest_profile(), session.id, dict(session.result_payload), existing, payload.text.strip(),
+        usage_context=guest_usage_context(
+            db, guest_session_id=session.id, operation="followup_chat"
+        ),
     )
     session.turns = existing + [
         {"role": "user", "kind": "followup_user", "text": payload.text.strip()},

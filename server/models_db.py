@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 
 from sqlalchemy import (
+    BigInteger,
     JSON,
     Boolean,
     DateTime,
@@ -209,6 +210,63 @@ class GuestTriageSession(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=_utcnow, onupdate=_utcnow, nullable=False
     )
+
+
+class AIUsageBudget(Base):
+    """Lifetime AI allowance for one registered account or guest session.
+
+    Money is stored as integer micro-US-dollars so budget enforcement never
+    depends on floating-point arithmetic. Guest rows use the anonymous session
+    id only; they contain no IP address, token, transcript, or identity.
+    """
+
+    __tablename__ = "ai_usage_budgets"
+    __table_args__ = (
+        UniqueConstraint("scope_type", "scope_key", name="uq_ai_budget_scope"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    scope_type: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
+    scope_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    account_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    guest_session_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    limit_microusd: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    used_microusd: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    reserved_microusd: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+
+class AIUsageEvent(Base):
+    """Privacy-safe provider/token/cost ledger shown in the owner console."""
+
+    __tablename__ = "ai_usage_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    request_id: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    scope_type: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
+    scope_key: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    account_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    guest_session_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    profile_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    triage_session_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    provider: Mapped[str] = mapped_column(String(24), index=True, nullable=False)
+    model: Mapped[str] = mapped_column(String(80), nullable=False)
+    operation: Mapped[str] = mapped_column(String(40), index=True, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), index=True, nullable=False)
+    fallback_from: Mapped[str | None] = mapped_column(String(24))
+    fallback_reason: Mapped[str | None] = mapped_column(String(80))
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    cached_input_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    cost_microusd: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    reserved_microusd: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    usage_estimated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    latency_ms: Mapped[float | None] = mapped_column(Float)
+    error_code: Mapped[str | None] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True, nullable=False)
 
 
 class UsageSession(Base):

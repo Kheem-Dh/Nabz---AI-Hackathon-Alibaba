@@ -338,7 +338,7 @@ def test_ai_timeout_session_remains_retryable(client, auth, monkeypatch):
     headers, _account, self_id = auth
     calls = 0
 
-    def unavailable_then_ai(profile, session_id, turns):
+    def unavailable_then_ai(profile, session_id, turns, **_kwargs):
         nonlocal calls
         calls += 1
         if calls == 1:
@@ -375,7 +375,7 @@ def test_ai_requested_image_is_observed_and_added_to_same_transcript(client, aut
 
     headers, _account, self_id = auth
 
-    def image_request_then_continue(profile, session_id, turns):
+    def image_request_then_continue(profile, session_id, turns, **_kwargs):
         if not any(turn.get("kind") == "image" for turn in turns):
             return TriageTurn(
                 type="question",
@@ -902,7 +902,7 @@ def test_followup_chat_uses_owned_transcript_and_current_vault(
     assert result["type"] == "result"
     captured = {}
 
-    def followup(profile, session_id, saved_result, turns, question):
+    def followup(profile, session_id, saved_result, turns, question, **_kwargs):
         captured.update({
             "profile": profile,
             "session_id": session_id,
