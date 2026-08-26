@@ -6918,3 +6918,20 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
 .landing-v2 .visual-orbit.orbit-one { width: 400px; height: 400px; top: -80px; right: -100px; }
 .landing-v2 .visual-orbit.orbit-two { width: 300px; height: 300px; bottom: -60px; left: -60px; }
 .landing-v2 .landing-visual { position: relative; }
+
+/* Minimal landing (post-trim, 2026-08-27)
+   Tighten trust strip labels, mini feature cards (icon + 1 Urdu + 1 English) */
+.landing-trust-v2 > div { padding: 16px 10px; }
+.landing-trust-v2 .urdu { font-size: 13px; }
+.landing-feature-grid-mini { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important; gap: 12px !important; }
+.landing-feature-mini { padding: 18px 16px !important; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.landing-feature-mini .feature-icon { margin: 0; }
+.feature-mini-urdu { font-size: 15px !important; color: var(--urdu-primary) !important; margin: 4px 0 0 !important; line-height: 1.55 !important; }
+.feature-mini-en { font-size: 11px; color: var(--muted-ink); letter-spacing: .02em; }
+.safety-urdu-lead { font-size: 15px; line-height: 1.9; color: var(--urdu-ink); margin: 12px 0 0; }
+.landing-v2 .safety-copy ul { margin-top: 18px; }
+.landing-v2 .safety-copy li .urdu { font-size: 14px; }
+.landing-v2 .safety-copy li { font-size: 13px; }
+.landing-v2 .safety-card h3 { font-size: 24px; }
+.landing-v2 .safety-card p { font-size: 14px; margin-bottom: 14px; }
+.landing-v2 .landing-final-cta p { font-size: 15px; margin-top: 4px; }
