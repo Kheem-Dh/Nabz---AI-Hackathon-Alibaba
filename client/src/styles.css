@@ -6694,8 +6694,18 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
   .authed-chat-page { flex-direction: column !important; }
   .authed-chat-page > .family-sidebar { flex: 0 0 auto; width: 100%; }
 }
-.authed-chat-workspace { padding: 20px 28px 40px; max-width: none; margin: 0; }
+.authed-chat-workspace { padding: 20px 28px 40px; max-width: none; margin: 0; display: flex; flex-direction: column; }
 @media (max-width: 768px) { .authed-chat-workspace { padding: 16px; } }
+
+/* Override the workspace-shell 0-height rule for our new flex layout.
+   The old grid used a scroll-container trick; here we want natural flow. */
+.workspace-shell .authed-chat-page .workspace-conversation {
+  height: auto !important;
+  min-height: 300px !important;
+  overflow: visible !important;
+  flex: 1 1 auto;
+  display: flex; flex-direction: column;
+}
 
 .authed-insights-head { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 4px 0; }
 .urdu-side-title { font-size: 18px; color: #0F9D8A; font-weight: 700; }
