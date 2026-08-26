@@ -48,7 +48,7 @@ logger = logging.getLogger("nabz.triage")
 
 DASHSCOPE_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 _DEFAULT_TEXT_MODEL = "qwen3.7-plus"
-_DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
+_DEFAULT_OPENAI_MODEL = "gpt-4o"
 DEFAULT_REQUEST_TIMEOUT_SECONDS = 60
 DEFAULT_MAX_OUTPUT_TOKENS = 4096
 MAX_QUESTIONS = 5
@@ -350,7 +350,14 @@ Adaptive clinical images:
 - If the patient skips the photo or it is unusable, continue intelligently from
   the history. Do not keep asking for it.
 - Image observations are evidence, not a diagnosis. Integrate only the supplied
-  Qwen-VL observations and keep uncertainty explicit.
+  Qwen-VL / OpenAI-vision observations and keep uncertainty explicit.
+- When ENCOUNTER_TRANSCRIPT_DATA contains a turn with `kind: "image"` and an
+  `image_analysis` block, your VERY NEXT question MUST reference at least one
+  concrete visible feature from that analysis (e.g., "The photo shows a
+  yellow-purple discoloration — did you knock or bump this area?"). Do not
+  ask a generic question that ignores the image. If the image is unusable,
+  say so once and pivot to history. Never claim to see something not listed
+  in the image_analysis.
 
 Clinical synthesis:
 - Never claim an unconfirmed diagnosis. Use "may be consistent with",

@@ -84,7 +84,7 @@ def budget_limit_microusd(scope_type: str) -> int:
         if scope_type == "account"
         else "NABZ_GUEST_AI_BUDGET_USD"
     )
-    default = "0.50" if scope_type == "account" else "0.30"
+    default = "1.00" if scope_type == "account" else "0.30"
     return int(
         (_env_decimal(name, default) * MICRO_USD_PER_USD).quantize(
             Decimal("1"), rounding=ROUND_HALF_UP
@@ -95,7 +95,8 @@ def budget_limit_microusd(scope_type: str) -> int:
 def _rates(provider: str) -> tuple[Decimal, Decimal, Decimal]:
     prefix = "NABZ_OPENAI" if provider == "openai" else "NABZ_QWEN"
     defaults = (
-        ("0.15", "0.075", "0.60")
+        # gpt-4o list pricing: $2.50 input / $1.25 cached / $10.00 output per 1M tokens
+        ("2.50", "1.25", "10.00")
         if provider == "openai"
         else ("0.40", "0.08", "1.60")
     )

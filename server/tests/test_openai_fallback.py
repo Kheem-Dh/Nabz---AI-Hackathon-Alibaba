@@ -74,8 +74,9 @@ def test_available_providers_reflects_configured_keys(monkeypatch):
 def test_default_openai_fallback_model_is_a_real_openai_model():
     import triage
 
-    # gpt-4o-mini is the stable, cheap OpenAI text model we chose.
-    assert triage.get_openai_model_name() == "gpt-4o-mini"
+    # gpt-4o is the current fallback (upgraded from gpt-4o-mini for higher
+    # clinical-reasoning quality; cost stays inside the $1 per-account cap).
+    assert triage.get_openai_model_name() == "gpt-4o"
 
 
 def test_qwen_success_does_not_touch_openai(monkeypatch):
