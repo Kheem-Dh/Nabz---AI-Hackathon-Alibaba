@@ -1,0 +1,57 @@
+name: 🐛 Bug report
+description: Something in Nabz isn't working as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. If this is a **safety-relevant bug**
+        (wrong urgency level, a medication shown that shouldn't be, a missed
+        emergency red flag), please say so in the title — those get priority.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you get instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to '...'
+        2. Type '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where did this happen?
+      options:
+        - Triage chat (guest)
+        - Triage chat (logged in)
+        - Medical Vault / documents
+        - Lab report explainer
+        - Prescription scan
+        - Doctor handoff (QR)
+        - Nearby care
+        - Admin dashboard
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        - Browser + version:
+        - Device (desktop/mobile):
+        - MOCK_MODE=true or live AI:
+    validations:
+      required: false

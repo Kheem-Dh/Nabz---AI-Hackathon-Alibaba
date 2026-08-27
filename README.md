@@ -1,16 +1,54 @@
+<div align="center">
+
+<img src="client/public/icon-512.png" width="96" alt="Nabz logo" />
+
 # Nabz — نبض
 
-> **آپ کی آواز، آپ کی صحت** · Your voice, your health
+**آپ کی آواز، آپ کی صحت** · *Your voice, your health*
 
-Nabz is an Urdu-first AI health assistant built for the **Alibaba Cloud AI Hackathon Pakistan 2026**. A patient can describe a concern by voice or text, answer clear follow-up questions, receive an urgency recommendation, and prepare a useful summary for a doctor.
+Urdu-first AI health triage for Pakistan — voice-first, family-aware, and doctor-ready.
 
-Nabz is a web application. Its desktop workspace keeps three things visible together:
+[![CI](https://github.com/Kheem-Dh/Nabz---AI-Hackathon-Alibaba/actions/workflows/ci.yml/badge.svg)](https://github.com/Kheem-Dh/Nabz---AI-Hackathon-Alibaba/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](client/package.json)
+[![FastAPI](https://img.shields.io/badge/FastAPI-async-009688?logo=fastapi&logoColor=white)](server/main.py)
+[![Powered by Qwen](https://img.shields.io/badge/AI-Alibaba%20Qwen-FF6A00)](https://www.alibabacloud.com/en/solutions/generative-ai/qwen)
+
+[**Live demo**](https://nabz-web.onrender.com/) · [Report a bug](../../issues/new?template=bug_report.yml) · [Request a feature](../../issues/new?template=feature_request.yml) · [Contributing](CONTRIBUTING.md)
+
+</div>
+
+---
+
+Nabz is an Urdu-first AI health assistant built for the **Alibaba Cloud AI Hackathon Pakistan 2026**. A patient describes a concern by voice or text, answers clear follow-up questions like a Pakistani GP would ask, receives an urgency recommendation, and leaves with a doctor-ready summary — QR handoff included.
+
+Its desktop workspace keeps three things visible together:
 
 1. previous health conversations;
 2. the current AI assessment;
 3. the patient's Medical Vault and health timeline.
 
 > **Medical safety:** Nabz does not replace a doctor, confirm a diagnosis, or independently prescribe medicine. In an emergency, contact emergency services or go to a hospital immediately.
+
+<details>
+<summary><strong>📑 Table of contents</strong></summary>
+
+- [Feature overview](#feature-overview)
+- [Current experience](#current-experience)
+- [How the AI assessment works](#how-the-ai-assessment-works)
+- [Voice flow](#voice-flow)
+- [Medical Vault and doctor handoff](#medical-vault-and-doctor-handoff)
+- [Simple system architecture](#simple-system-architecture)
+- [Run locally](#run-locally)
+- [Important API routes](#important-api-routes)
+- [Tests](#tests)
+- [Production deployment](#production-deployment)
+- [Repository guide](#repository-guide)
+- [Privacy and safety boundaries](#privacy-and-safety-boundaries)
+- [Contributing](#contributing)
+- [Medical disclaimer](#medical-disclaimer)
+
+</details>
 
 ---
 
@@ -560,6 +598,23 @@ Read [PRIVACY.md](PRIVACY.md) for the complete privacy statement.
 6. Complete the conversation and show urgency, practical suggestions, and any evidence-checked medicine information.
 7. Open the saved conversation from the left sidebar.
 8. Open the doctor handoff and show which Vault facts were used.
+
+---
+
+## Contributing
+
+Contributions are welcome — bug reports, feature ideas, and PRs alike. Start
+with [CONTRIBUTING.md](CONTRIBUTING.md) for local setup, the test commands
+CI runs, and what gets extra scrutiny (anything touching the triage prompt
+or safety filters).
+
+Found a security issue? Please use
+[GitHub Security Advisories](../../security/advisories/new) instead of a
+public issue.
+
+## License
+
+[MIT](LICENSE) — free to use, modify, and build on, with attribution.
 
 ---
 
