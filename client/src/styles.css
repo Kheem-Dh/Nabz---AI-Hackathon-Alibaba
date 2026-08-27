@@ -4847,9 +4847,12 @@ textarea.input {
 .profile-header-btn small { margin-top: 1px; opacity: .72; font-size: 7.5px; }
 
 .triage-start-card { min-height: 0; padding: clamp(20px, 3vw, 34px); }
-.triage-start-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
-.triage-start-card .hero-greet-ur { color: #102825; font-size: clamp(22px, 2vw, 29px); text-align: left; }
-.triage-start-card .hero-greet-en { color: var(--ink-mute); text-align: left; }
+/* Single child always (the greeting block) — center it like guest's
+   .guest-welcome instead of space-between, which left-anchored the
+   whole heading when there was only one flex item to distribute. */
+.triage-start-head { display: flex; align-items: center; justify-content: center; gap: 20px; text-align: center; }
+.triage-start-card .hero-greet-ur { color: #102825; font-size: clamp(22px, 2vw, 29px); text-align: center; }
+.triage-start-card .hero-greet-en { color: var(--ink-mute); text-align: center; }
 .triage-start-card .symptom-composer { width: 100%; margin: 24px 0 0; }
 .voice-language { padding: 3px; display: flex; flex: 0 0 auto; gap: 2px; border-radius: 10px; background: var(--teal-050); }
 .voice-language button { min-height: 30px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--teal-dark); font-size: 9px; font-weight: 700; }
@@ -7090,7 +7093,12 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
   max-width: 720px;
   margin: 0 auto;
 }
-.authed-chat-workspace .workspace-conversation.is-new {
+/* Only vertically-center the TRUE idle greeting screen (mic + heading,
+   no turns yet). The "is-new" class stays applied for the entire live
+   conversation (question/photo-request/thinking/result phases too) —
+   centering the whole time forced large empty gaps above and below
+   compact question/photo cards once the conversation had content. */
+.authed-chat-workspace .workspace-conversation.is-new:has(.triage-start-card) {
   min-height: calc(100dvh - 260px) !important;
   justify-content: center;
 }

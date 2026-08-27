@@ -369,8 +369,8 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
         {error && <div className="notice notice-warn">{error}</div>}
         <div className="triage-start-head">
           <div>
-            <div className="hero-greet-ur urdu">
-              آج طبیعت کیسی ہے؟
+            <div className="hero-greet-ur urdu" dir="rtl">
+              {profile.display_name}، آج طبیعت کیسی ہے؟
             </div>
             <div className="hero-greet-en">Tell Nabz how {profile.display_name} feels</div>
           </div>
