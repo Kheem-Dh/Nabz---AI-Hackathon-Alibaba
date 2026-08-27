@@ -6670,31 +6670,59 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
 .nav-links button small,
 .app-header nav button small { display: block; font-size: 9px; opacity: .65; text-transform: uppercase; letter-spacing: .06em; margin-top: 1px; }
 
-/* Unified authed workspace — three-column flex row that stays inside the
-   viewport. .page is display:flex column by default, so we must set
-   flex-direction:row explicitly.
-   Wide  : [family 240] [chat flex] [record 320]
-   Medium: [family 220] [chat flex]                (record hides)
+/* Unified authed workspace — flush, edge-to-edge, exactly like
+   .guest-chat-page: sidebar and content sit directly against each
+   other with a hairline border, no gap, no floating card. The center
+   column has NO border/shadow/background of its own — it just IS the
+   page background, same as .guest-chat-main.
+   Wide  : [family 260 | border] [chat flex, flush] [record 300 | border]
+   Medium: [family 260 | border] [chat flex]           (record hides)
    Narrow: single column stack
 */
 .authed-chat-page {
   display: flex !important;
   flex-direction: row !important;
-  gap: 16px;
+  gap: 0 !important;
   align-items: stretch;
   min-height: calc(100vh - var(--top-bar-h, 60px));
+  overflow-x: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  background: #f3f7f6;
 }
-.authed-chat-page > .family-sidebar { flex: 0 0 240px; min-width: 0; }
-.authed-chat-page > .assessment-workspace { flex: 1 1 auto; min-width: 0; }
-.authed-chat-page > .authed-insights { flex: 0 0 320px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.authed-chat-page > .family-sidebar {
+  flex: 0 0 260px; min-width: 0; box-sizing: border-box;
+  border: 0 !important; border-right: 1px solid #dce8e5 !important;
+  border-radius: 0 !important; background: #fff !important;
+  box-shadow: none !important;
+  max-width: none !important; padding: 24px 16px 18px !important;
+}
+.authed-chat-page > .assessment-workspace {
+  flex: 1 1 auto; min-width: 0; box-sizing: border-box;
+  border: 0 !important; box-shadow: none !important; background: transparent !important;
+}
+.authed-chat-page > .authed-insights {
+  flex: 0 0 300px; min-width: 0; max-width: 300px; box-sizing: border-box;
+  border-left: 1px solid #dce8e5; background: #fff;
+  padding: 22px 18px; display: flex; flex-direction: column; gap: 12px;
+  overflow-wrap: anywhere; overflow-y: auto;
+}
+.authed-chat-page > .authed-insights .pd-head-actions { align-items: flex-start; }
+.authed-chat-page > .authed-insights .pd-vault-btn { max-width: 100%; }
 @media (max-width: 1180px) {
   .authed-chat-page > .authed-insights { display: none; }
 }
 @media (max-width: 900px) {
   .authed-chat-page { flex-direction: column !important; }
-  .authed-chat-page > .family-sidebar { flex: 0 0 auto; width: 100%; }
+  .authed-chat-page > .family-sidebar {
+    flex: 0 0 auto; width: 100%; border-right: 0 !important;
+    border-bottom: 1px solid #dce8e5 !important;
+  }
 }
-.authed-chat-workspace { padding: 20px 28px 40px; max-width: none; margin: 0; display: flex; flex-direction: column; }
+.authed-chat-workspace {
+  padding: 24px clamp(16px, 3vw, 48px) 40px; max-width: none; margin: 0;
+  display: flex; flex-direction: column;
+}
 @media (max-width: 768px) { .authed-chat-workspace { padding: 16px; } }
 
 /* Override the workspace-shell 0-height rule for our new flex layout.
@@ -6723,10 +6751,13 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
 .authed-chat-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
 .authed-chat-title h1 { margin: 0 !important; font-size: clamp(24px, 3.4vw, 34px); line-height: 1.4; color: var(--nabz-primary, #0F9D8A); }
 .authed-chat-sub { margin: 4px 0 0; font-size: 12px; color: #7a8b88; }
-.authed-chat-actions { display: flex; gap: 8px; flex-shrink: 0; }
-.authed-chat-actions button { padding: 8px 12px; border: 1px solid #d9e5e2; border-radius: 999px; background: #fff; cursor: pointer; }
-.authed-chat-actions button:hover { background: #f4faf8; }
-.authed-feature-strip { max-width: none; margin: 8px 0 22px; }
+.authed-clear-btn {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid #d9e5e2; background: #fff; color: #6b7c79;
+  cursor: pointer; font-size: 15px; line-height: 1;
+  display: grid; place-items: center;
+}
+.authed-clear-btn:hover { background: #f4faf8; color: #0F9D8A; }
 .authed-chat-workspace .service-warning { margin-bottom: 14px; padding: 10px 14px; border-radius: 12px; }
 .authed-chat-workspace .service-warning strong { display: block; font-size: 14px; }
 .authed-chat-workspace .service-warning small { font-size: 12px; color: #6b7c79; }
@@ -6950,6 +6981,14 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
     min-height: 0;
   }
 }
+/* .app-main normally has 16px side padding for every other page. Guest
+   chat bypasses the app-shell entirely and is flush by construction; for
+   the authed chat to look the same (no gutter around the sidebar/main/
+   insights row), strip that padding whenever authed-chat-page is inside. */
+.app-shell:has(.authed-chat-page) .app-main {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
 
 /* ============================================================
    Privacy page V2 — Urdu-primary, professional layout
@@ -7016,3 +7055,42 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
 .privacy-demo-notice { padding: 14px 18px; border-radius: 14px; margin-top: 8px; display: flex; flex-direction: column; gap: 4px; background: #fff9ec; border: 1px solid #f0dcae; }
 .privacy-demo-notice .urdu { font-size: 14px; color: #6b4a00; line-height: 1.9; }
 .privacy-demo-notice small { font-size: 11px; color: #8a6c1a; letter-spacing: .02em; }
+
+/* Content centering inside the flush chat column (kept separate from the
+   padding/border rules above, which already handle the flush shell). */
+/* q-card (question/listening/review/thinking phases) fills the column
+   width, same as guest's .guest-question-card — no centering max-width.
+   That earlier constraint was the actual source of the persistent
+   symmetric side-gaps the user kept seeing throughout the conversation,
+   not just on the idle screen. */
+.authed-chat-workspace .q-card { width: 100%; }
+
+/* AnalysisPanel (نبض کا تجزیہ / "Information gathered" progress card) only
+   exists in the authed TriageConversation flow — guest never renders it.
+   Its own bordered gradient card was another source of "extra floating
+   box" that guest doesn't have. Hide it here so authed matches guest's
+   actual screen composition exactly. */
+.authed-chat-workspace .analysis { display: none; }
+.authed-chat-workspace .workspace-conversation { align-items: center; }
+.authed-chat-workspace .workspace-conversation > * { width: 100%; }
+
+/* The idle "triage-start-card" is a .q-card by default (white background,
+   border-radius, shadow) — a real card component. Guest's equivalent
+   welcome screen (.guest-welcome) has NO card chrome at all: it's just
+   centered text + mic directly on the page background. Strip the card
+   look here specifically so the authed idle screen is visually flush
+   with guest, while question/result cards later in the conversation
+   keep their normal card styling (that part already matches guest). */
+.authed-chat-workspace .triage-start-card {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.authed-chat-workspace .workspace-conversation.is-new {
+  min-height: calc(100dvh - 260px) !important;
+  justify-content: center;
+}

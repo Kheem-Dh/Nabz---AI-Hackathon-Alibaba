@@ -148,31 +148,17 @@ export default function HomePage() {
       />
 
       <main className="assessment-workspace authed-chat-workspace">
-        <header className="authed-chat-header">
-          <div className="authed-chat-title">
-            <h1 className="urdu urdu-hero" dir="rtl">
-              {selectedEncounter ? (selectedEncounter.title || 'گفتگو') : 'آج آپ کو کیا تکلیف ہے؟'}
-            </h1>
-            <p className="authed-chat-sub">
-              {selectedEncounter ? 'Saved conversation' : `Chat with Nabz · ${active.display_name}'s Vault`}
-            </p>
-          </div>
-          <div className="authed-chat-actions">
-            {(selectedId || sessions.length > 0) && (
-              <button onClick={newAssessment} title="New chat">＋ <span className="urdu" dir="rtl">نئی</span></button>
-            )}
-            <button onClick={() => navigate(`/profile/${active.id}/documents`)} title="Vault"><span className="urdu" dir="rtl">والٹ</span></button>
-            <button onClick={() => navigate(`/summary/${active.id}`)} title="Doctor handoff"><span className="urdu" dir="rtl">ڈاکٹر ہینڈ آف</span></button>
-          </div>
-        </header>
-
-        {!selectedEncounter && (
-          <div className="guest-feature-strip authed-feature-strip" aria-label="Features">
-            <div className="guest-feature-chip"><span>🎙️</span><b className="urdu" dir="rtl">آواز</b><small>Voice</small></div>
-            <div className="guest-feature-chip"><span>📷</span><b className="urdu" dir="rtl">تصویر</b><small>Photo</small></div>
-            <div className="guest-feature-chip" onClick={() => navigate(`/profile/${active.id}/documents`)} role="button"><span>👨‍👩‍👧</span><b className="urdu" dir="rtl">فیملی والٹ</b><small>Vault</small></div>
-            <div className="guest-feature-chip" onClick={() => navigate(`/summary/${active.id}`)} role="button"><span>👨‍⚕️</span><b className="urdu" dir="rtl">ڈاکٹر ہینڈ آف</b><small>Handoff</small></div>
-          </div>
+        {/* When starting fresh, TriageConversation owns the big Urdu
+            greeting + mic (same as guest). Only show a header bar when
+            viewing a saved conversation, to avoid two stacked headings. */}
+        {selectedEncounter && (
+          <header className="authed-chat-header">
+            <div className="authed-chat-title">
+              <h1 className="urdu urdu-hero" dir="rtl">{selectedEncounter.title || 'گفتگو'}</h1>
+              <p className="authed-chat-sub">Saved conversation</p>
+            </div>
+            <button className="authed-clear-btn" onClick={newAssessment} title="New chat" aria-label="Start a new chat">✕</button>
+          </header>
         )}
 
         {!service?.unavailable && service?.ai_configured === false && (

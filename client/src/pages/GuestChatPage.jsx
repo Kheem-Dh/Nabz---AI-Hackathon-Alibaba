@@ -203,7 +203,10 @@ export default function GuestChatPage() {
   const [followupText, setFollowupText] = useState('')
   const [draftAttachment, setDraftAttachment] = useState(null)
   const [attaching, setAttaching] = useState(false)
-  const [consent, setConsent] = useState(Boolean(restored?.stateToken))
+  // Guest session is inherently temporary — the "Temporary session ·
+  // no account required" line at the page bottom is the disclosure;
+  // no separate checkbox to click before the mic works.
+  const [consent, setConsent] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const controllerRef = useRef(null)
@@ -484,16 +487,6 @@ export default function GuestChatPage() {
             <section className="guest-welcome">
               <h1 className="urdu urdu-hero" dir="rtl">آج آپ کو کیا تکلیف ہے؟</h1>
               <p className="guest-welcome-sub">What's worrying you today?</p>
-              <div className="guest-feature-strip" aria-label="Nabz features">
-                <div className="guest-feature-chip"><span>🎙️</span><b className="urdu" dir="rtl">آواز</b><small>Voice</small></div>
-                <div className="guest-feature-chip"><span>📷</span><b className="urdu" dir="rtl">تصویر</b><small>Photo</small></div>
-                <div className="guest-feature-chip"><span>👨‍👩‍👧</span><b className="urdu" dir="rtl">فیملی والٹ</b><small>Vault</small></div>
-                <div className="guest-feature-chip"><span>👨‍⚕️</span><b className="urdu" dir="rtl">ڈاکٹر ہینڈ آف</b><small>Handoff</small></div>
-              </div>
-              <label className="guest-consent guest-consent-tight">
-                <input type="checkbox" checked={consent} onChange={(event) => { setConsent(event.target.checked); setError('') }} />
-                <span className="urdu" dir="rtl">میں اپنی بات AI کو دینے پر رضامند ہوں <small>· Temporary, no Vault, not for emergencies</small></span>
-              </label>
               <div className="guest-voice-first">
                 <div className="guest-voice-rings"><i /><i /></div>
                 <MicButton listening={speech.listening} disabled={busy || !speech.supported || !consent} onClick={toggleVoice} />
