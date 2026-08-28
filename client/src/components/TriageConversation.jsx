@@ -37,8 +37,6 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   const tts = useTextToSpeech()
   const spokenRef = useRef(null)
   const submittedRef = useRef(false)
-  const [reviewText, setReviewText] = useState('')
-  const [reviewOrigin, setReviewOrigin] = useState(null) // 'start' | 'answer'
   const [attaching, setAttaching] = useState(false)
   const [attachError, setAttachError] = useState('')
   const [initialAttachment, setInitialAttachment] = useState(null)
@@ -99,8 +97,8 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     }
   }, [turn, tts.speak])
 
-  // When listening stops with a transcript, move the user into a REVIEW state
-  // so they can edit / confirm / retry before we send anything.
+  // Voice is one complete action in the signed-in flow too. When recognition
+  // ends—Done button or natural silence—submit the final transcript directly.
   useEffect(() => {
     if (
       (phase === 'listening' || phase === 'answering-voice') &&
@@ -109,9 +107,11 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
       !submittedRef.current
     ) {
       submittedRef.current = true
-      setReviewText(speech.transcript.trim())
-      setReviewOrigin(phase === 'listening' ? 'start' : 'answer')
-      setPhase('reviewing')
+      const text = speech.transcript.trim()
+      const answeringQuestion = phase === 'answering-voice'
+      speech.reset()
+      if (answeringQuestion) doAnswer(text)
+      else doStart(withInitialAttachment(text))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speech.listening, speech.transcript, phase])
@@ -306,21 +306,6 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     setPhase('answering-voice')
   }
 
-  function retryVoice() {
-    submittedRef.current = false
-    setReviewText('')
-    speech.reset()
-    speech.start()
-    setPhase(reviewOrigin === 'answer' ? 'answering-voice' : 'listening')
-  }
-
-  function confirmReview() {
-    const text = reviewText.trim()
-    if (!text) return
-    if (reviewOrigin === 'answer') doAnswer(text)
-    else doStart(withInitialAttachment(text))
-  }
-
   function withInitialAttachment(text) {
     const context = initialAttachment
       ? `[Attached file: ${initialAttachment.name}] ${initialAttachment.description}`
@@ -473,57 +458,19 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
         </p>
         <p className="hero-hint-en">
           Speak naturally — words appear below while you talk.
-          Tap <strong>Done speaking</strong> when finished.
+          Tap <strong>Done speaking</strong> to send automatically.
         </p>
         <div className="live-transcript urdu" dir="auto" style={{ marginTop: 12 }}>
           {speech.transcript || <span className="placeholder">…</span>}
         </div>
         <div className="btn-row" style={{ marginTop: 12 }}>
           <button className="btn btn-primary" onClick={() => speech.stop()}>
-            Done speaking · مکمل
+            Done &amp; send · مکمل کرکے بھیجیں
           </button>
           <button className="btn btn-outline" onClick={reset}>
             منسوخ · Cancel
           </button>
         </div>
-      </div>
-    )
-  }
-
-  // --- Reviewing (transcript confirmation) -------------------------------
-  if (phase === 'reviewing') {
-    return (
-      <div className="q-card">
-        <div className="section-title">
-          <span className="ur urdu">اپنی بات دیکھیں</span>
-          <span className="en">Review before sending</span>
-        </div>
-        <textarea
-          className="input urdu"
-          dir="auto"
-          value={reviewText}
-          onChange={(e) => setReviewText(e.target.value)}
-          rows={3}
-          style={{ marginTop: 8 }}
-        />
-        <div className="btn-row" style={{ marginTop: 10 }}>
-          <button
-            className="btn btn-primary"
-            onClick={confirmReview}
-            disabled={!reviewText.trim()}
-          >
-            Send · بھیجیں
-          </button>
-          <button className="btn btn-outline" onClick={retryVoice}>
-            Retry · دوبارہ بولیں
-          </button>
-          <button className="btn btn-ghost" onClick={reset}>
-            منسوخ · Cancel
-          </button>
-        </div>
-        <p className="hero-hint-en" style={{ marginTop: 8 }}>
-          Nabz will not send anything until you confirm this transcript.
-        </p>
       </div>
     )
   }

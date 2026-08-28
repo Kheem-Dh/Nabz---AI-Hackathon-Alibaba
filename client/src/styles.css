@@ -6838,7 +6838,9 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
   overflow-wrap: anywhere; overflow-y: auto;
 }
 .authed-chat-page > .authed-insights .pd-head-actions { align-items: flex-start; }
-.authed-chat-page > .authed-insights .pd-vault-btn { max-width: 100%; }
+.authed-chat-page > .authed-insights .pd-head { display: grid; grid-template-columns: minmax(0,1fr) 96px; }
+.authed-chat-page > .authed-insights .pd-head-actions { width: 96px; min-width: 96px; align-items: stretch; }
+.authed-chat-page > .authed-insights .pd-vault-btn { width: 100%; min-width: 96px; max-width: 96px; padding: 8px 7px; white-space: nowrap; overflow-wrap: normal; word-break: normal; }
 @media (max-width: 1180px) {
   .authed-chat-page > .authed-insights { display: none; }
 }
