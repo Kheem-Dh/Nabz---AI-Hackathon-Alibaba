@@ -1846,13 +1846,23 @@ textarea.input {
   font-size: 11px;
   font-weight: 700;
   padding: 8px 10px;
-  white-space: nowrap;
+  /* Text was overflowing the pill on narrow screens because nowrap
+     prevented wrapping while the button itself was allowed to shrink
+     below the text's natural width. Wrap instead of overflowing, and
+     make the box model predictable. */
+  white-space: normal;
+  overflow-wrap: break-word;
+  box-sizing: border-box;
+  width: 100%;
+  text-align: center;
+  line-height: 1.3;
 }
 .pd-head-actions {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 5px;
+  min-width: 0;
 }
 .pd-summary-ur {
   margin: 12px 0 2px;

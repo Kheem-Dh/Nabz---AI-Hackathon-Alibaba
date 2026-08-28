@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import { useLocationPref } from './context/LocationContext'
@@ -210,6 +210,8 @@ function TopBar({ minimal = false }) {
   const profileComplete = Boolean(
     active?.date_of_birth && active?.gender && active?.blood_group && active?.weight_kg,
   )
+  const accountMenuRef = useRef(null)
+  const closeAccountMenu = () => { accountMenuRef.current?.removeAttribute('open') }
 
   // Header stays pinned on scroll; a shadow + blur appear once the page has
   // scrolled a few pixels so the initial paint is clean.
@@ -218,6 +220,20 @@ function TopBar({ minimal = false }) {
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Native <details> only closes on re-clicking its own <summary> — it has
+  // no built-in "click outside to close" behaviour, so the popover was
+  // staying open over whatever page you navigated to next. Close it on any
+  // outside pointer down.
+  useEffect(() => {
+    function onPointerDown(event) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target)) {
+        closeAccountMenu()
+      }
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [])
 
   return (
@@ -240,7 +256,7 @@ function TopBar({ minimal = false }) {
             {account?.is_admin && <button className={navClass('/admin')} onClick={() => navigate('/admin')}>Admin</button>}
           </nav>
         )}
-        <details className="account-menu">
+        <details className="account-menu" ref={accountMenuRef}>
           <summary aria-label="Open profile and settings">
             <span className="profile-header-avatar">{(active?.display_name || account?.full_name || 'U').charAt(0).toUpperCase()}</span>
             <span className="account-menu-label">
@@ -255,18 +271,18 @@ function TopBar({ minimal = false }) {
               <small>{account?.email || account?.phone || 'Private health account'}</small>
             </div>
             {active && (
-              <button onClick={() => navigate(profileComplete ? `/profile/${active.id}` : `/profile/${active.id}/edit`)}>
+              <button onClick={() => { closeAccountMenu(); navigate(profileComplete ? `/profile/${active.id}` : `/profile/${active.id}/edit`) }}>
                 <span>Profile</span><small>{profileComplete ? 'View health details' : 'Complete health details'}</small>
               </button>
             )}
             {!minimal && <div className="account-menu-location"><LocationChip /></div>}
-            <button onClick={() => { stopAllSpeech() }}>
+            <button onClick={() => { closeAccountMenu(); stopAllSpeech() }}>
               <span>Mute Nabz</span><small>Stop all voice playback</small>
             </button>
-            <button onClick={() => navigate('/privacy')}>
+            <button onClick={() => { closeAccountMenu(); navigate('/privacy') }}>
               <span>Privacy & consent</span><small>Manage health-data permissions</small>
             </button>
-            <button className="account-menu-signout" onClick={() => { stopAllSpeech(); logout() }}>
+            <button className="account-menu-signout" onClick={() => { closeAccountMenu(); stopAllSpeech(); logout() }}>
               <span>Sign out</span><small>End this session securely</small>
             </button>
           </div>
