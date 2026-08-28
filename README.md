@@ -278,7 +278,7 @@ The DashScope API key and JWT secret stay on the backend. They are never sent to
 | Routing | **React Router v6** | Client-side navigation, deep-linkable handoff pages |
 | State | Context + hooks (no Redux) | Small app, clear ownership per feature |
 | Voice input | Cloud STT via `MediaRecorder` → `/api/voice/transcribe` (Qwen3.5-Omni), `webkitSpeechRecognition` fallback | Real Urdu accuracy Chrome can't match |
-| Voice output | Server-side gTTS (`/api/tts`) with `SpeechSynthesis` fallback | Actual Urdu pronunciation |
+| Voice output | Open-source **MMS-TTS** neural voice (`facebook/mms-tts-urd-script_arabic`, `/api/tts`) with automatic gTTS + browser `SpeechSynthesis` fallback | Real Urdu neural TTS, not a formant/wrapper engine |
 | QR generation | `qrcode` npm package (client-side SVG) | Zero-cost doctor handoff QRs |
 | Styling | Plain CSS + custom design tokens (`--radius-*`, `--shadow-*`, `--focus-ring`) | Full control, no runtime cost |
 | PWA | Manifest + service worker + PNG icons + apple-touch-icon | Installable on Android/iOS home screen |
@@ -303,7 +303,7 @@ The DashScope API key and JWT secret stay on the backend. They are never sent to
 | Text triage | **Alibaba Qwen3.7-plus** (DashScope) | **OpenAI `gpt-4o`** | Quota, auth, rate-limit, timeout, or unrepairable JSON |
 | Image analysis | **Qwen-VL** | **OpenAI `gpt-4o` vision** | Same triggers |
 | Audio STT | **Qwen3.5-Omni** | (browser `webkitSpeechRecognition`) | Server unavailable |
-| TTS | Server gTTS | Browser `SpeechSynthesis` | gTTS unreachable |
+| TTS | Open-source **MMS-TTS** (Urdu neural voice) | Server gTTS → browser `SpeechSynthesis` | MMS model can't load (e.g. low-memory host) |
 
 - Fallback is **automatic and audited** — every call is logged with `provider`, `model`, `tokens`, `cost_microusd`, `fallback_reason` in the Admin ledger. Never fabricates a response.
 - **Per-user USD cap** — registered account $1.00, guest session $0.30 (env-overridable). Reservation → provider call → reconcile. Concurrent-safe via atomic `UPDATE ... WHERE used + reserved + amount <= limit`. Cap exhaustion returns `AIBudgetExceeded` before any provider is called.
@@ -449,7 +449,7 @@ All personal health routes require a valid login token.
 | `GET` | `/api/handoff/{token}` | Public bounded read of the handoff snapshot (no auth) |
 | `GET` | `/api/facilities/nearby` | Find care appropriate to the urgency |
 | `POST` | `/api/voice/transcribe` | Cloud Urdu STT via Qwen3.5-Omni |
-| `GET` | `/api/tts?text=…&lang=ur` | Server-rendered Urdu TTS (gTTS) |
+| `GET` | `/api/tts?text=…&lang=ur` | Neural Urdu TTS (MMS-TTS, gTTS fallback) |
 | `POST` | `/api/guest/triage/start` | Anonymous JWT-scoped guest triage (2 h TTL) |
 | `POST` | `/api/guest/triage/answer` | Guest answer turn |
 | `POST` | `/api/guest/triage/chat` | Guest follow-up chat (capped at 3) |

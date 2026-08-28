@@ -10,7 +10,6 @@ modules (auth, profiles, triage, labreport, prescription, summary, clinics).
 """
 from __future__ import annotations
 
-import io
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -58,6 +57,7 @@ from sessions import router as triage_router  # noqa: E402
 from triage_stream import router as triage_stream_router  # noqa: E402
 from voice_stt import router as voice_stt_router  # noqa: E402
 from summary import router as summary_router  # noqa: E402
+import tts_engine  # noqa: E402
 from handoff import router as handoff_router  # noqa: E402
 from guest_triage import router as guest_triage_router  # noqa: E402
 from safety_eval import router as safety_eval_router  # noqa: E402
@@ -162,9 +162,8 @@ def clinics_endpoint(
 
 
 # Cache a few recently synthesized clips in memory (advice repeats on replay).
-_TTS_CACHE: dict[tuple[str, str], bytes] = {}
+_TTS_CACHE: dict[tuple[str, str], tuple[bytes, str]] = {}
 _TTS_CACHE_MAX = 32
-_TTS_LANG_MAP = {"ur": "ur", "hi": "hi", "en": "en"}
 
 
 @misc_router.get("/api/tts")
@@ -172,33 +171,30 @@ def tts_endpoint(
     text: str = Query(..., min_length=1, max_length=1000),
     lang: str = Query("ur"),
 ) -> Response:
-    """Return real spoken Urdu (or Hindi/English) audio for `text`.
+    """Return real spoken audio for `text`.
 
-    Uses gTTS so the voice actually pronounces Urdu script — browser
-    SpeechSynthesis on most machines has no Urdu voice. The frontend uses this
-    first and only falls back to browser speech if it fails.
+    Urdu uses the MMS-TTS neural voice (server/tts_engine.py) with an
+    automatic fallback to gTTS if that model can't load in this environment.
+    English/Hindi use gTTS. The frontend tries this endpoint first and only
+    falls back to the browser's own speech synthesis if it fails.
     """
-    gtts_lang = _TTS_LANG_MAP.get(lang, "ur")
-    key = (gtts_lang, text)
+    key = (lang, text)
     if key in _TTS_CACHE:
-        return Response(content=_TTS_CACHE[key], media_type="audio/mpeg")
+        audio, content_type = _TTS_CACHE[key]
+        return Response(content=audio, media_type=content_type)
 
     try:
-        from gtts import gTTS
-
-        buf = io.BytesIO()
-        gTTS(text=text, lang=gtts_lang).write_to_fp(buf)
-        audio = buf.getvalue()
+        audio, content_type = tts_engine.synthesize(text, lang)
     except Exception as exc:  # noqa: BLE001
         logger.error("TTS failed: %s", exc)
         raise HTTPException(status_code=503, detail="tts_unavailable")
 
     if len(_TTS_CACHE) >= _TTS_CACHE_MAX:
         _TTS_CACHE.pop(next(iter(_TTS_CACHE)))
-    _TTS_CACHE[key] = audio
+    _TTS_CACHE[key] = (audio, content_type)
     return Response(
         content=audio,
-        media_type="audio/mpeg",
+        media_type=content_type,
         headers={"Cache-Control": "public, max-age=86400"},
     )
 
