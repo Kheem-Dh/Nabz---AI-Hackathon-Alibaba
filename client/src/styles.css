@@ -8253,3 +8253,1076 @@ h1, h2, h3 { letter-spacing: -.01em; }
 }
 
 /* END LANDING PAGE REDESIGN */
+
+/* ═══════════════════════════════════════════════════════════════
+   NABZ LANDING v3 — "The Consultation Room"
+   Palette:
+     --nb-chai   #F7F3EE  warm off-white background
+     --nb-forest #1B3A2D  deep green — trust / Pakistan
+     --nb-leaf   #2D6A4F  medium green
+     --nb-clay   #C4602A  terracotta — warmth / CTA
+     --nb-cream  #F0E8DC  card backgrounds
+     --nb-ink    #1B3A2D  body text
+     --nb-muted  #6B7B78  secondary text
+   ═══════════════════════════════════════════════════════════════ */
+
+.nb-page {
+  --nb-chai:   #F7F3EE;
+  --nb-forest: #1B3A2D;
+  --nb-leaf:   #2D6A4F;
+  --nb-clay:   #C4602A;
+  --nb-clay-dk:#A0491E;
+  --nb-cream:  #F0E8DC;
+  --nb-ink:    #1B3A2D;
+  --nb-muted:  #6B7B78;
+  --nb-border: #DDD8D0;
+  --nb-r:      14px;
+  --nb-font:   'Inter', system-ui, sans-serif;
+  background: var(--nb-chai);
+  color: var(--nb-ink);
+  font-family: var(--nb-font);
+  min-height: 100vh;
+}
+
+/* reset any lingering landing-v2 styles on nb-page */
+.nb-page * { box-sizing: border-box; }
+
+/* ── SHARED TOKENS ── */
+.nb-icon { width: 22px; height: 22px; flex-shrink: 0; }
+
+.nb-h1 {
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.035em;
+  color: var(--nb-forest);
+  margin: 0 0 14px;
+}
+
+.nb-h2 {
+  font-size: clamp(1.7rem, 3.2vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -.025em;
+  color: var(--nb-forest);
+  margin: 0 0 8px;
+}
+
+.nb-h2-light { color: #fff; }
+
+.nb-label {
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--nb-clay);
+  margin: 0 0 10px;
+  display: block;
+}
+.nb-label-light { color: rgba(255,255,255,.6); }
+
+.nb-eyebrow {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--nb-clay);
+  margin: 0 0 18px;
+  display: block;
+}
+
+/* ── BUTTONS ── */
+.nb-btn-clay {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  background: var(--nb-clay);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-size: .88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s, transform .15s;
+  font-family: var(--nb-font);
+  text-decoration: none;
+}
+.nb-btn-clay:hover { background: var(--nb-clay-dk); transform: translateY(-1px); }
+.nb-btn-clay .nb-icon { width: 16px; height: 16px; }
+
+.nb-btn-lg {
+  padding: 14px 28px;
+  font-size: .95rem;
+}
+
+.nb-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: transparent;
+  color: var(--nb-forest);
+  border: 1.5px solid var(--nb-border);
+  border-radius: 999px;
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  font-family: var(--nb-font);
+}
+.nb-btn-outline:hover { border-color: var(--nb-forest); background: rgba(27,58,45,.05); }
+.nb-btn-outline .nb-icon { width: 16px; height: 16px; }
+
+.nb-btn-ghost {
+  background: transparent;
+  border: none;
+  color: var(--nb-forest);
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background .15s;
+  font-family: var(--nb-font);
+}
+.nb-btn-ghost:hover { background: rgba(27,58,45,.07); }
+
+.nb-btn-white {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  background: #fff;
+  color: var(--nb-forest);
+  border: none;
+  border-radius: 999px;
+  font-size: .85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .2s;
+  font-family: var(--nb-font);
+  margin-top: 4px;
+}
+.nb-btn-white:hover { opacity: .88; }
+.nb-btn-white .nb-icon { width: 15px; height: 15px; }
+
+/* ── NAV ── */
+.nb-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 clamp(20px, 5vw, 60px);
+  height: 60px;
+  background: rgba(247,243,238,.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--nb-border);
+}
+
+.nb-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.nb-brand-pulse {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--nb-forest);
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.nb-brand-pulse .nb-icon { width: 16px; height: 16px; stroke: #fff; }
+
+.nb-brand-name {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  gap: 1px;
+}
+.nb-brand-name strong {
+  font-size: 1rem;
+  color: var(--nb-forest);
+  font-family: var(--font-ur, 'Noto Nastaliq Urdu', serif);
+}
+.nb-brand-name small {
+  font-size: .55rem;
+  letter-spacing: .12em;
+  color: var(--nb-muted);
+  font-weight: 700;
+}
+
+.nb-nav-links {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  justify-content: center;
+}
+.nb-nav-links a {
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--nb-muted);
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: color .15s, background .15s;
+}
+.nb-nav-links a:hover { color: var(--nb-forest); background: rgba(27,58,45,.07); }
+
+.nb-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── HERO ── */
+.nb-hero {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: center;
+  padding: clamp(60px, 8vw, 100px) clamp(20px, 5vw, 60px);
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* SIGNATURE ELEMENT: giant نبض watermark */
+.nb-hero-wm {
+  position: absolute;
+  right: -2%;
+  top: -10%;
+  font-family: var(--font-ur, 'Noto Nastaliq Urdu', serif);
+  font-size: clamp(200px, 28vw, 380px);
+  font-weight: 700;
+  color: var(--nb-forest);
+  opacity: .04;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+.nb-hero-copy {
+  position: relative;
+  z-index: 1;
+}
+
+.nb-hero-ur {
+  font-family: var(--font-ur, 'Noto Nastaliq Urdu', serif);
+  font-size: 1.1rem;
+  color: var(--nb-leaf);
+  line-height: 2.2;
+  margin: 0 0 16px;
+  display: block;
+}
+
+.nb-hero-sub {
+  font-size: .95rem;
+  color: var(--nb-muted);
+  line-height: 1.75;
+  max-width: 460px;
+  margin: 0 0 28px;
+}
+
+.nb-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ── PHONE MOCKUP ── */
+.nb-hero-phone {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.nb-phone-shell {
+  width: min(300px, 85vw);
+  background: var(--nb-forest);
+  border-radius: 40px;
+  padding: 12px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.08),
+    0 40px 80px rgba(27,58,45,.35),
+    0 10px 20px rgba(27,58,45,.2);
+}
+
+.nb-phone-notch {
+  width: 80px;
+  height: 8px;
+  background: rgba(0,0,0,.4);
+  border-radius: 999px;
+  margin: 0 auto 10px;
+}
+
+.nb-phone-screen {
+  background: var(--nb-chai);
+  border-radius: 30px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.nb-phone-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--nb-border);
+}
+
+.nb-phone-logo {
+  font-family: var(--font-ur, 'Noto Nastaliq Urdu', serif);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--nb-forest);
+}
+
+.nb-phone-session {
+  font-size: .62rem;
+  font-weight: 600;
+  color: var(--nb-muted);
+  background: var(--nb-cream);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.nb-phone-chat {
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.nb-chat-prompt {
+  text-align: center;
+  padding: 10px 12px;
+  background: var(--nb-cream);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nb-chat-prompt strong {
+  font-family: var(--font-ur, 'Noto Nastaliq Urdu', serif);
+  font-size: .95rem;
+  color: var(--nb-forest);
+  line-height: 1.8;
+}
+.nb-chat-prompt small {
+  font-size: .64rem;
+  color: var(--nb-muted);
+}
+
+.nb-chat-bubble {
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-size: .82rem;
+  line-height: 1.6;
+}
+
+.nb-chat-user {
+  background: var(--nb-forest);
+  color: #fff;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  font-family: var(--font-ur, 'Noto Nastaliq Urdu', serif);
+  font-size: .9rem;
+  line-height: 1.9;
+}
+
+.nb-chat-bot {
+  background: #fff;
+  color: var(--nb-ink);
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+  border: 1px solid var(--nb-border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.nb-chat-bot .urdu {
+  font-family: var(--font-ur, 'Noto Nastaliq Urdu', serif);
+  font-size: .88rem;
+  line-height: 1.9;
+  color: var(--nb-forest);
+}
+.nb-chat-bot small { font-size: .64rem; color: var(--nb-muted); }
+
+.nb-chat-typing {
+  display: flex;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 8px 14px;
+  background: #fff;
+  border: 1px solid var(--nb-border);
+  border-radius: 14px;
+  border-bottom-left-radius: 4px;
+}
+.nb-chat-typing span {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--nb-muted);
+  animation: nb-bounce .9s infinite;
+}
+.nb-chat-typing span:nth-child(2) { animation-delay: .15s; }
+.nb-chat-typing span:nth-child(3) { animation-delay: .3s; }
+@keyframes nb-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: .5; }
+  40% { transform: translateY(-4px); opacity: 1; }
+}
+
+.nb-phone-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--nb-border);
+  background: #fff;
+}
+.nb-phone-mic { color: var(--nb-clay); width: 18px; height: 18px; }
+.nb-phone-input .urdu {
+  font-family: var(--font-ur, 'Noto Nastaliq Urdu', serif);
+  font-size: .72rem;
+  color: var(--nb-muted);
+  flex: 1;
+}
+
+/* ── PROOF STRIP ── */
+.nb-proof-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 20px clamp(20px, 5vw, 60px);
+  background: var(--nb-forest);
+  flex-wrap: wrap;
+}
+.nb-proof-strip > div:not(.nb-proof-div) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 32px;
+  gap: 2px;
+}
+.nb-proof-strip strong {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -.02em;
+}
+.nb-proof-strip span {
+  font-size: .68rem;
+  font-weight: 500;
+  color: rgba(255,255,255,.5);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+.nb-proof-div {
+  width: 1px;
+  height: 30px;
+  background: rgba(255,255,255,.15);
+  flex-shrink: 0;
+}
+
+/* ── SECTIONS ── */
+.nb-section {
+  padding: clamp(60px, 7vw, 90px) clamp(20px, 5vw, 60px);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.nb-section-head {
+  max-width: 520px;
+  margin-bottom: 48px;
+}
+
+.nb-section-ur {
+  font-family: var(--font-ur, 'Noto Nastaliq Urdu', serif);
+  font-size: 1rem;
+  color: var(--nb-leaf);
+  line-height: 2.2;
+  margin: 0 0 10px;
+  display: block;
+}
+.nb-section-ur-light { color: rgba(255,255,255,.6); }
+
+/* ── VIDEO ── */
+.nb-demo-section { text-align: center; }
+.nb-demo-section .nb-section-head { margin-left: auto; margin-right: auto; }
+
+.nb-video-wrap {
+  border-radius: var(--nb-r);
+  overflow: hidden;
+  border: 1px solid var(--nb-border);
+  box-shadow: 0 20px 60px rgba(27,58,45,.12);
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.nb-video {
+  width: 100%;
+  display: block;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  background: var(--nb-forest);
+}
+
+.nb-video-hint {
+  font-size: .75rem;
+  color: var(--nb-muted);
+  margin-top: 10px;
+  text-align: center;
+}
+
+/* ── HOW IT WORKS ── */
+.nb-how-section {
+  background: var(--nb-cream);
+  max-width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+}
+.nb-how-section .nb-section-head {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(20px, 5vw, 60px);
+  padding-right: clamp(20px, 5vw, 60px);
+  margin-bottom: 40px;
+}
+
+.nb-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 5vw, 60px);
+  gap: 0;
+}
+
+.nb-step {
+  padding: 32px 28px;
+  border-right: 1px solid var(--nb-border);
+  position: relative;
+}
+.nb-step:last-child { border-right: none; }
+
+.nb-step-num {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--nb-forest);
+  color: #fff;
+  font-size: .9rem;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  flex-shrink: 0;
+}
+
+.nb-step-connector { display: none; }
+
+.nb-step-en {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--nb-forest);
+  margin: 0 0 6px;
+  letter-spacing: -.01em;
+  line-height: 1.3;
+}
+
+.nb-step-ur {
+  font-family: var(--font-ur, 'Noto Nastaliq Urdu', serif);
+  font-size: .95rem;
+  color: var(--nb-clay);
+  line-height: 2.2;
+  margin: 0 0 8px;
+  display: block;
+}
+
+.nb-step-detail {
+  font-size: .82rem;
+  color: var(--nb-muted);
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* ── HERO FEATURES (3 large) ── */
+.nb-hero-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.nb-hfeat {
+  background: var(--nb-cream);
+  border: 1px solid var(--nb-border);
+  border-radius: 20px;
+  padding: 28px 24px;
+  transition: box-shadow .2s, transform .2s;
+}
+.nb-hfeat:hover {
+  box-shadow: 0 12px 32px rgba(27,58,45,.1);
+  transform: translateY(-2px);
+}
+
+.nb-hfeat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--nb-forest);
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  color: #fff;
+}
+.nb-hfeat-icon .nb-icon { width: 22px; height: 22px; stroke: #fff; }
+
+.nb-hfeat-en {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--nb-forest);
+  margin: 0 0 6px;
+  line-height: 1.3;
+  letter-spacing: -.01em;
+}
+
+.nb-hfeat-ur {
+  font-family: var(--font-ur, 'Noto Nastaliq Urdu', serif);
+  font-size: 1rem;
+  color: var(--nb-clay);
+  line-height: 2.2;
+  margin: 0 0 10px;
+  display: block;
+}
+
+.nb-hfeat-desc {
+  font-size: .82rem;
+  color: var(--nb-muted);
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* ── SECONDARY FEATURE GRID ── */
+.nb-feat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1px;
+  background: var(--nb-border);
+  border: 1px solid var(--nb-border);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+.nb-feat {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 20px;
+  background: var(--nb-chai);
+  transition: background .15s;
+}
+.nb-feat:hover { background: var(--nb-cream); }
+
+.nb-feat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--nb-cream);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--nb-leaf);
+  margin-top: 2px;
+}
+.nb-feat-icon .nb-icon { width: 18px; height: 18px; }
+
+.nb-feat-body { flex: 1; min-width: 0; }
+
+.nb-feat-en {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--nb-forest);
+  margin: 0 0 2px;
+  line-height: 1.3;
+}
+
+.nb-feat-ur {
+  font-family: var(--font-ur, 'Noto Nastaliq Urdu', serif);
+  font-size: .78rem;
+  color: var(--nb-clay);
+  line-height: 2;
+  margin: 0 0 4px;
+  display: block;
+}
+
+.nb-feat-desc {
+  font-size: .76rem;
+  color: var(--nb-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ── SAFETY BAND ── */
+.nb-safety-band {
+  background: var(--nb-forest);
+  padding: clamp(60px, 7vw, 90px) clamp(20px, 5vw, 60px);
+}
+
+.nb-safety-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.nb-safety-lead {
+  font-size: .92rem;
+  color: rgba(255,255,255,.7);
+  line-height: 1.75;
+  margin: 12px 0 20px;
+}
+
+.nb-safety-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nb-safety-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: .88rem;
+  color: rgba(255,255,255,.85);
+}
+.nb-check-icon { color: var(--nb-clay); width: 18px; height: 18px; flex-shrink: 0; }
+
+.nb-safety-card {
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 20px;
+  padding: 30px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nb-emerg-icon {
+  color: var(--nb-clay);
+  width: 32px;
+  height: 32px;
+  margin-bottom: 4px;
+}
+.nb-safety-card h3 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+}
+.nb-safety-card .urdu {
+  font-family: var(--font-ur, 'Noto Nastaliq Urdu', serif);
+  font-size: .9rem;
+  color: rgba(255,255,255,.65);
+  line-height: 2;
+}
+.nb-safety-card p:not(.urdu) {
+  font-size: .85rem;
+  color: rgba(255,255,255,.8);
+  line-height: 1.6;
+  margin: 0;
+}
+.nb-safety-card strong { color: var(--nb-clay); }
+
+/* ── FINAL CTA ── */
+.nb-final-cta {
+  padding: clamp(80px, 10vw, 120px) clamp(20px, 5vw, 60px);
+  text-align: center;
+}
+
+.nb-final-inner {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.nb-final-ur {
+  font-family: var(--font-ur, 'Noto Nastaliq Urdu', serif);
+  font-size: 1rem;
+  color: var(--nb-leaf);
+  line-height: 2.2;
+  margin: 0 0 8px;
+}
+
+/* ── FOOTER ── */
+.nb-footer {
+  border-top: 1px solid var(--nb-border);
+  padding: 28px clamp(20px, 5vw, 60px);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.nb-brand-sm .nb-brand-pulse { width: 26px; height: 26px; border-radius: 7px; }
+.nb-brand-sm .nb-brand-pulse .nb-icon { width: 13px; height: 13px; }
+.nb-brand-sm .nb-brand-name strong { font-size: .9rem; }
+
+.nb-footer p {
+  flex: 1;
+  font-size: .75rem;
+  color: var(--nb-muted);
+  margin: 0;
+  min-width: 180px;
+}
+
+.nb-footer-link {
+  background: none;
+  border: none;
+  font-size: .75rem;
+  color: var(--nb-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-family: var(--nb-font);
+  padding: 0;
+}
+.nb-footer-link:hover { color: var(--nb-forest); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .nb-hero {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 48px;
+  }
+  .nb-hero-copy { display: flex; flex-direction: column; align-items: center; }
+  .nb-hero-sub { text-align: center; }
+  .nb-hero-wm { font-size: 42vw; right: -5%; top: -5%; }
+
+  .nb-steps { grid-template-columns: 1fr; }
+  .nb-step { border-right: none; border-bottom: 1px solid var(--nb-border); }
+  .nb-step:last-child { border-bottom: none; }
+
+  .nb-hero-features { grid-template-columns: 1fr; }
+
+  .nb-safety-inner { grid-template-columns: 1fr; gap: 36px; }
+}
+
+@media (max-width: 640px) {
+  .nb-nav-links { display: none; }
+  .nb-proof-strip { gap: 0; }
+  .nb-proof-strip > div:not(.nb-proof-div) { padding: 10px 16px; }
+  .nb-feat-grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nb-chat-typing span { animation: none; }
+  .nb-hfeat, .nb-feat { transition: none; }
+  .nb-btn-clay:hover, .nb-btn-outline:hover { transform: none; }
+}
+
+/* END NABZ LANDING v3 */
+
+/* ═══════════════════════════════════════════════════════════════
+   NABZ LANDING v3 — QA PASS IMPROVEMENTS
+   All fixes after computed-style audit. Append-only.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 1. Hero h1 — raise clamp floor so it's always bold even at narrow widths */
+.nb-page .nb-h1 {
+  font-size: clamp(2.8rem, 5.5vw, 4.2rem) !important;
+  letter-spacing: -.04em !important;
+  line-height: 1.08 !important;
+}
+
+/* 2. Urdu text sizing — Nastaliq renders small, needs extra size boost */
+.nb-page .nb-hero-ur {
+  font-size: 1.25rem !important;
+  line-height: 2.4 !important;
+  margin-bottom: 20px !important;
+}
+
+.nb-page .nb-hfeat-ur {
+  font-size: 1.2rem !important;
+  line-height: 2.3 !important;
+}
+
+.nb-page .nb-feat-ur {
+  font-size: 0.93rem !important;
+  line-height: 2.1 !important;
+}
+
+.nb-page .nb-step-ur {
+  font-size: 1.05rem !important;
+  line-height: 2.3 !important;
+}
+
+.nb-page .nb-section-ur {
+  font-size: 1.1rem !important;
+  line-height: 2.3 !important;
+}
+
+/* 3. Nav CTA — slightly larger, more breathable */
+.nb-page .nb-nav .nb-btn-clay {
+  font-size: 0.88rem !important;
+  padding: 10px 20px !important;
+  letter-spacing: .01em !important;
+}
+
+/* 4. Phone — warm glow behind the mockup to lift it off the background */
+.nb-page .nb-hero-phone {
+  padding: 20px;
+}
+
+.nb-page .nb-phone-shell {
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.06),
+    0 0 60px rgba(196, 96, 42, .12),
+    0 40px 80px rgba(27, 58, 45, .32),
+    0 8px 16px rgba(27, 58, 45, .18) !important;
+}
+
+/* 5. Safety section label in light context — amber, not dark terracotta */
+.nb-page .nb-label-light {
+  color: rgba(196, 96, 42, 0.75) !important;
+}
+
+/* 6. How It Works — ensure no double-padding on section head */
+.nb-page .nb-how-section > .nb-section-head {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.nb-page .nb-how-section .nb-steps {
+  margin-top: 40px !important;
+}
+
+/* 7. Feature grid — stronger visual separation between items */
+.nb-page .nb-feat {
+  border: none !important;
+  position: relative !important;
+}
+
+/* 8. Hero section copy — add a subtle top-of-page breathing room */
+.nb-page .nb-hero {
+  padding-top: clamp(70px, 9vw, 110px) !important;
+  padding-bottom: clamp(70px, 9vw, 110px) !important;
+}
+
+/* 9. Proof strip numbers — bigger and more confident */
+.nb-page .nb-proof-strip strong {
+  font-size: 1.4rem !important;
+  letter-spacing: -.03em !important;
+}
+
+/* 10. Hero feature cards — use white BG instead of cream for contrast against chai page bg */
+.nb-page .nb-hfeat {
+  background: #ffffff !important;
+  border-color: #e8e4de !important;
+  box-shadow: 0 2px 8px rgba(27, 58, 45, .04) !important;
+}
+
+.nb-page .nb-hfeat:hover {
+  box-shadow: 0 14px 36px rgba(27, 58, 45, .11) !important;
+  border-color: #d0cbc3 !important;
+}
+
+/* 11. Feature grid items — alternate warm bg for visual rhythm */
+.nb-page .nb-feat:nth-child(odd) {
+  background: #faf8f5 !important;
+}
+
+/* 12. Final CTA — add a thin top border and tighten inner max-width */
+.nb-page .nb-final-cta {
+  border-top: 1px solid var(--nb-border) !important;
+}
+
+.nb-page .nb-final-inner {
+  max-width: 520px !important;
+}
+
+.nb-page .nb-final-inner .nb-h2 {
+  font-size: clamp(2rem, 4vw, 3rem) !important;
+  letter-spacing: -.03em !important;
+}
+
+/* 13. Demo video section — tighten padding, cleaner */
+.nb-page .nb-demo-section {
+  padding-top: clamp(50px, 6vw, 72px) !important;
+  padding-bottom: clamp(50px, 6vw, 72px) !important;
+}
+
+/* 14. Section head Urdu — when inside dark safety band */
+.nb-safety-band .nb-section-head .nb-section-ur {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* 15. Nav links — ensure visible at ≥ 641px (override the 640px hide rule) */
+@media (min-width: 641px) {
+  .nb-page .nb-nav-links {
+    display: flex !important;
+  }
+}
+
+/* 16. Hero copy on mobile — better spacing */
+@media (max-width: 900px) {
+  .nb-page .nb-hero-copy {
+    max-width: 560px !important;
+    margin: 0 auto !important;
+  }
+  .nb-page .nb-hero-actions {
+    justify-content: center !important;
+  }
+  .nb-page .nb-hero-ur {
+    text-align: center !important;
+  }
+  .nb-page .nb-eyebrow {
+    text-align: center !important;
+  }
+}
+
+/* 17. Feature section — remove the italic hover hint, tighten section head */
+.nb-page .lp-section-desc {
+  display: none !important;
+}
+
+/* 18. Tighter how-it-works steps padding on mobile */
+@media (max-width: 640px) {
+  .nb-page .nb-step {
+    padding: 24px 20px !important;
+  }
+  .nb-page .nb-hero-features {
+    gap: 12px !important;
+  }
+}
+
+/* END QA PASS IMPROVEMENTS */
