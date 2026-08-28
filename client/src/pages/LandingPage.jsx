@@ -1,70 +1,43 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-const HERO_FEATURES = [
-  {
-    icon: 'voice',
-    en: 'Talk in Urdu — no typing needed',
-    urdu: 'آواز میں بتائیں',
-    desc: 'Speak naturally. Nabz understands Urdu, Roman Urdu, and English.',
-  },
-  {
-    icon: 'family',
-    en: 'One account for the whole family',
-    urdu: 'پورا گھرانہ، ایک جگہ',
-    desc: 'Each person keeps their own medical history. Nothing gets mixed up.',
-  },
-  {
-    icon: 'emergency',
-    en: 'Knows when it\'s serious',
-    urdu: 'سنگین حالت پہچانتا ہے',
-    desc: 'When symptoms signal danger, Nabz tells you to call 1122 immediately.',
-  },
-]
-
-const ALL_FEATURES = [
-  { icon: 'photo',        en: 'Photo analysis',            urdu: 'تصویر سے تشخیص',          desc: 'Upload a rash, wound, or prescription — Nabz reads it.' },
-  { icon: 'vault',        en: 'Document vault',            urdu: 'رپورٹس محفوظ',             desc: 'Store reports and prescriptions. Share with any doctor via QR.' },
-  { icon: 'lab',          en: 'Lab result explainer',      urdu: 'لیب رپورٹ سمجھیں',         desc: 'Plain-language explanation of blood tests and urine reports.' },
-  { icon: 'prescription', en: 'Prescription scanner',      urdu: 'نسخہ اسکین',               desc: 'Point your camera at a handwritten prescription to decode it.' },
-  { icon: 'handoff',      en: 'Doctor handoff QR',         urdu: 'ڈاکٹر کو خلاصہ',           desc: 'Generate a QR your doctor scans to see your full history.' },
-  { icon: 'location',     en: 'Nearby clinics & labs',     urdu: 'قریبی مراکز',              desc: 'Find hospitals, blood banks, and pharmacies near you.' },
-  { icon: 'pk',           en: 'Built for Pakistan',        urdu: 'پاکستانی طبی حالات',       desc: 'Dengue, typhoid, malaria patterns. Local disease context built in.' },
-  { icon: 'memory',       en: 'Remembers your history',    urdu: 'پرانی گفتگو یاد',           desc: 'Past symptoms and medicines are recalled in every new session.' },
-  { icon: 'safety',       en: 'Medicine safety checks',    urdu: 'ادویات کی جانچ',            desc: 'Flags drug interactions, allergy risks, and pregnancy warnings.' },
-]
-
 const VAULT_DOCS = [
-  { emoji: '🩻', type: 'xray',         en: 'X-ray',           urdu: 'ایکس رے',         badge: 'analyzed', desc: 'Chest, bone, spine — Nabz reads the report and explains findings in plain Urdu.' },
-  { emoji: '🧪', type: 'lab',          en: 'Lab report',      urdu: 'لیب رپورٹ',        badge: 'flagged',  desc: 'CBC, HbA1c, thyroid, urine — flags abnormal values and what they might mean.' },
-  { emoji: '📋', type: 'prescription', en: 'Prescription',    urdu: 'نسخہ',             badge: 'analyzed', desc: 'Handwritten or printed — decodes medicine names, doses, and timing in Urdu.' },
-  { emoji: '🧠', type: 'mri',          en: 'MRI / CT scan',   urdu: 'ایم آر آئی / سی ٹی', badge: 'new',   desc: 'Uploads the report text so Nabz can reference it during any future consultation.' },
-  { emoji: '📸', type: 'skin',         en: 'Skin photo',      urdu: 'جلدی تصویر',       badge: 'analyzed', desc: 'Rash, wound, or growth — described and tracked over time for changes.' },
-  { emoji: '📄', type: 'other',        en: 'Other document',  urdu: 'دیگر دستاویز',     badge: 'analyzed', desc: 'Discharge summaries, specialist letters — stored and surfaced when relevant.' },
+  { emoji: '🩻', type: 'xray',         en: 'X-ray',           urdu: 'ایکس رے',              badge: 'analyzed', desc: 'Chest, bone, spine — Nabz reads the report and explains findings in plain Urdu.' },
+  { emoji: '🧪', type: 'lab',          en: 'Lab report',      urdu: 'لیب رپورٹ',             badge: 'flagged',  desc: 'CBC, HbA1c, thyroid, urine — flags abnormal values and what they might mean.' },
+  { emoji: '📋', type: 'prescription', en: 'Prescription',    urdu: 'نسخہ',                  badge: 'analyzed', desc: 'Handwritten or printed — decodes medicine names, doses, and timing in Urdu.' },
+  { emoji: '🧠', type: 'mri',          en: 'MRI / CT scan',   urdu: 'ایم آر آئی / سی ٹی',   badge: 'new',      desc: 'Uploads the report text so Nabz can reference it during any future consultation.' },
+  { emoji: '📸', type: 'skin',         en: 'Skin photo',      urdu: 'جلدی تصویر',            badge: 'analyzed', desc: 'Rash, wound, or growth — described and tracked over time for changes.' },
+  { emoji: '📄', type: 'other',        en: 'Other document',  urdu: 'دیگر دستاویز',          badge: 'analyzed', desc: 'Discharge summaries, specialist letters — stored and surfaced when relevant.' },
 ]
 
 const VAULT_POINTS = [
-  { icon: 'shield',  en: 'Private by design', urdu: 'نجی اور محفوظ',          detail: 'Each family member has a separate, encrypted vault. Nothing is shared without your permission.' },
-  { icon: 'memory',  en: 'Remembered forever', urdu: 'ہمیشہ یاد رہتا ہے',      detail: 'Nabz references your past documents in every new conversation — no re-uploading.' },
-  { icon: 'handoff', en: 'Share with any doctor', urdu: 'کسی بھی ڈاکٹر سے شیئر', detail: 'Generate a QR code that gives your doctor an instant, complete medical summary.' },
+  { icon: 'shield',  en: 'Private by design',      urdu: 'نجی اور محفوظ',            detail: 'Each family member has a separate, encrypted vault. Nothing is shared without your permission.' },
+  { icon: 'memory',  en: 'Remembered forever',      urdu: 'ہمیشہ یاد رہتا ہے',        detail: 'Nabz references your past documents in every new conversation — no re-uploading.' },
+  { icon: 'handoff', en: 'Share with any doctor',   urdu: 'کسی بھی ڈاکٹر سے شیئر',   detail: 'Generate a QR code that gives your doctor an instant, complete medical summary.' },
+]
+
+const HERO_FEATURES = [
+  { icon: 'voice',     en: 'Talk in Urdu — no typing needed', urdu: 'آواز میں بتائیں',       desc: 'Speak naturally. Nabz understands Urdu, Roman Urdu, and English.' },
+  { icon: 'family',    en: 'One account for the whole family', urdu: 'پورا گھرانہ، ایک جگہ',  desc: 'Each person keeps their own medical history. Nothing gets mixed up.' },
+  { icon: 'emergency', en: 'Knows when it\'s serious',         urdu: 'سنگین حالت پہچانتا ہے', desc: 'When symptoms signal danger, Nabz tells you to call 1122 immediately.' },
+]
+
+const ALL_FEATURES = [
+  { icon: 'photo',        en: 'Photo analysis',         urdu: 'تصویر سے تشخیص',   desc: 'Upload a rash, wound, or prescription — Nabz reads it.' },
+  { icon: 'vault',        en: 'Document vault',         urdu: 'رپورٹس محفوظ',      desc: 'Store reports and prescriptions. Share with any doctor via QR.' },
+  { icon: 'lab',          en: 'Lab result explainer',   urdu: 'لیب رپورٹ سمجھیں', desc: 'Plain-language explanation of blood tests and urine reports.' },
+  { icon: 'prescription', en: 'Prescription scanner',   urdu: 'نسخہ اسکین',        desc: 'Point your camera at a handwritten prescription to decode it.' },
+  { icon: 'handoff',      en: 'Doctor handoff QR',      urdu: 'ڈاکٹر کو خلاصہ',   desc: 'Generate a QR your doctor scans to see your full history.' },
+  { icon: 'location',     en: 'Nearby clinics & labs',  urdu: 'قریبی مراکز',       desc: 'Find hospitals, blood banks, and pharmacies near you.' },
+  { icon: 'pk',           en: 'Built for Pakistan',     urdu: 'پاکستانی طبی حالات',desc: 'Dengue, typhoid, malaria patterns. Local disease context built in.' },
+  { icon: 'memory',       en: 'Remembers your history', urdu: 'پرانی گفتگو یاد',   desc: 'Past symptoms and medicines are recalled in every new session.' },
+  { icon: 'safety',       en: 'Medicine safety checks', urdu: 'ادویات کی جانچ',    desc: 'Flags drug interactions, allergy risks, and pregnancy warnings.' },
 ]
 
 const STEPS = [
-  {
-    en: 'Describe what\'s wrong',
-    urdu: 'تکلیف بتائیں',
-    detail: 'One sentence in any language. Voice or text — your choice.',
-  },
-  {
-    en: 'Answer a few questions',
-    urdu: 'چند سوالوں کے جواب',
-    detail: 'Nabz asks only what matters. Never more than five questions.',
-  },
-  {
-    en: 'Get a clear next step',
-    urdu: 'واضح فیصلہ',
-    detail: 'Home care, see a doctor, or call emergency — stated plainly.',
-  },
+  { en: 'Describe what\'s wrong',    urdu: 'تکلیف بتائیں',          detail: 'One sentence in any language. Voice or text — your choice.' },
+  { en: 'Answer a few questions',    urdu: 'چند سوالوں کے جواب',    detail: 'Nabz asks only what matters. Never more than five questions.' },
+  { en: 'Get a clear next step',     urdu: 'واضح فیصلہ',            detail: 'Home care, see a doctor, or call emergency — stated plainly.' },
 ]
 
 function Icon({ name, className = '' }) {
@@ -87,9 +60,6 @@ function Icon({ name, className = '' }) {
     play:         <path d="M8 5v14l11-7L8 5Z"/>,
     check:        <><path d="M20 6 9 17l-5-5"/></>,
     mic:          <><path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M5.5 10.5v.7a6.5 6.5 0 0 0 13 0v-.7"/></>,
-    lock:         <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
-    star:         <><path d="M12 2l3 6 6 .9-4.5 4.3 1 6.3L12 16.9 6.5 19.5l1-6.3L3 8.9 9 8l3-6z"/></>,
-    sparkle:      <><path d="M9.5 2.5 11 7l4.5 1.5L11 10l-1.5 4.5L8 10l-4.5-1.5L8 7z"/><path d="M16 14l.8 2.5L19 17.2l-2.2.8-.8 2.5-.8-2.5-2.2-.8 2.2-.8z"/></>,
   }
   return (
     <svg
@@ -143,7 +113,7 @@ export default function LandingPage() {
               Log in
             </button>
           )}
-          <button className="nb-btn-clay" onClick={openChat}>
+          <button className="nb-btn-marigold" onClick={openChat}>
             {account ? 'Open Nabz' : 'Start free'}
             <Icon name="arrow" />
           </button>
@@ -153,75 +123,97 @@ export default function LandingPage() {
       <main>
 
         {/* ── HERO ── */}
-        <section className="nb-hero">
-          {/* watermark Urdu word behind the copy — the signature element */}
-          <span className="nb-hero-wm urdu" aria-hidden="true">نبض</span>
+        <div className="nb-hero-wrap">
+          <div className="nb-hero-inner">
 
-          <div className="nb-hero-copy">
-            <p className="nb-eyebrow">Urdu-first · Pakistan · Free</p>
-            <h1 className="nb-h1">
-              Describe your symptoms.<br />
-              Get a clear answer.
-            </h1>
-            <p className="nb-hero-ur urdu" dir="rtl">
-              اپنی تکلیف بتائیں — واضح مشورہ ملے گا۔
-            </p>
-            <p className="nb-hero-sub">
-              Nabz listens in Urdu, asks the right questions, and tells you exactly
-              what to do — in under two minutes.
-            </p>
-            <div className="nb-hero-actions">
-              <button className="nb-btn-clay nb-btn-lg" onClick={openChat}>
-                {account ? 'Open Nabz' : 'Start for free'}
-                <Icon name="arrow" />
-              </button>
-              <button
-                className="nb-btn-outline"
-                onClick={() => document.querySelector('#demo')?.scrollIntoView({ behavior: 'smooth' })}
-              >
-                <Icon name="play" />
-                Watch 30-second demo
-              </button>
+            <div className="nb-hero-copy">
+              <span className="nb-eyebrow">
+                <span className="nb-pulse-dot" />
+                دیہی و دور دراز پاکستان کے لیے · صرف آواز سے
+              </span>
+
+              <h1 className="nb-h1">
+                بس بولیں،<br />
+                <span className="nb-accent">نبض</span> سمجھے گا۔
+              </h1>
+
+              <p className="nb-hero-en">
+                Voice-first health guidance in Urdu — built for every village,
+                every basic phone, every family.
+              </p>
+
+              <p className="nb-hero-reassure">
+                نہ لکھنا پڑے، نہ پڑھنا پڑے — بس اپنی زبان میں بولیں۔
+              </p>
+
+              <div className="nb-hero-actions">
+                <button className="nb-btn-marigold nb-btn-lg" onClick={openChat}>
+                  {account ? 'Open Nabz' : 'مفت شروع کریں'}
+                  <Icon name="arrow" />
+                </button>
+                <button
+                  className="nb-btn-ghost-dark nb-btn-lg"
+                  onClick={() => document.querySelector('#demo')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                  <Icon name="play" />
+                  مظاہرہ دیکھیں
+                </button>
+              </div>
+
+              <div className="nb-trust-strip">
+                {[
+                  'کم انٹرنیٹ پر بھی چلے',
+                  'پورا خاندان، ایک جگہ',
+                  'نجی اور محفوظ',
+                ].map((t) => (
+                  <div className="nb-trust-item" key={t}>
+                    <Icon name="check" />
+                    <span>{t}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="nb-hero-phone">
-            <div className="nb-phone-shell">
-              <div className="nb-phone-notch" />
-              <div className="nb-phone-screen">
-                <div className="nb-phone-header">
-                  <span className="nb-phone-logo urdu" dir="rtl">نبض</span>
-                  <span className="nb-phone-session">Guest session</span>
-                </div>
-                <div className="nb-phone-chat">
-                  <div className="nb-chat-prompt urdu" dir="rtl">
-                    <strong>آج آپ کی طبیعت کیسی ہے؟</strong>
-                    <small>How are you feeling today?</small>
+            {/* phone mockup */}
+            <div className="nb-hero-phone-col">
+              <div className="nb-phone-shell">
+                <div className="nb-phone-notch" />
+                <div className="nb-phone-screen">
+                  <div className="nb-phone-header">
+                    <span className="nb-phone-logo urdu" dir="rtl">نبض</span>
+                    <span className="nb-phone-session">Guest session</span>
                   </div>
-                  <div className="nb-chat-bubble nb-chat-user urdu" dir="rtl">
-                    مجھے بخار اور سر درد ہے
+                  <div className="nb-phone-chat">
+                    <div className="nb-chat-prompt" dir="rtl">
+                      <strong>آج آپ کی طبیعت کیسی ہے؟</strong>
+                      <small>How are you feeling today?</small>
+                    </div>
+                    <div className="nb-chat-bubble nb-chat-user" dir="rtl">
+                      مجھے بخار اور سر درد ہے
+                    </div>
+                    <div className="nb-chat-bubble nb-chat-bot">
+                      <span className="urdu" dir="rtl">کب سے یہ تکلیف ہے؟</span>
+                      <small>How long has this been going on?</small>
+                    </div>
+                    <div className="nb-chat-bubble nb-chat-user" dir="rtl">
+                      تین دن سے
+                    </div>
+                    <div className="nb-chat-typing">
+                      <span /><span /><span />
+                    </div>
                   </div>
-                  <div className="nb-chat-bubble nb-chat-bot">
-                    <span className="urdu" dir="rtl">کب سے یہ تکلیف ہے؟</span>
-                    <small>How long has this been going on?</small>
+                  <div className="nb-phone-input">
+                    <Icon name="mic" className="nb-phone-mic" />
+                    <span className="urdu" dir="rtl">بولیں یا لکھیں</span>
                   </div>
-                  <div className="nb-chat-bubble nb-chat-user urdu" dir="rtl">
-                    تین دن سے
-                  </div>
-                  <div className="nb-chat-typing">
-                    <span /><span /><span />
-                  </div>
-                </div>
-                <div className="nb-phone-input">
-                  <Icon name="mic" className="nb-phone-mic" />
-                  <span className="urdu" dir="rtl">بولیں یا لکھیں</span>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
 
-        {/* ── SOCIAL PROOF STRIP ── */}
+          </div>
+        </div>
+
+        {/* ── PROOF STRIP ── */}
         <div className="nb-proof-strip">
           <div><strong>Urdu</strong><span>native language</span></div>
           <div className="nb-proof-div" aria-hidden="true" />
@@ -235,8 +227,9 @@ export default function LandingPage() {
         {/* ── VIDEO DEMO ── */}
         <section className="nb-section nb-demo-section" id="demo">
           <div className="nb-section-head">
-            <h2 className="nb-h2">See it in 30 seconds</h2>
-            <p className="nb-section-ur urdu" dir="rtl">۳۰ سیکنڈ میں دیکھیں</p>
+            <span className="nb-label">See it in 30 seconds</span>
+            <h2 className="nb-h2-ur">۳۰ سیکنڈ میں دیکھیں</h2>
+            <p className="nb-section-en">Hear how a real conversation with Nabz sounds — no typing required.</p>
           </div>
           <div className="nb-video-wrap">
             <video
@@ -255,15 +248,14 @@ export default function LandingPage() {
         {/* ── HOW IT WORKS ── */}
         <section className="nb-section nb-how-section" id="how">
           <div className="nb-section-head">
-            <p className="nb-label">THE PROCESS</p>
-            <h2 className="nb-h2">Three steps. Two minutes.</h2>
-            <p className="nb-section-ur urdu" dir="rtl">تین قدم — دو منٹ</p>
+            <span className="nb-label">How it works</span>
+            <h2 className="nb-h2-ur">تین آسان قدم</h2>
+            <p className="nb-section-en">From a spoken worry to a clear next step — in under a minute.</p>
           </div>
           <div className="nb-steps">
             {STEPS.map((s, i) => (
               <div className="nb-step" key={i}>
                 <div className="nb-step-num">{i + 1}</div>
-                <div className="nb-step-connector" aria-hidden="true" />
                 <h3 className="nb-step-en">{s.en}</h3>
                 <p className="nb-step-ur urdu" dir="rtl">{s.urdu}</p>
                 <p className="nb-step-detail">{s.detail}</p>
@@ -272,26 +264,24 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ============ VAULT SHOWCASE ============ */}
-        <section className="nb-vault-section" id="vault">
+        {/* ── VAULT SHOWCASE ── */}
+        <section id="vault" className="nb-vault-section">
           <div className="nb-vault-inner">
 
             <div className="nb-vault-copy">
               <p className="nb-label nb-label-marigold">FAMILY MEDICAL VAULT</p>
-              <h2 className="nb-h2 nb-h2-light">
-                Every document.<br/>Always with you.
+              <h2 className="nb-vault-copy .nb-h2-ur" style={{ fontFamily: 'var(--font-ur)', fontSize: 'clamp(1.5rem,3vw,2.2rem)', fontWeight: 600, color: 'var(--cream)', direction: 'rtl', lineHeight: 1.7, margin: '0 0 8px' }}>
+                ہر دستاویز، ہمیشہ آپ کے ساتھ
               </h2>
-              <p className="nb-vault-ur urdu" dir="rtl">خاندانی صحت والٹ — تمام رپورٹس ایک جگہ</p>
               <p className="nb-vault-lead">
                 Upload once. Nabz reads, summarizes, and remembers every medical
                 document — so your whole health history is in every conversation,
                 without you having to repeat yourself.
               </p>
-
               <div className="nb-vault-doc-types">
                 {VAULT_DOCS.map((d) => (
                   <div className="nb-vault-doc-type" key={d.type}>
-                    <div className={`nb-vault-doc-ico nb-vault-ico-${d.type}`}>
+                    <div className="nb-vault-doc-ico">
                       <span>{d.emoji}</span>
                     </div>
                     <div className="nb-vault-doc-body">
@@ -320,8 +310,8 @@ export default function LandingPage() {
                   {[
                     { emoji: '🩻', name: 'Chest X-ray — July 2024',  date: '12 Jul', badge: 'analyzed', ai: 'No abnormalities found. Lungs clear.' },
                     { emoji: '🧪', name: 'CBC Blood Test',            date: '3 Jun',  badge: 'flagged',  ai: '⚠ Haemoglobin low — 10.8 g/dL' },
-                    { emoji: '📋', name: "Dr. Asif's prescription",   date: '1 Jun',  badge: 'analyzed', ai: 'Amoxicillin 500mg, twice daily, 7 days.' },
-                    { emoji: '🧠', name: 'Brain MRI report',          date: '15 May', badge: 'new',       ai: null },
+                    { emoji: '📋', name: "Dr. Asif's prescription",   date: '1 Jun',  badge: 'analyzed', ai: 'Amoxicillin 500mg, twice daily.' },
+                    { emoji: '🧠', name: 'Brain MRI report',          date: '15 May', badge: 'new',      ai: null },
                     { emoji: '📸', name: 'Skin rash — right arm',     date: '2 May',  badge: 'analyzed', ai: 'Possible contact dermatitis.' },
                   ].map((doc, i) => (
                     <div className="nb-vault-row" key={i}>
@@ -368,12 +358,12 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── HERO FEATURES (3 large cards) ── */}
+        {/* ── FEATURES ── */}
         <section className="nb-section nb-hero-features-section" id="features">
           <div className="nb-section-head">
-            <p className="nb-label">WHAT IT DOES</p>
-            <h2 className="nb-h2">Everything your family needs</h2>
-            <p className="nb-section-ur urdu" dir="rtl">مکمل صحت کا نظام</p>
+            <span className="nb-label">What it does</span>
+            <h2 className="nb-h2-ur">پورے گھر کی صحت، ایک جگہ</h2>
+            <p className="nb-section-en">Twelve features working quietly behind one simple conversation.</p>
           </div>
 
           <div className="nb-hero-features">
@@ -389,7 +379,6 @@ export default function LandingPage() {
             ))}
           </div>
 
-          {/* secondary feature grid — no hover tricks, direct display */}
           <div className="nb-feat-grid">
             {ALL_FEATURES.map((f) => (
               <div className="nb-feat" key={f.icon}>
@@ -411,25 +400,16 @@ export default function LandingPage() {
           <div className="nb-safety-inner">
             <div className="nb-safety-copy">
               <p className="nb-label nb-label-light">SAFETY FIRST</p>
-              <h2 className="nb-h2 nb-h2-light">Helpful. Honest. Safe.</h2>
+              <h2 className="nb-h2">Helpful. Honest. Safe.</h2>
               <p className="nb-section-ur nb-section-ur-light urdu" dir="rtl">مددگار، ذمہ دار، محفوظ</p>
               <p className="nb-safety-lead">
                 Nabz is not a replacement for a doctor. It helps you understand
                 what's happening and decide when to seek care.
               </p>
               <ul className="nb-safety-list">
-                <li>
-                  <Icon name="check" className="nb-check-icon" />
-                  <span>Only WHO/FDA-verified drug data</span>
-                </li>
-                <li>
-                  <Icon name="check" className="nb-check-icon" />
-                  <span>Automatic allergy and pregnancy checks</span>
-                </li>
-                <li>
-                  <Icon name="check" className="nb-check-icon" />
-                  <span>Escalates to emergency services when symptoms are serious</span>
-                </li>
+                <li><Icon name="check" className="nb-check-icon" /><span>Only WHO/FDA-verified drug data</span></li>
+                <li><Icon name="check" className="nb-check-icon" /><span>Automatic allergy and pregnancy checks</span></li>
+                <li><Icon name="check" className="nb-check-icon" /><span>Escalates to emergency services when symptoms are serious</span></li>
               </ul>
             </div>
 
@@ -449,11 +429,13 @@ export default function LandingPage() {
         {/* ── FINAL CTA ── */}
         <section className="nb-final-cta">
           <div className="nb-final-inner">
-            <p className="nb-label">FREE · NO ACCOUNT REQUIRED</p>
-            <h2 className="nb-h2">Tell Nabz how you feel.</h2>
+            <p className="nb-label" style={{ color: 'var(--leaf)' }}>FREE · NO ACCOUNT REQUIRED</p>
+            <h2 className="nb-h1" style={{ fontSize: 'clamp(1.8rem,4vw,3rem)', marginBottom: 0 }}>
+              بس بولیں،<br /><span className="nb-accent">نبض</span> سمجھے گا۔
+            </h2>
             <p className="nb-final-ur urdu" dir="rtl">آج اپنی تکلیف بتائیں — اپنی زبان میں</p>
-            <button className="nb-btn-clay nb-btn-lg" onClick={openChat}>
-              {account ? 'Open Nabz' : 'Start for free'}
+            <button className="nb-btn-marigold nb-btn-lg" onClick={openChat}>
+              {account ? 'Open Nabz' : 'مفت شروع کریں'}
               <Icon name="arrow" />
             </button>
           </div>
@@ -462,7 +444,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="nb-footer">
-        <button className="nb-brand nb-brand-sm" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+        <button className="nb-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
           <span className="nb-brand-pulse"><Icon name="pulse" /></span>
           <span className="nb-brand-name">
             <strong className="urdu" dir="rtl">نبض</strong>
