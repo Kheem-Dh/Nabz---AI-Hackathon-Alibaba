@@ -1,27 +1,109 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-// Feature list — Urdu-primary, English secondary. Urdu written as a
-// Pakistani would actually speak it, not a literal English translation.
 const FEATURES = [
-  { icon: 'voice',        tag: 'VOICE',        urdu: 'اردو میں بولیں',                  en: 'Talk in your language' },
-  { icon: 'photo',        tag: 'PHOTO',        urdu: 'تصویر بھیجیں',                    en: 'Send a photo' },
-  { icon: 'family',       tag: 'FAMILY',       urdu: 'ہر فرد کا الگ ریکارڈ',            en: 'Separate family records' },
-  { icon: 'vault',        tag: 'VAULT',        urdu: 'رپورٹس محفوظ',                    en: 'Vault your reports' },
-  { icon: 'lab',          tag: 'LAB',          urdu: 'لیب رپورٹ سمجھیں',                 en: 'Explain lab values' },
-  { icon: 'prescription', tag: 'RX',           urdu: 'نسخہ اسکین',                      en: 'Scan a prescription' },
-  { icon: 'handoff',      tag: 'HANDOFF',      urdu: 'ڈاکٹر ہینڈ آف',                   en: 'Doctor QR handoff' },
-  { icon: 'location',     tag: 'NEARBY',       urdu: 'قریبی مراکز',                     en: 'Nearby care' },
-  { icon: 'pk',           tag: 'PK CONTEXT',   urdu: 'پاکستانی وباؤں کا خیال',         en: 'PK-context ranking' },
-  { icon: 'memory',       tag: 'MEMORY',       urdu: 'پرانی گفتگو یاد',                 en: 'Cross-session memory' },
-  { icon: 'safety',       tag: 'SAFETY',       urdu: 'ادویات کی جانچ',                  en: 'Medication safety' },
-  { icon: 'emergency',    tag: 'EMERGENCY',    urdu: '۱۱۲۲ ایک ٹیپ',                    en: 'Rescue 1122 one tap' },
+  {
+    icon: 'voice',
+    tag: 'VOICE',
+    en: 'Describe symptoms by voice',
+    urdu: 'آواز میں بتائیں',
+    desc: 'Speak naturally in Urdu, Roman Urdu, or English. No typing required.',
+  },
+  {
+    icon: 'photo',
+    tag: 'PHOTO',
+    en: 'Send a photo for analysis',
+    urdu: 'تصویر بھیجیں',
+    desc: 'Upload a rash, wound, or prescription image — Nabz reads it.',
+  },
+  {
+    icon: 'family',
+    tag: 'FAMILY',
+    en: 'Separate record for every member',
+    urdu: 'ہر فرد کا الگ ریکارڈ',
+    desc: 'One account covers the whole family. Each person keeps their own history.',
+  },
+  {
+    icon: 'vault',
+    tag: 'VAULT',
+    en: 'Store reports and prescriptions',
+    urdu: 'رپورٹس اور نسخے محفوظ',
+    desc: 'Upload documents once. Access them any time, share with any doctor.',
+  },
+  {
+    icon: 'lab',
+    tag: 'LAB',
+    en: 'Understand your lab results',
+    urdu: 'لیب رپورٹ سمجھیں',
+    desc: 'Plain-language explanation of blood tests, urine reports, and more.',
+  },
+  {
+    icon: 'prescription',
+    tag: 'RX',
+    en: 'Scan a prescription',
+    urdu: 'نسخہ اسکین کریں',
+    desc: 'Point your camera at a handwritten prescription — Nabz reads and explains it.',
+  },
+  {
+    icon: 'handoff',
+    tag: 'HANDOFF',
+    en: 'Share a summary with your doctor',
+    urdu: 'ڈاکٹر کو خلاصہ بھیجیں',
+    desc: 'Generate a secure QR code your doctor scans to see your full history.',
+  },
+  {
+    icon: 'location',
+    tag: 'NEARBY',
+    en: 'Find nearby clinics and hospitals',
+    urdu: 'قریبی مراکز تلاش کریں',
+    desc: 'Ranked by your location. Includes blood banks, labs, and pharmacies.',
+  },
+  {
+    icon: 'pk',
+    tag: 'PK',
+    en: 'Built for Pakistani health context',
+    urdu: 'پاکستانی طبی حالات',
+    desc: 'Dengue, typhoid, malaria patterns. Local disease prevalence factored in.',
+  },
+  {
+    icon: 'memory',
+    tag: 'MEMORY',
+    en: 'Remembers your history',
+    urdu: 'پرانی گفتگو یاد',
+    desc: 'Past symptoms and medicines are recalled in every new conversation.',
+  },
+  {
+    icon: 'safety',
+    tag: 'SAFETY',
+    en: 'Checks medicine safety automatically',
+    urdu: 'ادویات کی جانچ',
+    desc: 'Flags drug interactions, allergy risks, and pregnancy warnings.',
+  },
+  {
+    icon: 'emergency',
+    tag: 'EMERGENCY',
+    en: 'Escalates emergencies automatically',
+    urdu: 'ہنگامی حالت میں فوری اقدام',
+    desc: 'When symptoms are serious, Nabz tells you to call 1122 immediately.',
+  },
 ]
 
 const STEPS = [
-  { n: '۱', urdu: 'تکلیف بتائیں',            en: 'Tell us what is wrong' },
-  { n: '۲', urdu: 'اہم سوالوں کے جواب دیں', en: 'Answer focused questions' },
-  { n: '۳', urdu: 'واضح مشورہ لیں',           en: 'Get a clear next step' },
+  {
+    en: 'Describe what\'s wrong',
+    urdu: 'تکلیف بتائیں',
+    detail: 'Speak or type in any language. One sentence is enough to start.',
+  },
+  {
+    en: 'Answer a few focused questions',
+    urdu: 'چند سوالوں کے جواب دیں',
+    detail: 'Nabz asks only what matters — never more than five questions.',
+  },
+  {
+    en: 'Get a clear next step',
+    urdu: 'واضح مشورہ ملے گا',
+    detail: 'Home care, see a doctor, or go to emergency — stated plainly.',
+  },
 ]
 
 function Icon({ name }) {
@@ -60,19 +142,15 @@ export default function LandingPage() {
           <span><b className="urdu">نبض</b><small>NABZ</small></span>
         </button>
         <nav aria-label="Navigation" className="landing-nav-links">
-          <a href="#demo"><span className="urdu" dir="rtl">ڈیمو</span><small>Demo</small></a>
-          <a href="#how"><span className="urdu" dir="rtl">طریقہ</span><small>How it works</small></a>
-          <a href="#features"><span className="urdu" dir="rtl">خصوصیات</span><small>Features</small></a>
-          <a href="#safety"><span className="urdu" dir="rtl">حفاظت</span><small>Safety</small></a>
+          <a href="#demo">Demo</a>
+          <a href="#how">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#safety">Safety</a>
         </nav>
         <div className="landing-nav-actions">
-          {!account && <button className="landing-login" onClick={() => openAuth('login')}><span className="urdu" dir="rtl">لاگ اِن</span></button>}
+          {!account && <button className="landing-login" onClick={() => openAuth('login')}>Log in</button>}
           <button className="landing-nav-cta" onClick={openChat}>
-            {account ? (
-              <><span className="urdu" dir="rtl">گفتگو کھولیں</span></>
-            ) : (
-              <><span className="urdu" dir="rtl">ابھی آزمائیں</span></>
-            )}
+            {account ? 'Open Nabz' : 'Try free'}
             <Icon name="arrow" />
           </button>
         </div>
@@ -82,19 +160,20 @@ export default function LandingPage() {
         {/* ============ HERO ============ */}
         <section className="landing-hero landing-hero-v2">
           <div className="landing-hero-copy">
-            <h1 className="urdu urdu-hero-xl" dir="rtl">پورے گھر کی صحت،<br/>ایک ہی جگہ۔</h1>
-            <p className="landing-hero-en">Your family's health, in one place.</p>
-            <p className="landing-lead urdu" dir="rtl">
-              اپنی زبان میں بات کریں۔ نبض ڈاکٹر کی طرح سوچے گا، مشورہ دے گا۔
+            <p className="lp-eyebrow">Urdu-first health guide for Pakistan</p>
+            <h1 className="lp-hero-en">Your family's health,<br/>in one place.</h1>
+            <p className="lp-hero-ur urdu" dir="rtl">پورے گھر کی صحت — ایک ہی جگہ</p>
+            <p className="landing-lead">
+              Describe symptoms by voice in Urdu. Nabz asks the right questions and tells you exactly what to do next.
             </p>
-            <p className="landing-lead-en">Voice-first health guide in Urdu.</p>
+            <p className="landing-lead-ur urdu" dir="rtl">آواز میں بتائیں، واضح مشورہ ملے گا۔</p>
             <div className="landing-hero-actions">
               <button className="landing-primary" onClick={openChat}>
-                <span className="urdu" dir="rtl">{account ? 'کھولیں' : 'ابھی شروع کریں'}</span>
+                {account ? 'Open Nabz' : 'Start for free'}
                 <Icon name="arrow" />
               </button>
               <button className="landing-secondary" onClick={() => document.querySelector('#demo')?.scrollIntoView({ behavior: 'smooth' })}>
-                <Icon name="play" /> <span className="urdu" dir="rtl">ڈیمو</span>
+                <Icon name="play" /> Watch demo
               </button>
             </div>
           </div>
@@ -129,8 +208,8 @@ export default function LandingPage() {
         {/* ============ VIDEO DEMO ============ */}
         <section className="landing-section landing-video-section" id="demo">
           <div className="landing-section-head">
-            <h2 className="urdu urdu-h2" dir="rtl">۳۰ سیکنڈ میں دیکھیں</h2>
-            <p className="landing-en-sub">See it in 30 seconds.</p>
+            <h2 className="lp-section-en">See it in 30 seconds</h2>
+            <p className="lp-section-ur urdu" dir="rtl">۳۰ سیکنڈ میں دیکھیں</p>
           </div>
           <div className="landing-video-frame">
             <video
@@ -144,32 +223,51 @@ export default function LandingPage() {
               <p className="urdu" dir="rtl">آپ کا براؤزر ویڈیو نہیں چلا سکتا۔</p>
             </video>
             <div className="landing-video-caption">
-              <span className="urdu" dir="rtl">🔊 آواز آن کریں</span>
-              <small>Turn sound on</small>
+              <span>🔊 Turn sound on</span>
+              <small className="urdu" dir="rtl">آواز آن کریں</small>
             </div>
           </div>
         </section>
 
         {/* ============ TRUST STRIP ============ */}
-        <section className="landing-trust landing-trust-v2" aria-label="Nabz stats">
-          <div><strong>3</strong><span className="urdu" dir="rtl">زبانیں</span></div>
-          <div><strong>12+</strong><span className="urdu" dir="rtl">خصوصیات</span></div>
-          <div><strong>5</strong><span className="urdu" dir="rtl">سوال زیادہ سے زیادہ</span></div>
-          <div><strong>WHO/FDA</strong><span className="urdu" dir="rtl">تصدیق شدہ</span></div>
+        <section className="landing-trust landing-trust-v2" aria-label="Nabz at a glance">
+          <div>
+            <strong>3</strong>
+            <span>Languages</span>
+            <small className="urdu" dir="rtl">زبانیں</small>
+          </div>
+          <div>
+            <strong>12+</strong>
+            <span>Features</span>
+            <small className="urdu" dir="rtl">خصوصیات</small>
+          </div>
+          <div>
+            <strong>≤ 5</strong>
+            <span>Questions per session</span>
+            <small className="urdu" dir="rtl">سوال زیادہ سے زیادہ</small>
+          </div>
+          <div>
+            <strong>WHO/FDA</strong>
+            <span>Drug database</span>
+            <small className="urdu" dir="rtl">تصدیق شدہ ادویات</small>
+          </div>
         </section>
 
         {/* ============ HOW IT WORKS ============ */}
         <section className="landing-section steps-section" id="how">
           <div className="landing-section-head">
-            <h2 className="urdu urdu-h2" dir="rtl">تین آسان قدم</h2>
-            <p className="landing-en-sub">How it works.</p>
+            <h2 className="lp-section-en">How it works</h2>
+            <p className="lp-section-ur urdu" dir="rtl">تین آسان قدم</p>
           </div>
-          <div className="landing-steps">
-            {STEPS.map((s) => (
-              <article className="landing-step" key={s.n}>
-                <span className="step-number urdu" dir="rtl">{s.n}</span>
-                <h3 className="urdu" dir="rtl">{s.urdu}</h3>
-                <small className="step-en">{s.en}</small>
+          <div className="landing-steps lp-steps">
+            {STEPS.map((s, i) => (
+              <article className="landing-step lp-step" key={i}>
+                <span className="lp-step-num">{i + 1}</span>
+                <div className="lp-step-body">
+                  <h3 className="lp-step-en">{s.en}</h3>
+                  <p className="lp-step-ur urdu" dir="rtl">{s.urdu}</p>
+                  <p className="lp-step-detail">{s.detail}</p>
+                </div>
               </article>
             ))}
           </div>
@@ -178,15 +276,22 @@ export default function LandingPage() {
         {/* ============ FEATURES ============ */}
         <section className="landing-section features-section" id="features">
           <div className="landing-section-head compact">
-            <h2 className="urdu urdu-h2" dir="rtl">پورا ہیلتھ ورک اسپیس</h2>
-            <p className="landing-en-sub">A full health workspace.</p>
+            <h2 className="lp-section-en">Everything in one place</h2>
+            <p className="lp-section-ur urdu" dir="rtl">مکمل صحت کا نظام</p>
+            <p className="lp-section-desc">Hover any card to learn what it does.</p>
           </div>
-          <div className="landing-feature-grid landing-feature-grid-v2 landing-feature-grid-mini">
+          <div className="lp-feature-grid">
             {FEATURES.map((f) => (
-              <article className="landing-feature landing-feature-mini" key={f.tag}>
-                <div className="feature-icon"><Icon name={f.icon} /></div>
-                <h3 className="urdu feature-mini-urdu" dir="rtl">{f.urdu}</h3>
-                <small className="feature-mini-en">{f.en}</small>
+              <article className="lp-feat-card" key={f.tag}>
+                <div className="lp-feat-front">
+                  <div className="lp-feat-icon"><Icon name={f.icon} /></div>
+                  <h3 className="lp-feat-en">{f.en}</h3>
+                  <p className="lp-feat-ur urdu" dir="rtl">{f.urdu}</p>
+                </div>
+                <div className="lp-feat-back">
+                  <p className="lp-feat-desc">{f.desc}</p>
+                  <p className="lp-feat-back-ur urdu" dir="rtl">{f.urdu}</p>
+                </div>
               </article>
             ))}
           </div>
@@ -195,35 +300,38 @@ export default function LandingPage() {
         {/* ============ SAFETY ============ */}
         <section className="landing-safety" id="safety">
           <div className="safety-copy">
-            <h2 className="urdu urdu-h2" dir="rtl">مددگار، ذمہ دار</h2>
-            <p className="landing-en-sub">Helpful. Honest.</p>
+            <h2 className="lp-section-en">Helpful. Honest. Safe.</h2>
+            <p className="lp-section-ur urdu" dir="rtl">مددگار، ذمہ دار</p>
+            <p className="safety-lead">
+              Nabz is not a replacement for a doctor. It helps you understand what's happening and decide when to seek care.
+            </p>
             <p className="urdu safety-urdu-lead" dir="rtl">
               نبض ڈاکٹر کا متبادل نہیں۔ سنگین علامات پر فوراً ایمرجنسی کی سمت بتاتا ہے۔
             </p>
             <ul>
-              <li><Icon name="shield" /> <span className="urdu" dir="rtl">صرف WHO/FDA سے تصدیق شدہ ادویات</span></li>
-              <li><Icon name="shield" /> <span className="urdu" dir="rtl">الرجی اور حمل کی خودکار جانچ</span></li>
-              <li><Icon name="shield" /> <span className="urdu" dir="rtl">سنگین علامات پر ۱۱۲۲</span></li>
+              <li><Icon name="shield" /> <span>Only WHO/FDA-verified drug data</span><small className="urdu" dir="rtl">صرف تصدیق شدہ ادویات</small></li>
+              <li><Icon name="shield" /> <span>Automatic allergy and pregnancy checks</span><small className="urdu" dir="rtl">الرجی اور حمل کی جانچ</small></li>
+              <li><Icon name="shield" /> <span>Escalates to emergency services when symptoms are serious</span><small className="urdu" dir="rtl">سنگین علامات پر فوری اقدام</small></li>
             </ul>
           </div>
           <div className="safety-card">
             <span className="safety-card-icon"><Icon name="emergency" /></span>
-            <h3 className="urdu" dir="rtl">ہنگامی حالت؟</h3>
-            <p className="urdu" dir="rtl">
-              فوراً <strong>۱۱۲۲</strong> ملائیں یا نزدیکی ایمرجنسی جائیں۔
-            </p>
-            <button onClick={openChat}><span className="urdu" dir="rtl">نبض کھولیں</span> <Icon name="arrow" /></button>
+            <h3>Emergency?</h3>
+            <p className="urdu" dir="rtl">ہنگامی حالت؟</p>
+            <p>Call <strong>1122</strong> or go to your nearest emergency room immediately.</p>
+            <p className="urdu" dir="rtl">فوراً <strong>۱۱۲۲</strong> ملائیں یا نزدیکی ایمرجنسی جائیں۔</p>
+            <button onClick={openChat}>Open Nabz <Icon name="arrow" /></button>
           </div>
         </section>
 
         {/* ============ FINAL CTA ============ */}
         <section className="landing-final-cta">
           <div>
-            <h2 className="urdu urdu-h2" dir="rtl">آج اپنی تکلیف بتائیں</h2>
-            <p className="urdu" dir="rtl">اپنی زبان میں۔ مفت۔</p>
+            <h2>Describe how you feel today.</h2>
+            <p className="urdu" dir="rtl">آج اپنی تکلیف بتائیں — اپنی زبان میں — مفت۔</p>
           </div>
           <button className="landing-primary" onClick={openChat}>
-            <span className="urdu" dir="rtl">{account ? 'کھولیں' : 'مفت آزمائیں'}</span>
+            {account ? 'Open Nabz' : 'Start for free'}
             <Icon name="arrow" />
           </button>
         </section>
@@ -232,10 +340,10 @@ export default function LandingPage() {
       <footer className="landing-footer">
         <div className="landing-brand footer-brand">
           <span className="landing-brand-mark"><Icon name="pulse" /></span>
-          <span><b className="urdu">نبض</b><small>NABZ · <span className="urdu" dir="rtl">آپ کی آواز، آپ کی صحت</span></small></span>
+          <span><b className="urdu">نبض</b><small>NABZ · Your voice, your health</small></span>
         </div>
-        <p className="urdu" dir="rtl">عام مشورہ ہے۔ ہنگامی حالت میں ۱۱۲۲۔</p>
-        <button onClick={() => navigate('/privacy')}><span className="urdu" dir="rtl">پرائیویسی</span></button>
+        <p>General health guidance only. For emergencies call 1122.</p>
+        <button onClick={() => navigate('/privacy')}>Privacy</button>
       </footer>
     </div>
   )
