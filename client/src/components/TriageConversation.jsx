@@ -44,6 +44,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   const lastRequestRef = useRef(null)
   const [waitSeconds, setWaitSeconds] = useState(0)
   const [streamStage, setStreamStage] = useState(null) // {stage, message, latency_ms?}
+  const [pendingVoiceText, setPendingVoiceText] = useState('')
   const streamCtrlRef = useRef(null)
 
   const processing = ['starting', 'thinking', 'analyzing-image'].includes(phase)
@@ -58,6 +59,10 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     }, 1000)
     return () => window.clearInterval(timer)
   }, [processing])
+
+  useEffect(() => {
+    if (['result', 'error'].includes(phase)) setPendingVoiceText('')
+  }, [phase])
 
   function beginRequest() {
     requestControllerRef.current?.abort()
@@ -109,9 +114,10 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
       submittedRef.current = true
       const text = speech.transcript.trim()
       const answeringQuestion = phase === 'answering-voice'
+      setPendingVoiceText(text)
       speech.reset()
-      if (answeringQuestion) doAnswer(text)
-      else doStart(withInitialAttachment(text))
+      if (answeringQuestion) doAnswer(text, { fromVoice: true })
+      else doStart(withInitialAttachment(text), { fromVoice: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speech.listening, speech.transcript, phase])
@@ -122,8 +128,9 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     setStreamStage(null)
   }
 
-  async function doStart(text) {
+  async function doStart(text, { fromVoice = false } = {}) {
     if (!text || !text.trim()) return
+    if (!fromVoice) setPendingVoiceText('')
     tts.prime()
     tts.cancel()
     setPhase('starting')
@@ -170,8 +177,9 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     })
   }
 
-  async function doAnswer(text) {
+  async function doAnswer(text, { fromVoice = false } = {}) {
     if (!text || !text.trim()) return
+    if (!fromVoice) setPendingVoiceText('')
     // A selected answer ends the current assistant turn immediately. Cancel
     // its audio before the network request so it never speaks over the next
     // question or the processing state.
@@ -344,6 +352,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     setTurn(null)
     setSessionId(null)
     setTyped('')
+    setPendingVoiceText('')
     setInitialAttachment(null)
     setAttachError('')
     selectClinicalImage(null)
@@ -352,7 +361,9 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   }
 
   // --- Idle: capture the first symptom -----------------------------------
-  if (phase === 'idle') {
+  if (phase === 'idle' || phase === 'listening') {
+    const listeningInitial = phase === 'listening'
+    const recordingInitial = listeningInitial && speech.listening
     return (
       <div className="q-card triage-start-card">
         {error && <div className="notice notice-warn">{error}</div>}
@@ -382,14 +393,14 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
         <div className="voice-first-start">
           <div className="voice-start-rings" aria-hidden="true"><i /><i /></div>
           <MicButton
-            listening={false}
+            listening={recordingInitial}
             disabled={!speech.supported}
-            onClick={startVoice}
+            onClick={() => (listeningInitial ? speech.stop() : startVoice())}
           />
           <div className="voice-first-copy">
-            <strong>Start with your voice</strong>
-            <span className="urdu">مائیک دبائیں اور آرام سے اپنی بات بتائیں</span>
-            <small>{speech.backend === 'live' ? 'Live transcript as you speak' : 'Secure cloud transcription after recording'}</small>
+            <strong>{recordingInitial ? 'Listening — tap to finish and send' : listeningInitial ? 'Preparing your words…' : 'Start with your voice'}</strong>
+            <span className="urdu">{recordingInitial ? 'اپنی بات مکمل ہونے پر مائیک دوبارہ دبائیے' : listeningInitial ? 'آپ کی آواز کو تحریر میں بدلا جا رہا ہے…' : 'مائیک دبائیں اور آرام سے اپنی بات بتائیں'}</span>
+            <small>{recordingInitial ? 'آپ کے الفاظ نیچے ساتھ ساتھ دکھائی دے رہے ہیں' : listeningInitial ? 'Your question will be sent automatically' : (speech.backend === 'live' ? 'Live transcript as you speak' : 'Secure cloud transcription after recording')}</small>
           </div>
         </div>
 
@@ -402,12 +413,14 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           }}
         >
           <textarea
-            className="urdu"
+            className={`urdu ${listeningInitial ? 'voice-transcript-field' : ''}`}
             dir="auto"
             rows={3}
-            placeholder="اپنی علامات تفصیل سے لکھیں…  Describe your symptoms naturally"
-            value={typed}
+            placeholder={listeningInitial ? 'سن رہا ہوں…' : 'اپنی علامات تفصیل سے لکھیں…  Describe your symptoms naturally'}
+            value={listeningInitial ? speech.transcript : typed}
             onChange={(e) => setTyped(e.target.value)}
+            readOnly={listeningInitial}
+            aria-live={listeningInitial ? 'polite' : undefined}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey && (typed.trim() || initialAttachment)) {
                 e.preventDefault()
@@ -425,9 +438,9 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           )}
           {attachError && <div className="care-attachment-error" role="alert">{attachError}</div>}
           <footer>
-            <button className="care-tool" type="button" onClick={startVoice} disabled={!speech.supported}>
+            <button className={`care-tool ${listeningInitial ? 'recording' : ''}`} type="button" onClick={() => (listeningInitial ? speech.stop() : startVoice())} disabled={!speech.supported}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 10.5v.7a6.5 6.5 0 0 0 13 0v-.7M12 17.7V21" /></svg>
-              Speak
+              {listeningInitial ? 'Done & send' : 'Speak'}
             </button>
             <label className={`care-tool ${attaching ? 'busy' : ''}`} title="Attach a clinical image or PDF">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 5.8-5.8a3 3 0 0 1 4.2 4.2l-7.3 7.3a5 5 0 0 1-7.1-7.1l7.1-7.1" /></svg>
@@ -435,42 +448,11 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
               <input type="file" hidden accept="image/*,.pdf,application/pdf" onChange={chooseInitialAttachment} />
             </label>
             <span>{speech.backend === 'live' ? 'Live transcript in Chrome' : 'Transcript appears after Done'} · Enter to send</span>
-            <button className="care-send" type="submit" disabled={!typed.trim() && !initialAttachment} aria-label="Send">
+            <button className="care-send" type="submit" disabled={listeningInitial || (!typed.trim() && !initialAttachment)} aria-label="Send">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 16-8-5 16-3-6-8-2Zm8 2 8-10" /></svg>
             </button>
           </footer>
         </form>
-      </div>
-    )
-  }
-
-  // --- Listening (initial symptom) ---------------------------------------
-  if (phase === 'listening' || phase === 'answering-voice') {
-    return (
-      <div className="q-card">
-        <div className="voice-capture-meta">
-          <span className="voice-live-dot" />
-          {speech.backend === 'live' ? 'Live Urdu transcript' : 'Secure Urdu voice recording'}
-        </div>
-        <MicButton listening onClick={() => speech.stop()} />
-        <p className="hero-hint-ur urdu" style={{ marginTop: 12 }}>
-          آرام سے پوری بات بتائیں — نبض آپ کے رکنے کا انتظار کرے گا۔
-        </p>
-        <p className="hero-hint-en">
-          Speak naturally — words appear below while you talk.
-          Tap <strong>Done speaking</strong> to send automatically.
-        </p>
-        <div className="live-transcript urdu" dir="auto" style={{ marginTop: 12 }}>
-          {speech.transcript || <span className="placeholder">…</span>}
-        </div>
-        <div className="btn-row" style={{ marginTop: 12 }}>
-          <button className="btn btn-primary" onClick={() => speech.stop()}>
-            Done &amp; send · مکمل کرکے بھیجیں
-          </button>
-          <button className="btn btn-outline" onClick={reset}>
-            منسوخ · Cancel
-          </button>
-        </div>
       </div>
     )
   }
@@ -485,6 +467,12 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     const active = streamIdx >= 0 ? streamIdx : rampIdx
     return (
       <div className="assessment-thinking" role="status" aria-live="polite">
+        {pendingVoiceText && (
+          <div className="authed-voice-pending">
+            <p className="urdu" dir="auto">{pendingVoiceText}</p>
+            <small className="urdu" dir="rtl">آپ کی بات مل گئی ہے ✓</small>
+          </div>
+        )}
         <div className="thinking-mark"><div className="spinner" /></div>
         <span className="thinking-kicker">PRIVATE CLINICAL REASONING</span>
         <p className="cs-ur urdu">
@@ -558,6 +546,12 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   return (
     <div className="conv">
       {error && <div className="notice notice-warn">{error}</div>}
+      {pendingVoiceText && (
+        <div className="authed-voice-pending authed-voice-message">
+          <p className="urdu" dir="auto">{pendingVoiceText}</p>
+          <small className="urdu" dir="rtl">آپ کا جواب ✓</small>
+        </div>
+      )}
       <div className="q-card">
         <div className="q-card-meta">
           <div className={`ai-source-badge ${turn.response_source || 'live_ai'}`}>
@@ -638,17 +632,34 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
 
         {!turn.image_request && <div className="chips">
           {(turn.quick_replies || []).map((qr, i) => (
-            <button key={i} className="chip" onClick={() => doAnswer(qr.urdu)}>
+            <button type="button" key={i} className="chip" disabled={answeringByVoice} onClick={() => doAnswer(qr.urdu)}>
               {qr.urdu}
               <span className="chip-en">{qr.english}</span>
             </button>
           ))}
+          {speech.supported && (
+            <button
+              type="button"
+              className={`chip chip-voice-answer ${answeringByVoice ? 'recording' : ''}`}
+              onClick={() => (answeringByVoice ? speech.stop() : answerVoice())}
+            >
+              <span className="chip-voice-icon" aria-hidden="true">{answeringByVoice ? '■' : '🎤'}</span>
+              <span className="urdu">{answeringByVoice ? 'مکمل کرکے بھیجیں' : 'اپنے الفاظ میں بتائیے'}</span>
+              <span className="chip-en">{answeringByVoice ? 'Finish and send' : 'Answer by voice'}</span>
+            </button>
+          )}
         </div>}
       </div>
 
       {!turn.image_request && <div className="claude-composer compact-composer">
+        {answeringByVoice && (
+          <div className="inline-voice-status" role="status">
+            <span className="voice-live-dot" />
+            <span className="urdu" dir="rtl">{speech.listening ? 'سن رہا ہوں — مکمل ہونے پر دوبارہ مائیک دبائیے' : 'آپ کی آواز کو تحریر میں بدلا جا رہا ہے…'}</span>
+          </div>
+        )}
         <textarea
-          className="urdu"
+          className={`urdu ${answeringByVoice ? 'voice-transcript-field' : ''}`}
           dir="auto"
           rows={2}
           placeholder={answeringByVoice ? speech.transcript || 'سن رہے ہیں…' : 'یا یہاں جواب لکھیں…'}
@@ -660,13 +671,15 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
               doAnswer(typed)
             }
           }}
-          disabled={answeringByVoice}
+          readOnly={answeringByVoice}
+          aria-live={answeringByVoice ? 'polite' : undefined}
         />
         <footer>
         {speech.supported && (
           <button
+            type="button"
             className={`mini-mic ${answeringByVoice && speech.listening ? 'listening' : ''}`}
-            onClick={() => (answeringByVoice && speech.listening ? speech.stop() : answerVoice())}
+            onClick={() => (answeringByVoice ? speech.stop() : answerVoice())}
             aria-label="Answer by voice"
           >
             {answeringByVoice && speech.listening ? '⏹' : '🎤'}

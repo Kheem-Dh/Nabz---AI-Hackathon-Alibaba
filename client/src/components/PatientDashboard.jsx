@@ -38,14 +38,16 @@ export default function PatientDashboard({ profile, onOpenVault, onOpenSummary }
 
   const counts = Object.entries(dashboard.document_counts || {})
   const maxDocumentCount = Math.max(1, ...counts.map(([, count]) => count))
+  const nameLength = String(dashboard.patient_name || '').length
+  const nameSizeClass = nameLength > 30 ? 'is-very-long' : nameLength > 18 ? 'is-long' : ''
 
   return (
     <section className="patient-dashboard">
       <div className="pd-head">
         <div>
           <div className="pd-eyebrow">PRIVATE HEALTH VIEW</div>
-          <div className="pd-name">{dashboard.patient_name}&apos;s health record</div>
-          <div className="pd-name-ur urdu" lang="ur">{dashboard.patient_name} کا صحت ریکارڈ</div>
+          <div className={`pd-name ${nameSizeClass}`}>{dashboard.patient_name}&apos;s health record</div>
+          <div className={`pd-name-ur urdu ${nameSizeClass}`} lang="ur">{dashboard.patient_name} کا صحت ریکارڈ</div>
           <div className="pd-meta">
             {[dashboard.age != null ? `${dashboard.age} yrs` : null, dashboard.gender, dashboard.blood_group]
               .filter(Boolean)
