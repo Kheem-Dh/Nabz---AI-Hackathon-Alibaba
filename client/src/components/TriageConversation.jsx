@@ -90,13 +90,14 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   // Auto-speak each new assistant turn once.
   useEffect(() => {
     if (!turn) return
-    const key = `${turn.session_id}:${turn.type}:${turn.analysis?.questions_asked}`
+    const spokenText = turn.type === 'question' ? turn.question_urdu : turn.advice_urdu
+    const key = `${turn.session_id}:${turn.type}:${spokenText || ''}`
     const text = turn.type === 'question' ? turn.question_urdu : turn.advice_urdu
     if (text && spokenRef.current !== key) {
       spokenRef.current = key
-      tts.speak(text)
+      tts.speak(text, { lang: 'ur' })
     }
-  }, [turn, tts])
+  }, [turn, tts.speak])
 
   // When listening stops with a transcript, move the user into a REVIEW state
   // so they can edit / confirm / retry before we send anything.
@@ -123,6 +124,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
 
   async function doStart(text) {
     if (!text || !text.trim()) return
+    tts.prime()
     tts.cancel()
     setPhase('starting')
     setError('')
@@ -173,6 +175,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     // A selected answer ends the current assistant turn immediately. Cancel
     // its audio before the network request so it never speaks over the next
     // question or the processing state.
+    tts.prime()
     tts.cancel()
     setPhase('thinking')
     setError('')
@@ -297,6 +300,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   function answerVoice() {
     if (!speech.supported) return
     tts.cancel()
+    tts.prime()
     submittedRef.current = false
     speech.start()
     setPhase('answering-voice')

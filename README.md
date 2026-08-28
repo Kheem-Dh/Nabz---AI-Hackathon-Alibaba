@@ -278,7 +278,7 @@ The DashScope API key and JWT secret stay on the backend. They are never sent to
 | Routing | **React Router v6** | Client-side navigation, deep-linkable handoff pages |
 | State | Context + hooks (no Redux) | Small app, clear ownership per feature |
 | Voice input | Cloud STT via `MediaRecorder` → `/api/voice/transcribe` (Qwen3.5-Omni), `webkitSpeechRecognition` fallback | Real Urdu accuracy Chrome can't match |
-| Voice output | Open-source **MMS-TTS** neural voice (`facebook/mms-tts-urd-script_arabic`, `/api/tts`) with automatic gTTS + browser `SpeechSynthesis` fallback | Real Urdu neural TTS, not a formant/wrapper engine |
+| Voice output | **Qwen3.5-Omni** Urdu audio (`/api/tts`) with gTTS + exact-language browser fallback | Natural Pakistani Urdu without substituting Arabic or Hindi voices |
 | QR generation | `qrcode` npm package (client-side SVG) | Zero-cost doctor handoff QRs |
 | Styling | Plain CSS + custom design tokens (`--radius-*`, `--shadow-*`, `--focus-ring`) | Full control, no runtime cost |
 | PWA | Manifest + service worker + PNG icons + apple-touch-icon | Installable on Android/iOS home screen |
@@ -303,7 +303,7 @@ The DashScope API key and JWT secret stay on the backend. They are never sent to
 | Text triage | **Alibaba Qwen3.7-plus** (DashScope) | **OpenAI `gpt-4o`** | Quota, auth, rate-limit, timeout, or unrepairable JSON |
 | Image analysis | **Qwen-VL** | **OpenAI `gpt-4o` vision** | Same triggers |
 | Audio STT | **Qwen3.5-Omni** | (browser `webkitSpeechRecognition`) | Server unavailable |
-| TTS | Open-source **MMS-TTS** (Urdu neural voice) | Server gTTS → browser `SpeechSynthesis` | MMS model can't load (e.g. low-memory host) |
+| TTS | **Qwen3.5-Omni** Urdu audio | Server gTTS → exact Urdu browser voice | Provider unavailable or not configured |
 
 - Fallback is **automatic and audited** — every call is logged with `provider`, `model`, `tokens`, `cost_microusd`, `fallback_reason` in the Admin ledger. Never fabricates a response.
 - **Per-user USD cap** — registered account $1.00, guest session $0.30 (env-overridable). Reservation → provider call → reconcile. Concurrent-safe via atomic `UPDATE ... WHERE used + reserved + amount <= limit`. Cap exhaustion returns `AIBudgetExceeded` before any provider is called.

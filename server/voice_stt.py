@@ -27,7 +27,9 @@ logger = logging.getLogger("nabz.voice.stt")
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 
 MAX_AUDIO_BYTES = 15 * 1024 * 1024  # 15 MB — ~2 min of Opus at 128 kbps
-_OMNI_MODEL = os.getenv("NABZ_STT_MODEL", "qwen-omni-turbo")
+# The legacy qwen-omni-turbo only supports Chinese/English audio input.
+# Qwen3.5-Omni explicitly supports Urdu and mixed Urdu/English speech.
+_OMNI_MODEL = os.getenv("NABZ_STT_MODEL", "qwen3.5-omni-plus")
 
 _ACCEPTED_MIMES = {
     "audio/webm", "audio/ogg", "audio/opus", "audio/mp4", "audio/mpeg",
@@ -88,7 +90,7 @@ async def transcribe(
 
     api_key = os.getenv("DASHSCOPE_API_KEY", "").strip()
     if not api_key:
-        return _mock_urdu_transcript(lang)
+        raise HTTPException(status_code=503, detail="voice_transcription_unavailable")
 
     fmt = _MIME_TO_FORMAT.get(content_type) or (
         "wav" if (file.filename or "").lower().endswith(".wav")
@@ -131,15 +133,24 @@ async def transcribe(
             ],
             temperature=0.0,
             modalities=["text"],
+            stream=True,
+            stream_options={"include_usage": True},
         )
-        raw = (completion.choices[0].message.content or "").strip()
+        parts: list[str] = []
+        for chunk in completion:
+            if chunk.choices and chunk.choices[0].delta.content:
+                parts.append(chunk.choices[0].delta.content)
+        raw = "".join(parts).strip()
+        if not raw:
+            raise RuntimeError("speech model returned an empty transcript")
     except Exception as exc:  # noqa: BLE001
         logger.error("Cloud STT failed (model=%s): %s", _OMNI_MODEL, exc, exc_info=True)
-        # Fall back to mock so the UI still gets a placeholder rather than crashing.
-        m = _mock_urdu_transcript(lang)
-        return TranscriptOut(
-            transcript=m.transcript, language=m.language, provider="mock",
-        )
+        # Never fabricate a patient's words in live mode. The frontend keeps
+        # the recording flow recoverable and lets the user retry or type.
+        raise HTTPException(
+            status_code=503,
+            detail="voice_transcription_failed",
+        ) from exc
 
     return TranscriptOut(transcript=raw, language=lang, provider="cloud")
 

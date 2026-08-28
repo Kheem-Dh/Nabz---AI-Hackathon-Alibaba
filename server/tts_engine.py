@@ -1,26 +1,19 @@
-"""Urdu text-to-speech: a real neural voice, with a safe fallback.
+"""Natural Urdu text-to-speech with exact-language fallbacks.
 
-Meta's MMS-TTS (facebook/mms-tts-urd) is an open-source VITS-based model
-trained specifically on Urdu — a genuine neural voice, not the older
-formant/wrapper approach gTTS uses. It is loaded lazily (first Urdu request
-only, never at app startup) and cached in memory for the life of the
-process. Any failure — missing torch, out-of-memory, a slow/failed model
-download — falls back to gTTS automatically so the endpoint never breaks in
-a resource-constrained deployment; it just degrades to what was already
-working.
+Qwen3.5-Omni is preferred in live mode because it supports spoken Urdu and
+produces a much more natural Pakistani-Urdu reading than the older MMS voice.
+gTTS is the network fallback. Meta MMS remains available only as an explicit
+opt-in because its Urdu checkpoint can sound unnatural for clinical prose.
 
 NABZ_TTS_ENGINE controls this:
-  auto  (default) — try MMS for Urdu, fall back to gTTS on any failure
-  mms   — MMS only, no fallback (fails loudly so you notice in dev)
-  gtts  — skip MMS entirely, use gTTS for everything (small/low-memory hosts)
-
-Operational note: the MMS checkpoint (~145 MB) downloads into the Hugging
-Face cache on first use. On a host without a persistent disk (e.g. a free
-Render instance that respins), this download repeats after every redeploy
-or spin-down/wake cycle, adding a one-time delay to the first Urdu request.
+  auto  (default) — Qwen3.5-Omni for live Urdu, then gTTS
+  qwen  — Qwen3.5-Omni only (fails loudly if unavailable)
+  gtts  — gTTS only
+  mms   — legacy local MMS only (explicit opt-in)
 """
 from __future__ import annotations
 
+import base64
 import io
 import logging
 import os
@@ -34,7 +27,14 @@ logger = logging.getLogger("nabz.tts")
 _MMS_MODEL_ID = "facebook/mms-tts-urd-script_arabic"
 _mms_model = None
 _mms_tokenizer = None
-_mms_load_failed = False
+_qwen_failed = False
+
+_DASHSCOPE_BASE_URL = os.getenv(
+    "DASHSCOPE_BASE_URL",
+    "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+).strip()
+_QWEN_TTS_MODEL = os.getenv("NABZ_TTS_MODEL", "qwen3.5-omni-plus").strip()
+_QWEN_TTS_VOICE = os.getenv("NABZ_TTS_VOICE", "Tina").strip()
 
 
 def _engine_mode() -> str:
@@ -78,6 +78,69 @@ def _synthesize_mms(text: str) -> bytes:
     return buf.getvalue()
 
 
+def _pcm16_to_wav(pcm: bytes, sample_rate: int = 24000) -> bytes:
+    """Wrap mono 16-bit PCM returned by Qwen in a browser-safe WAV file."""
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(pcm)
+    return buf.getvalue()
+
+
+def _synthesize_qwen_urdu(text: str) -> bytes:
+    """Read *text* in Urdu using Qwen3.5-Omni's multilingual audio output."""
+    api_key = os.getenv("DASHSCOPE_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("DASHSCOPE_API_KEY is not configured")
+
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=api_key,
+        base_url=_DASHSCOPE_BASE_URL,
+        timeout=45,
+    )
+    stream = client.chat.completions.create(
+        model=_QWEN_TTS_MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a text-to-speech reader. Read the supplied text "
+                    "exactly as written, without answering, translating, "
+                    "paraphrasing, or adding words. Speak in natural Pakistani "
+                    "Urdu at a calm, clear, moderate pace."
+                ),
+            },
+            {"role": "user", "content": text},
+        ],
+        modalities=["text", "audio"],
+        audio={"voice": _QWEN_TTS_VOICE, "format": "wav"},
+        stream=True,
+        stream_options={"include_usage": True},
+    )
+
+    chunks: list[str] = []
+    for chunk in stream:
+        if not chunk.choices:
+            continue
+        audio = getattr(chunk.choices[0].delta, "audio", None)
+        if not audio:
+            continue
+        data = audio.get("data", "") if isinstance(audio, dict) else getattr(audio, "data", "")
+        if data:
+            chunks.append(data)
+
+    if not chunks:
+        raise RuntimeError("Qwen returned no audio")
+    pcm = base64.b64decode("".join(chunks))
+    if not pcm:
+        raise RuntimeError("Qwen returned empty audio")
+    return _pcm16_to_wav(pcm)
+
+
 def _synthesize_gtts(text: str, gtts_lang: str) -> tuple[bytes, str]:
     from gtts import gTTS
 
@@ -89,25 +152,27 @@ def _synthesize_gtts(text: str, gtts_lang: str) -> tuple[bytes, str]:
 def synthesize(text: str, lang: str) -> tuple[bytes, str]:
     """Return (audio_bytes, content_type) for the given text and language.
 
-    Only Urdu gets the MMS neural voice — English/Hindi keep gTTS, since a
-    separate MMS checkpoint per language is out of scope for now.
+    Urdu prefers Qwen3.5-Omni in auto mode. English/Hindi continue to use
+    gTTS. The legacy MMS voice is used only when explicitly requested.
     """
-    global _mms_load_failed
+    global _qwen_failed
     mode = _engine_mode()
     gtts_lang = {"ur": "ur", "hi": "hi", "en": "en"}.get(lang, "ur")
 
-    want_mms = lang == "ur" and mode in {"auto", "mms"} and not _mms_load_failed
-    if want_mms:
+    if lang == "ur" and mode in {"auto", "qwen"} and not _qwen_failed:
         try:
-            audio = _synthesize_mms(text)
+            audio = _synthesize_qwen_urdu(text)
             return audio, "audio/wav"
         except Exception as exc:  # noqa: BLE001
-            if mode == "mms":
+            if mode == "qwen":
                 raise
-            _mms_load_failed = True
+            _qwen_failed = True
             logger.warning(
-                "MMS-TTS unavailable (%s: %s) — falling back to gTTS for this process",
+                "Qwen Urdu TTS unavailable (%s: %s) — using gTTS for this process",
                 type(exc).__name__, exc,
             )
+
+    if lang == "ur" and mode == "mms":
+        return _synthesize_mms(text), "audio/wav"
 
     return _synthesize_gtts(text, gtts_lang)

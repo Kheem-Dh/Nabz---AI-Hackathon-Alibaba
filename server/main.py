@@ -173,10 +173,9 @@ def tts_endpoint(
 ) -> Response:
     """Return real spoken audio for `text`.
 
-    Urdu uses the MMS-TTS neural voice (server/tts_engine.py) with an
-    automatic fallback to gTTS if that model can't load in this environment.
-    English/Hindi use gTTS. The frontend tries this endpoint first and only
-    falls back to the browser's own speech synthesis if it fails.
+    Live Urdu uses Qwen3.5-Omni speech with a gTTS fallback. English/Hindi use
+    gTTS. The frontend tries this endpoint first and only uses a browser voice
+    when an exact language match is installed.
     """
     key = (lang, text)
     if key in _TTS_CACHE:

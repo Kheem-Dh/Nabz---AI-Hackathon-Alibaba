@@ -210,15 +210,39 @@ export default function GuestChatPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const controllerRef = useRef(null)
+  const spokenTurnRef = useRef('')
+  const spokenFollowupRef = useRef('')
   const endRef = useRef(null)
   const resultRef = useRef(null)
   const fileRef = useRef(null)
   const tts = useTextToSpeech()
   const speech = useSpeechRecognition({ lang: 'ur-PK', silenceMs: 4500 })
 
+  const assistantItems = messages.filter((item) => item.role === 'assistant')
   const currentTurn = [...messages].reverse().find((item) => item.role === 'assistant')?.turn || null
   const resultTurn = currentTurn?.type === 'result' ? currentTurn : null
   const started = Boolean(stateToken || messages.length)
+
+  // Every newly returned assessment question is read once. The previous user
+  // click primes the shared audio element, so this also works on mobile Safari
+  // after the network request has completed.
+  useEffect(() => {
+    if (!currentTurn || currentTurn.type !== 'question' || !currentTurn.question_urdu) return
+    const key = `${stateToken}:${assistantItems.length}:${currentTurn.question_urdu}`
+    if (spokenTurnRef.current === key) return
+    spokenTurnRef.current = key
+    tts.speak(currentTurn.question_urdu, { lang: 'ur' })
+  }, [assistantItems.length, currentTurn, stateToken, tts.speak])
+
+  useEffect(() => {
+    const latest = followups[followups.length - 1]
+    const text = latest?.answer?.answer_urdu
+    if (!text) return
+    const key = `${followups.length}:${text}`
+    if (spokenFollowupRef.current === key) return
+    spokenFollowupRef.current = key
+    tts.speak(text, { lang: 'ur' })
+  }, [followups, tts.speak])
 
   useEffect(() => {
     if (!stateToken) return
@@ -266,6 +290,7 @@ export default function GuestChatPage() {
       setError('Please confirm the temporary-session privacy note before starting.')
       return
     }
+    tts.prime()
     tts.cancel()
     setBusy(true)
     setError('')
@@ -290,6 +315,7 @@ export default function GuestChatPage() {
 
   async function answer(text, display = null) {
     if (!stateToken || !text.trim() || busy) return
+    tts.prime()
     tts.cancel()
     setBusy(true)
     setError('')
@@ -324,6 +350,7 @@ export default function GuestChatPage() {
       : ''
     const question = [attachmentContext, typedQuestion].filter(Boolean).join('\n')
     if (!question || !stateToken || busy) return
+    tts.prime()
     tts.cancel()
     setBusy(true)
     setError('')
@@ -407,6 +434,7 @@ export default function GuestChatPage() {
     }
     setError('')
     tts.cancel()
+    tts.prime()
     if (speech.listening) speech.stop()
     else speech.start()
   }
@@ -446,13 +474,13 @@ export default function GuestChatPage() {
     setFollowupText('')
     setDraftAttachment(null)
     setError('')
+    spokenTurnRef.current = ''
+    spokenFollowupRef.current = ''
     setConsent(false)
     speech.reset()
     sessionStorage.removeItem(STORAGE_KEY)
     if (oldToken) clearGuestTriage(oldToken).catch(() => {})
   }
-
-  const assistantItems = messages.filter((item) => item.role === 'assistant')
 
   return (
     <div className="guest-chat-page">

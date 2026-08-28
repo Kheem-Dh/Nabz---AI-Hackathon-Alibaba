@@ -4,11 +4,28 @@
 // poorly. The active audio element is module-global so the header can stop
 // speech started from any page or component.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 const SPEECH_STATE_EVENT = 'nabz:speech-state'
 let activeAudio = null
+let sharedAudio = null
+let audioPrimed = false
+
+// A few silent PCM samples in a valid WAV container. Playing this from the
+// user's first click blesses the shared media element on Safari/iOS, allowing
+// the next server-generated question to play after the async API response.
+const SILENT_WAV =
+  'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAACAgICA'
+
+function getSharedAudio() {
+  if (!sharedAudio && typeof Audio !== 'undefined') {
+    sharedAudio = new Audio()
+    sharedAudio.preload = 'auto'
+    sharedAudio.playsInline = true
+  }
+  return sharedAudio
+}
 
 function emitSpeechState(speaking) {
   if (typeof window !== 'undefined') {
@@ -38,17 +55,18 @@ function ttsUrl(text, lang = 'ur') {
   return `${API_BASE}/api/tts?lang=${encodeURIComponent(lang)}&text=${encodeURIComponent(clipped)}`
 }
 
-function pickVoice(voices) {
+function pickVoice(voices, lang) {
   if (!voices || voices.length === 0) return null
-  const byLang = (prefix) =>
-    voices.find((voice) => (voice.lang || '').toLowerCase().startsWith(prefix))
-  return byLang('ur') || byLang('ar') || byLang('hi') || null
+  const prefix = lang === 'en' ? 'en' : 'ur'
+  return voices.find((voice) =>
+    (voice.lang || '').toLowerCase().startsWith(prefix),
+  ) || null
 }
 
 export function useTextToSpeech() {
   const synthSupported = typeof window !== 'undefined' && 'speechSynthesis' in window
   const [speaking, setSpeaking] = useState(false)
-  const voiceRef = useRef(null)
+  const voicesRef = useRef([])
 
   useEffect(() => {
     const updateState = (event) => setSpeaking(Boolean(event.detail?.speaking))
@@ -59,7 +77,7 @@ export function useTextToSpeech() {
   useEffect(() => {
     if (!synthSupported) return undefined
     const load = () => {
-      voiceRef.current = pickVoice(window.speechSynthesis.getVoices())
+      voicesRef.current = window.speechSynthesis.getVoices()
     }
     load()
     window.speechSynthesis.addEventListener?.('voiceschanged', load)
@@ -74,12 +92,17 @@ export function useTextToSpeech() {
     try {
       window.speechSynthesis.cancel()
       const utterance = new SpeechSynthesisUtterance(text)
-      const voice = voiceRef.current
+      const voice = pickVoice(voicesRef.current, lang)
       if (voice) {
         utterance.voice = voice
         utterance.lang = voice.lang
+      } else if (lang !== 'en') {
+        // Never substitute Arabic or Hindi for Urdu. Those voices can read the
+        // script but pronounce Pakistani Urdu incorrectly and sound alarming.
+        emitSpeechState(false)
+        return
       } else {
-        utterance.lang = lang === 'en' ? 'en-US' : 'ur-PK'
+        utterance.lang = 'en-US'
       }
       utterance.rate = 0.9
       utterance.onstart = () => emitSpeechState(true)
@@ -96,7 +119,15 @@ export function useTextToSpeech() {
     if (!text) return
     stopAllSpeech()
 
-    const audio = new Audio(ttsUrl(text, lang))
+    const audio = getSharedAudio()
+    if (!audio) {
+      browserSpeak(text, lang)
+      return
+    }
+    audio.pause()
+    audio.muted = false
+    audio.src = ttsUrl(text, lang)
+    audio.load()
     let fallbackStarted = false
     const useBrowserFallback = () => {
       if (fallbackStarted || activeAudio !== audio) return
@@ -114,8 +145,29 @@ export function useTextToSpeech() {
     audio.play().catch(useBrowserFallback)
   }, [browserSpeak])
 
-  const prime = useCallback(() => {}, [])
+  const prime = useCallback(() => {
+    if (audioPrimed) return
+    const audio = getSharedAudio()
+    if (!audio) return
+    const oldMuted = audio.muted
+    audio.muted = true
+    audio.src = SILENT_WAV
+    const attempt = audio.play()
+    Promise.resolve(attempt)
+      .then(() => {
+        audio.pause()
+        audio.currentTime = 0
+        audio.muted = oldMuted
+        audioPrimed = true
+      })
+      .catch(() => {
+        audio.muted = oldMuted
+      })
+  }, [])
   const cancel = useCallback(() => stopAllSpeech(), [])
 
-  return { supported: true, speaking, speak, prime, cancel }
+  return useMemo(
+    () => ({ supported: true, speaking, speak, prime, cancel }),
+    [speaking, speak, prime, cancel],
+  )
 }
