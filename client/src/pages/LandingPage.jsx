@@ -34,6 +34,21 @@ const ALL_FEATURES = [
   { icon: 'safety',       en: 'Medicine safety checks',    urdu: 'ادویات کی جانچ',            desc: 'Flags drug interactions, allergy risks, and pregnancy warnings.' },
 ]
 
+const VAULT_DOCS = [
+  { emoji: '🩻', type: 'xray',         en: 'X-ray',           urdu: 'ایکس رے',         badge: 'analyzed', desc: 'Chest, bone, spine — Nabz reads the report and explains findings in plain Urdu.' },
+  { emoji: '🧪', type: 'lab',          en: 'Lab report',      urdu: 'لیب رپورٹ',        badge: 'flagged',  desc: 'CBC, HbA1c, thyroid, urine — flags abnormal values and what they might mean.' },
+  { emoji: '📋', type: 'prescription', en: 'Prescription',    urdu: 'نسخہ',             badge: 'analyzed', desc: 'Handwritten or printed — decodes medicine names, doses, and timing in Urdu.' },
+  { emoji: '🧠', type: 'mri',          en: 'MRI / CT scan',   urdu: 'ایم آر آئی / سی ٹی', badge: 'new',   desc: 'Uploads the report text so Nabz can reference it during any future consultation.' },
+  { emoji: '📸', type: 'skin',         en: 'Skin photo',      urdu: 'جلدی تصویر',       badge: 'analyzed', desc: 'Rash, wound, or growth — described and tracked over time for changes.' },
+  { emoji: '📄', type: 'other',        en: 'Other document',  urdu: 'دیگر دستاویز',     badge: 'analyzed', desc: 'Discharge summaries, specialist letters — stored and surfaced when relevant.' },
+]
+
+const VAULT_POINTS = [
+  { icon: 'shield',  en: 'Private by design', urdu: 'نجی اور محفوظ',          detail: 'Each family member has a separate, encrypted vault. Nothing is shared without your permission.' },
+  { icon: 'memory',  en: 'Remembered forever', urdu: 'ہمیشہ یاد رہتا ہے',      detail: 'Nabz references your past documents in every new conversation — no re-uploading.' },
+  { icon: 'handoff', en: 'Share with any doctor', urdu: 'کسی بھی ڈاکٹر سے شیئر', detail: 'Generate a QR code that gives your doctor an instant, complete medical summary.' },
+]
+
 const STEPS = [
   {
     en: 'Describe what\'s wrong',
@@ -72,6 +87,9 @@ function Icon({ name, className = '' }) {
     play:         <path d="M8 5v14l11-7L8 5Z"/>,
     check:        <><path d="M20 6 9 17l-5-5"/></>,
     mic:          <><path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M5.5 10.5v.7a6.5 6.5 0 0 0 13 0v-.7"/></>,
+    lock:         <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
+    star:         <><path d="M12 2l3 6 6 .9-4.5 4.3 1 6.3L12 16.9 6.5 19.5l1-6.3L3 8.9 9 8l3-6z"/></>,
+    sparkle:      <><path d="M9.5 2.5 11 7l4.5 1.5L11 10l-1.5 4.5L8 10l-4.5-1.5L8 7z"/><path d="M16 14l.8 2.5L19 17.2l-2.2.8-.8 2.5-.8-2.5-2.2-.8 2.2-.8z"/></>,
   }
   return (
     <svg
@@ -114,6 +132,7 @@ export default function LandingPage() {
 
         <nav className="nb-nav-links" aria-label="Page sections">
           <a href="#how">How it works</a>
+          <a href="#vault">Vault</a>
           <a href="#features">Features</a>
           <a href="#safety">Safety</a>
         </nav>
@@ -250,6 +269,102 @@ export default function LandingPage() {
                 <p className="nb-step-detail">{s.detail}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ============ VAULT SHOWCASE ============ */}
+        <section className="nb-vault-section" id="vault">
+          <div className="nb-vault-inner">
+
+            <div className="nb-vault-copy">
+              <p className="nb-label nb-label-marigold">FAMILY MEDICAL VAULT</p>
+              <h2 className="nb-h2 nb-h2-light">
+                Every document.<br/>Always with you.
+              </h2>
+              <p className="nb-vault-ur urdu" dir="rtl">خاندانی صحت والٹ — تمام رپورٹس ایک جگہ</p>
+              <p className="nb-vault-lead">
+                Upload once. Nabz reads, summarizes, and remembers every medical
+                document — so your whole health history is in every conversation,
+                without you having to repeat yourself.
+              </p>
+
+              <div className="nb-vault-doc-types">
+                {VAULT_DOCS.map((d) => (
+                  <div className="nb-vault-doc-type" key={d.type}>
+                    <div className={`nb-vault-doc-ico nb-vault-ico-${d.type}`}>
+                      <span>{d.emoji}</span>
+                    </div>
+                    <div className="nb-vault-doc-body">
+                      <div className="nb-vault-doc-labels">
+                        <strong>{d.en}</strong>
+                        <span className="nb-vault-doc-ur urdu" dir="rtl">{d.urdu}</span>
+                      </div>
+                      <p className="nb-vault-doc-desc">{d.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="nb-vault-visual">
+              <div className="nb-vault-card">
+                <div className="nb-vault-card-head">
+                  <div className="nb-vault-card-title">
+                    <Icon name="vault" className="nb-vault-head-icon" />
+                    <span>Ahmad's Vault</span>
+                  </div>
+                  <small>6 documents · all private</small>
+                </div>
+
+                <div className="nb-vault-doc-list">
+                  {[
+                    { emoji: '🩻', name: 'Chest X-ray — July 2024',  date: '12 Jul', badge: 'analyzed', ai: 'No abnormalities found. Lungs clear.' },
+                    { emoji: '🧪', name: 'CBC Blood Test',            date: '3 Jun',  badge: 'flagged',  ai: '⚠ Haemoglobin low — 10.8 g/dL' },
+                    { emoji: '📋', name: "Dr. Asif's prescription",   date: '1 Jun',  badge: 'analyzed', ai: 'Amoxicillin 500mg, twice daily, 7 days.' },
+                    { emoji: '🧠', name: 'Brain MRI report',          date: '15 May', badge: 'new',       ai: null },
+                    { emoji: '📸', name: 'Skin rash — right arm',     date: '2 May',  badge: 'analyzed', ai: 'Possible contact dermatitis.' },
+                  ].map((doc, i) => (
+                    <div className="nb-vault-row" key={i}>
+                      <span className="nb-vault-thumb">{doc.emoji}</span>
+                      <div className="nb-vault-row-info">
+                        <strong>{doc.name}</strong>
+                        {doc.ai
+                          ? <span className="nb-vault-ai">{doc.ai}</span>
+                          : <span className="nb-vault-pending">AI analysis in progress…</span>
+                        }
+                      </div>
+                      <span className={`nb-vault-badge nb-vault-badge-${doc.badge}`}>
+                        {doc.badge === 'analyzed' ? '✓' : doc.badge === 'flagged' ? '⚠' : '●'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="nb-vault-points">
+                  {VAULT_POINTS.map((p) => (
+                    <div className="nb-vault-point" key={p.en}>
+                      <div className="nb-vault-point-ico">
+                        <Icon name={p.icon} />
+                      </div>
+                      <div className="nb-vault-point-body">
+                        <strong>{p.en}</strong>
+                        <span className="nb-vault-point-ur urdu" dir="rtl">{p.urdu}</span>
+                        <p>{p.detail}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="nb-vault-cta-row">
+                <button className="nb-btn-marigold nb-btn-lg" onClick={openChat}>
+                  {account ? 'Open your Vault' : 'Start your Vault — free'}
+                  <Icon name="arrow" />
+                </button>
+                <span className="nb-vault-cta-note">No account needed to try Nabz</span>
+              </div>
+            </div>
+
           </div>
         </section>
 
