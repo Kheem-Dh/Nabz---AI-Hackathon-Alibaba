@@ -1,9 +1,13 @@
 """Authentication routes — register, login, /me, and phone/email verification."""
 from __future__ import annotations
 
+import os
+import threading
+import time
+from collections import defaultdict, deque
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
@@ -32,6 +36,41 @@ from verification import request_code, request_password_reset, reset_password, v
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+# ---------------------------------------------------------------------------
+# In-process IP rate limiting — same deque pattern as guest_triage.py.
+# Limits are intentionally tight: these endpoints touch credentials.
+# ---------------------------------------------------------------------------
+_login_events: dict[str, deque[float]] = defaultdict(deque)
+_register_events: dict[str, deque[float]] = defaultdict(deque)
+_reset_events: dict[str, deque[float]] = defaultdict(deque)
+_auth_rate_lock = threading.Lock()
+
+_LOGIN_LIMIT = 10
+_LOGIN_WINDOW = 15 * 60   # 15 minutes
+
+_REGISTER_LIMIT = 5
+_REGISTER_WINDOW = 60 * 60  # 1 hour
+
+_RESET_LIMIT = 5
+_RESET_WINDOW = 60 * 60  # 1 hour
+
+
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+def _check_rate(store: dict[str, deque[float]], key: str, limit: int, window: float, detail: str) -> None:
+    if os.getenv("MOCK_MODE", "").strip().lower() in {"1", "true", "yes", "on"}:
+        return
+    now = time.monotonic()
+    with _auth_rate_lock:
+        events = store[key]
+        while events and now - events[0] > window:
+            events.popleft()
+        if len(events) >= limit:
+            raise HTTPException(status_code=429, detail=detail)
+        events.append(now)
+
 
 def _account_out(account: Account) -> AccountOut:
     return AccountOut(
@@ -46,7 +85,8 @@ def _account_out(account: Account) -> AccountOut:
 
 
 @router.post("/register", response_model=AuthResponse)
-def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> AuthResponse:
+def register(payload: RegisterRequest, request: Request, db: Session = Depends(get_db)) -> AuthResponse:
+    _check_rate(_register_events, _client_ip(request), _REGISTER_LIMIT, _REGISTER_WINDOW, "auth_rate_limit")
     phone = canonical_phone(payload.phone)
     existing_phone = db.query(Account).filter(Account.phone == phone).first()
     if existing_phone:
@@ -90,7 +130,8 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> AuthRes
 
 
 @router.post("/login", response_model=AuthResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)) -> AuthResponse:
+def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)) -> AuthResponse:
+    _check_rate(_login_events, _client_ip(request), _LOGIN_LIMIT, _LOGIN_WINDOW, "auth_rate_limit")
     identifier = payload.identifier.strip().lower()
     # Match a phone in canonical form OR an email (case-insensitive), so the
     # login format need not equal the signup format.
@@ -113,17 +154,21 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> AuthResponse:
 @router.post("/password-reset/request", response_model=OtpSendResponse)
 def password_reset_request(
     payload: PasswordResetRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> OtpSendResponse:
     """Send a reset code without revealing whether an account exists."""
+    _check_rate(_reset_events, _client_ip(request), _RESET_LIMIT, _RESET_WINDOW, "auth_rate_limit")
     return OtpSendResponse(**request_password_reset(db, payload.identifier))
 
 
 @router.post("/password-reset/confirm")
 def password_reset_confirm(
     payload: PasswordResetConfirmRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> dict[str, bool]:
+    _check_rate(_reset_events, _client_ip(request), _RESET_LIMIT, _RESET_WINDOW, "auth_rate_limit")
     reset_password(db, payload.identifier, payload.code, payload.new_password)
     return {"reset": True}
 

@@ -7112,3 +7112,767 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
   min-height: calc(100dvh - 260px) !important;
   justify-content: center;
 }
+
+/* ============================================================
+   PROFESSIONAL DESIGN OVERHAUL — 2026-08-28
+   Goals: authoritative topbar, refined typography hierarchy,
+   mic breathing animation (signature), polished auth card,
+   and stronger Urdu-first guest welcome.
+   ============================================================ */
+
+/* ----------------------------------------------------------
+   1. TOPBAR — flat, dark, authoritative
+   ---------------------------------------------------------- */
+.topbar {
+  background: #0C2925 !important;
+  border-bottom: 1px solid rgba(255,255,255,.07) !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 clamp(16px, 3vw, 32px) !important;
+  height: 56px !important;
+  min-height: 56px !important;
+}
+.topbar-row {
+  height: 56px !important;
+  align-items: center !important;
+}
+.topbar.topbar-scrolled {
+  box-shadow: 0 1px 0 rgba(255,255,255,.06), 0 4px 20px rgba(0,0,0,.25) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* ----------------------------------------------------------
+   2. BRAND MARK — cleaner, more confident
+   ---------------------------------------------------------- */
+.brand-app-mark {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 9px !important;
+  background: rgba(15,157,138,.22) !important;
+  border: 1px solid rgba(15,157,138,.4) !important;
+}
+.brand-app-mark svg {
+  width: 20px !important;
+  height: 20px !important;
+  stroke: #4dd6c8 !important;
+  stroke-width: 2.1 !important;
+}
+.brand-title .brand-ur {
+  font-size: 1.3rem !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+}
+.brand-title .brand-en {
+  font-size: .62rem !important;
+  letter-spacing: .18em !important;
+  color: rgba(255,255,255,.45) !important;
+  font-weight: 700 !important;
+}
+.brand-pulse { display: none !important; }
+
+/* Desktop nav — flatter, crisper */
+.desktop-nav button {
+  font-size: .78rem !important;
+  font-weight: 600 !important;
+  letter-spacing: .02em !important;
+  color: rgba(255,255,255,.62) !important;
+  border-radius: 8px !important;
+  padding-inline: 12px !important;
+  min-height: 38px !important;
+  transition: color .15s, background .15s !important;
+}
+.desktop-nav button:hover {
+  color: #fff !important;
+  background: rgba(255,255,255,.08) !important;
+}
+.desktop-nav button.active {
+  color: #4dd6c8 !important;
+  background: rgba(15,157,138,.14) !important;
+}
+
+/* Account menu pill */
+.profile-header-btn {
+  border: 1px solid rgba(255,255,255,.12) !important;
+  background: rgba(255,255,255,.07) !important;
+  border-radius: 10px !important;
+  min-height: 38px !important;
+  transition: background .15s, border-color .15s !important;
+}
+.profile-header-btn:hover {
+  background: rgba(255,255,255,.13) !important;
+  border-color: rgba(255,255,255,.22) !important;
+}
+.profile-header-btn:not(.complete) {
+  background: rgba(15,157,138,.18) !important;
+  color: #4dd6c8 !important;
+  border-color: rgba(15,157,138,.3) !important;
+}
+.profile-header-avatar {
+  border-radius: 7px !important;
+  font-size: 11px !important;
+}
+
+/* ----------------------------------------------------------
+   3. TRUST BAR — slimmer, less noisy
+   ---------------------------------------------------------- */
+.trust-bar {
+  background: #f0f4f3 !important;
+  border-bottom: 1px solid #e4eae8 !important;
+  font-size: .68rem !important;
+  color: #4a6660 !important;
+  padding: 5px 16px !important;
+  font-weight: 500 !important;
+}
+.trust-bar svg { opacity: .7 !important; }
+
+/* ----------------------------------------------------------
+   4. GUEST WELCOME — stronger Urdu headline, tighter rhythm
+   ---------------------------------------------------------- */
+.guest-welcome h1 {
+  font-size: clamp(2.2rem, 5vw, 4rem) !important;
+  font-family: var(--font-ur) !important;
+  font-weight: 800 !important;
+  color: #0C2925 !important;
+  line-height: 1.55 !important;
+  letter-spacing: 0 !important;
+  direction: rtl !important;
+  margin: 0 0 4px !important;
+}
+.guest-welcome > .urdu {
+  font-size: clamp(.95rem, 1.8vw, 1.2rem) !important;
+  color: #2d6b62 !important;
+  line-height: 2.2 !important;
+  margin: 0 0 8px !important;
+}
+.guest-welcome-lead {
+  font-size: .8rem !important;
+  color: #7a8e8b !important;
+  line-height: 1.65 !important;
+  margin-bottom: 24px !important;
+}
+.guest-welcome-kicker {
+  font-size: .6rem !important;
+  letter-spacing: .18em !important;
+  color: #0F9D8A !important;
+  font-weight: 800 !important;
+}
+.guest-welcome-mark {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 18px !important;
+  background: linear-gradient(135deg, #e8f7f4, #c8ede7) !important;
+  border: 1px solid #a8d9d1 !important;
+  box-shadow: 0 8px 24px rgba(15,157,138,.14) !important;
+  color: #0b7d6e !important;
+  margin-bottom: 14px !important;
+}
+.guest-welcome-mark svg {
+  width: 30px !important;
+  height: 30px !important;
+  stroke-width: 1.8 !important;
+}
+
+/* ----------------------------------------------------------
+   5. STARTER CHIPS — refined, hover accent on left border
+   ---------------------------------------------------------- */
+.guest-starters {
+  gap: 8px !important;
+  width: min(680px, 100%) !important;
+}
+.guest-starters button {
+  min-height: 64px !important;
+  padding: 10px 16px 10px 14px !important;
+  border: 1px solid #dce8e5 !important;
+  border-left: 3px solid transparent !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  text-align: right !important;
+  box-shadow: 0 2px 8px rgba(15,60,50,.04) !important;
+  transition: border-color .18s, box-shadow .18s, transform .18s !important;
+  gap: 2px !important;
+}
+.guest-starters button:hover:not(:disabled) {
+  border-color: #c8e5e0 !important;
+  border-left-color: #0F9D8A !important;
+  box-shadow: 0 6px 18px rgba(15,60,50,.09) !important;
+  transform: translateY(-1px) !important;
+}
+.guest-starters .urdu {
+  font-size: .88rem !important;
+  line-height: 1.9 !important;
+  color: #0C2925 !important;
+  font-weight: 500 !important;
+}
+.guest-starters small {
+  font-size: .65rem !important;
+  color: #7a9490 !important;
+  font-weight: 400 !important;
+}
+.guest-starter-label {
+  font-size: .62rem !important;
+  font-weight: 700 !important;
+  letter-spacing: .14em !important;
+  color: #8aacA6 !important;
+}
+
+/* ----------------------------------------------------------
+   6. MIC BUTTON — breathing dual-ring animation (signature)
+   ---------------------------------------------------------- */
+@keyframes nabz-breathe-inner {
+  0%,100% { opacity: .55; transform: scale(1); }
+  50%      { opacity: .9; transform: scale(1.07); }
+}
+@keyframes nabz-breathe-outer {
+  0%,100% { opacity: .2; transform: scale(1); }
+  50%      { opacity: .45; transform: scale(1.18); }
+}
+
+/* Guest mic fab */
+.guest-mic-fab,
+.mic-fab {
+  position: relative !important;
+}
+.guest-mic-fab::before,
+.guest-mic-fab::after,
+.mic-fab::before,
+.mic-fab::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  border-radius: 50% !important;
+  pointer-events: none !important;
+}
+.guest-mic-fab::before,
+.mic-fab::before {
+  border: 2px solid rgba(15,157,138,.6) !important;
+  animation: nabz-breathe-inner 2.8s ease-in-out infinite !important;
+  inset: -7px !important;
+}
+.guest-mic-fab::after,
+.mic-fab::after {
+  border: 1.5px solid rgba(15,157,138,.3) !important;
+  animation: nabz-breathe-outer 2.8s ease-in-out infinite !important;
+  inset: -16px !important;
+  animation-delay: .4s !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .guest-mic-fab::before, .guest-mic-fab::after,
+  .mic-fab::before, .mic-fab::after {
+    animation: none !important;
+    opacity: .3 !important;
+  }
+}
+
+/* ----------------------------------------------------------
+   7. CHAT INPUT BAR — cleaner
+   ---------------------------------------------------------- */
+.guest-input-bar,
+.triage-input-bar {
+  border-top: 1px solid #e4eae8 !important;
+  background: #fff !important;
+  padding: 10px 12px !important;
+}
+.guest-input-bar input,
+.triage-input-bar input,
+.guest-input-bar textarea,
+.triage-input-bar textarea {
+  border: 1px solid #dce8e5 !important;
+  border-radius: 10px !important;
+  background: #f8faf9 !important;
+  font-size: .88rem !important;
+  color: #0C2925 !important;
+  padding: 10px 14px !important;
+}
+.guest-input-bar input:focus,
+.triage-input-bar input:focus {
+  border-color: #0F9D8A !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(15,157,138,.1) !important;
+  outline: none !important;
+}
+
+/* ----------------------------------------------------------
+   8. BOTTOM NAV — refined, less toy-ish
+   ---------------------------------------------------------- */
+.bottom-nav {
+  background: #fff !important;
+  border-top: 1px solid #e4eae8 !important;
+  box-shadow: none !important;
+  padding-bottom: env(safe-area-inset-bottom, 0) !important;
+}
+.bottom-nav a,
+.bottom-nav button {
+  color: #8aA5A0 !important;
+  font-size: .62rem !important;
+  font-weight: 600 !important;
+  letter-spacing: .03em !important;
+  transition: color .15s !important;
+}
+.bottom-nav a[aria-current="page"],
+.bottom-nav button[aria-current="page"] {
+  color: #0F9D8A !important;
+}
+.bottom-nav a[aria-current="page"] svg,
+.bottom-nav button[aria-current="page"] svg {
+  stroke: #0F9D8A !important;
+}
+.bottom-nav svg {
+  stroke: currentColor !important;
+  width: 22px !important;
+  height: 22px !important;
+  stroke-width: 1.7 !important;
+}
+
+/* ----------------------------------------------------------
+   9. AUTH PAGE — clean centered card, proper spacing
+   ---------------------------------------------------------- */
+.auth-page {
+  background: #f3f7f6 !important;
+}
+.auth-page .auth-card {
+  box-shadow: 0 24px 60px rgba(12,41,37,.12), 0 2px 8px rgba(12,41,37,.06) !important;
+  border-radius: 22px !important;
+  border: 1px solid rgba(12,41,37,.07) !important;
+}
+.auth-page .auth-tab {
+  font-size: .8rem !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+}
+.auth-page .field label {
+  font-size: .72rem !important;
+  font-weight: 600 !important;
+  color: #4a6660 !important;
+  letter-spacing: .02em !important;
+}
+.auth-page .input {
+  border: 1px solid #d8e4e1 !important;
+  border-radius: 10px !important;
+  background: #f8faf9 !important;
+  font-size: .88rem !important;
+  color: #0C2925 !important;
+  transition: border-color .15s, box-shadow .15s !important;
+}
+.auth-page .input:focus {
+  border-color: #0F9D8A !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(15,157,138,.1) !important;
+  outline: none !important;
+}
+
+/* ----------------------------------------------------------
+   10. PRIMARY BUTTON — sharper, more confident
+   ---------------------------------------------------------- */
+.btn-primary {
+  background: #0F9D8A !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  font-size: .88rem !important;
+  letter-spacing: .01em !important;
+  box-shadow: 0 4px 14px rgba(15,157,138,.28) !important;
+  transition: background .15s, box-shadow .15s, transform .12s !important;
+  border: none !important;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #0b8778 !important;
+  box-shadow: 0 6px 20px rgba(15,157,138,.36) !important;
+  transform: translateY(-1px) !important;
+}
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 8px rgba(15,157,138,.22) !important;
+}
+.btn-primary:disabled {
+  background: #a5c9c4 !important;
+  box-shadow: none !important;
+}
+
+/* ----------------------------------------------------------
+   11. CARD base — consistent, less shadow-heavy
+   ---------------------------------------------------------- */
+.card, .q-card {
+  border: 1px solid #e4eae8 !important;
+  box-shadow: 0 2px 10px rgba(12,41,37,.06) !important;
+  border-radius: 18px !important;
+}
+
+/* ----------------------------------------------------------
+   12. PAGE BACKGROUND — pure off-white, no texture
+   ---------------------------------------------------------- */
+body,
+.app-shell,
+.app-container {
+  background: #F6F5F1 !important;
+}
+.triage-start-card {
+  background: transparent !important;
+}
+
+/* ----------------------------------------------------------
+   13. BOOT SCREEN — clean, brand-aligned
+   ---------------------------------------------------------- */
+.boot-screen {
+  background: #0C2925 !important;
+  color: #fff !important;
+}
+.boot-screen .brand-ur,
+.boot-brand .brand-ur {
+  color: #fff !important;
+}
+.boot-screen .boot-note {
+  color: rgba(255,255,255,.55) !important;
+}
+.boot-pulse i {
+  background: #4dd6c8 !important;
+}
+
+/* ----------------------------------------------------------
+   14. LANDING PAGE — tighter, more purposeful
+   ---------------------------------------------------------- */
+.landing-v2 .urdu-hero {
+  font-size: clamp(2.8rem, 7vw, 5.5rem) !important;
+  color: #0C2925 !important;
+  line-height: 1.5 !important;
+}
+.landing-v2 .urdu-btn {
+  border-radius: 10px !important;
+  font-size: .88rem !important;
+  font-weight: 700 !important;
+}
+
+/* ----------------------------------------------------------
+   15. SECTION HEADERS — consistent rhythm
+   ---------------------------------------------------------- */
+h1, h2, h3 { letter-spacing: -.01em; }
+.section-label,
+.q-card-label,
+.result-label {
+  font-size: .6rem !important;
+  letter-spacing: .14em !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  color: #0F9D8A !important;
+}
+
+/* END PROFESSIONAL DESIGN OVERHAUL */
+
+/* ============================================================
+   PRECISION OVERRIDES — 2026-08-28 pass 2
+   Using exact class names from DOM inspection.
+   ============================================================ */
+
+/* --- Guest welcome Urdu hero headline --- */
+.guest-welcome .urdu-hero {
+  font-size: clamp(2rem, 5.5vw, 3.8rem) !important;
+  color: #0C2925 !important;
+  line-height: 1.55 !important;
+  font-weight: 800 !important;
+}
+
+/* --- Guest welcome sub text --- */
+.guest-welcome-sub {
+  font-size: .82rem !important;
+  color: #6b7c79 !important;
+  margin: 0 0 6px !important;
+}
+
+/* --- Guest header — dark authoritative bar --- */
+.guest-chat-header {
+  background: #0C2925 !important;
+  border-bottom: 1px solid rgba(255,255,255,.07) !important;
+  backdrop-filter: none !important;
+  min-height: 56px !important;
+}
+.guest-guide-status strong {
+  color: #fff !important;
+  font-size: .8rem !important;
+}
+.guest-guide-status small {
+  color: rgba(255,255,255,.5) !important;
+}
+.guest-ai-avatar {
+  background: rgba(15,157,138,.25) !important;
+  border: 1px solid rgba(15,157,138,.4) !important;
+}
+.guest-ai-avatar svg {
+  stroke: #4dd6c8 !important;
+}
+/* Online indicator */
+.guest-guide-status i {
+  background: #4dd6c8 !important;
+  box-shadow: 0 0 0 3px rgba(77,214,200,.2) !important;
+}
+/* Mobile brand on header */
+.guest-mobile-brand { color: #fff !important; }
+
+/* Header action buttons */
+.guest-header-actions button {
+  border-color: rgba(255,255,255,.18) !important;
+  background: rgba(255,255,255,.08) !important;
+  color: rgba(255,255,255,.8) !important;
+  border-radius: 8px !important;
+}
+.guest-header-actions button:hover {
+  background: rgba(255,255,255,.14) !important;
+}
+.guest-header-actions .primary {
+  background: #0F9D8A !important;
+  border-color: #0F9D8A !important;
+  color: #fff !important;
+  box-shadow: 0 3px 10px rgba(15,157,138,.3) !important;
+}
+
+/* --- Guest sidebar --- */
+.guest-chat-sidebar {
+  background: #f8f7f3 !important;
+  border-right: 1px solid #e4eae8 !important;
+}
+
+/* --- Mic button — refined with breathing rings animation --- */
+.mic-button {
+  background: #0F9D8A !important;
+  box-shadow: 0 8px 28px rgba(15,157,138,.32) !important;
+  transition: transform .2s, box-shadow .2s !important;
+}
+.mic-button:hover:not(:disabled) {
+  transform: scale(1.04) !important;
+  box-shadow: 0 12px 36px rgba(15,157,138,.42) !important;
+}
+.mic-button.listening {
+  background: #0b7d6e !important;
+  box-shadow: 0 8px 28px rgba(15,157,138,.5) !important;
+}
+
+/* Voice rings — animated breathing (the signature) */
+@keyframes nabz-ring-pulse-a {
+  0%,100% { opacity: .22; transform: scale(1); }
+  50%      { opacity: .55; transform: scale(1.12); }
+}
+@keyframes nabz-ring-pulse-b {
+  0%,100% { opacity: .1; transform: scale(1); }
+  50%      { opacity: .3; transform: scale(1.28); }
+}
+
+.guest-voice-rings i {
+  border: 1.5px solid rgba(15,157,138,.5) !important;
+  border-radius: 50% !important;
+  animation: nabz-ring-pulse-a 2.6s ease-in-out infinite !important;
+}
+.guest-voice-rings i:last-child {
+  border-color: rgba(15,157,138,.3) !important;
+  animation: nabz-ring-pulse-b 2.6s ease-in-out infinite !important;
+  animation-delay: .55s !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .guest-voice-rings i { animation: none !important; }
+}
+
+/* --- Starter cards — refined chips --- */
+.guest-starters button {
+  border-left-width: 3px !important;
+  border-left-color: transparent !important;
+  transition: border-color .18s, border-left-color .18s, transform .18s, box-shadow .18s !important;
+}
+.guest-starters button:hover:not(:disabled) {
+  border-left-color: #0F9D8A !important;
+}
+.guest-starters .urdu {
+  color: #0C2925 !important;
+  font-weight: 600 !important;
+  font-size: .9rem !important;
+}
+.guest-starters small {
+  color: #8a9997 !important;
+  font-size: .67rem !important;
+}
+
+/* --- Starter label divider --- */
+.guest-starter-label {
+  color: #9ab0ac !important;
+  font-size: .6rem !important;
+  letter-spacing: .16em !important;
+  font-weight: 700 !important;
+}
+
+/* --- Urdu-hero heading everywhere (landing, result screens) --- */
+.urdu-hero {
+  font-size: clamp(28px, 5.5vw, 48px) !important;
+  color: #0C2925 !important;
+  font-weight: 800 !important;
+  line-height: 1.5 !important;
+}
+
+/* --- Guest page background --- */
+.guest-chat-page {
+  background: #f6f5f1 !important;
+}
+.guest-chat-scroll {
+  background: #f6f5f1 !important;
+}
+
+/* --- Input bar — clean, no noise --- */
+.guest-input-row {
+  background: #fff !important;
+  border-top: 1px solid #e4eae8 !important;
+}
+.guest-input-row input,
+.guest-input-row textarea {
+  border: 1.5px solid #dce8e5 !important;
+  border-radius: 10px !important;
+  background: #f9fbfa !important;
+  color: #0C2925 !important;
+  font-size: .88rem !important;
+  transition: border-color .15s, box-shadow .15s !important;
+}
+.guest-input-row input:focus,
+.guest-input-row textarea:focus {
+  border-color: #0F9D8A !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(15,157,138,.1) !important;
+  outline: none !important;
+}
+
+/* send button */
+.guest-send-btn,
+.send-btn {
+  background: #0F9D8A !important;
+  border-radius: 10px !important;
+  box-shadow: 0 3px 10px rgba(15,157,138,.25) !important;
+  transition: background .15s, transform .12s !important;
+}
+.guest-send-btn:hover:not(:disabled),
+.send-btn:hover:not(:disabled) {
+  background: #0b8778 !important;
+  transform: scale(1.04) !important;
+}
+
+/* --- Emergency footer --- */
+.guest-emergency-strip,
+.emergency-strip {
+  font-size: .65rem !important;
+  color: #7a8e8b !important;
+}
+
+/* --- Auth page header (nav bar) --- */
+.auth-page .topbar,
+.auth-page header,
+.auth-site-nav {
+  background: #0C2925 !important;
+  border-bottom: none !important;
+  border-radius: 0 !important;
+}
+.auth-site-nav .landing-brand b,
+.auth-site-nav .landing-brand .urdu {
+  color: #fff !important;
+}
+.auth-site-nav .landing-brand small {
+  color: rgba(255,255,255,.45) !important;
+}
+.auth-site-nav .landing-brand-mark {
+  background: rgba(15,157,138,.22) !important;
+  border: 1px solid rgba(15,157,138,.4) !important;
+}
+.auth-site-nav .landing-icon {
+  stroke: #4dd6c8 !important;
+}
+.auth-home-link {
+  background: transparent !important;
+  border: 1px solid rgba(255,255,255,.2) !important;
+  color: rgba(255,255,255,.8) !important;
+  border-radius: 8px !important;
+  font-size: .78rem !important;
+  font-weight: 500 !important;
+}
+.auth-home-link:hover {
+  background: rgba(255,255,255,.1) !important;
+  color: #fff !important;
+}
+
+/* Auth page mobile — dark top bleed into wrap */
+@media (max-width: 899px) {
+  .auth-page {
+    background: #f3f7f6 !important;
+  }
+  .auth-page .auth-wrap {
+    background: linear-gradient(180deg, #0C2925 0px, #0C2925 70px, #f3f7f6 70px) !important;
+    padding-top: 40px !important;
+  }
+  .auth-page .auth-panel {
+    box-shadow: 0 24px 64px rgba(12,41,37,.16), 0 2px 8px rgba(12,41,37,.07) !important;
+    border: 1px solid rgba(12,41,37,.06) !important;
+    background: #fff !important;
+  }
+}
+
+/* --- Auth page tabs — slightly more visible active state --- */
+.auth-page .auth-tabs {
+  background: #f4f8f7 !important;
+  border: 1px solid #e4eae8 !important;
+  border-radius: 12px !important;
+  padding: 4px !important;
+}
+.auth-page .auth-tab.active {
+  background: #0F9D8A !important;
+  color: #fff !important;
+  box-shadow: 0 3px 10px rgba(15,157,138,.25) !important;
+}
+.auth-page .auth-tab:not(.active) {
+  color: #4a6660 !important;
+}
+
+/* --- Auth page input fields --- */
+.auth-page .input,
+.auth-page input[type='text'],
+.auth-page input[type='password'],
+.auth-page input[type='tel'],
+.auth-page input[type='email'] {
+  background: #f8fbfa !important;
+  border: 1.5px solid #dce8e5 !important;
+  border-radius: 10px !important;
+  font-size: .88rem !important;
+  color: #0C2925 !important;
+  transition: border-color .15s, box-shadow .15s !important;
+}
+.auth-page .input:focus,
+.auth-page input:focus {
+  border-color: #0F9D8A !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(15,157,138,.1) !important;
+  outline: none !important;
+}
+
+/* --- Authed home — greeting headline bigger --- */
+.triage-start-greeting,
+.triage-start-card h2,
+.triage-start-card .urdu-hero,
+.home-greeting {
+  font-size: clamp(1.4rem, 3.5vw, 2.2rem) !important;
+  font-family: var(--font-ur) !important;
+  color: #0C2925 !important;
+  line-height: 1.65 !important;
+}
+
+/* --- Phone verification banner — less alarming, more informational --- */
+.banner-warn,
+[class*="verify-banner"],
+[class*="phone-verify"],
+.verify-phone-banner {
+  background: #fff9ec !important;
+  border-bottom: 1px solid #f0e0b0 !important;
+  color: #7a5500 !important;
+  font-size: .74rem !important;
+}
+
+/* --- Profile avatar button (topbar B circle) — refined --- */
+.profile-header-btn {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 10px !important;
+  font-size: .75rem !important;
+  font-weight: 700 !important;
+  letter-spacing: .02em !important;
+}
+
+/* END PRECISION OVERRIDES */

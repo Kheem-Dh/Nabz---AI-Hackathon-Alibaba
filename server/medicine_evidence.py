@@ -476,6 +476,8 @@ def resolve_medication_candidates(
         # receive an adult dose card even if the model nominates one.
         minimum_age = row.get("minimum_age")
         age = profile.get("age")
+        if age is None and profile.get("assumed_adult"):
+            age = 18
         if minimum_age is not None and (age is None or age < minimum_age):
             continue
 

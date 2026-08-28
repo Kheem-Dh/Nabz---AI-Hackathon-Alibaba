@@ -114,6 +114,8 @@ class Profile(Base):
     notes: Mapped[str | None] = mapped_column(Text)
     is_self: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    # Rotated on every POST /handoff; old tokens whose nonce no longer matches are rejected.
+    handoff_nonce: Mapped[str | None] = mapped_column(String(32))
 
     account: Mapped[Account] = relationship(back_populates="profiles")
     medicines: Mapped[list["Medicine"]] = relationship(

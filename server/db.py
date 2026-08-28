@@ -59,6 +59,39 @@ def get_db():
         db.close()
 
 
+def _release_stale_reservations() -> None:
+    """On restart any in-flight reservations are permanently orphaned.
+
+    Reset them so the per-account/guest budget isn't permanently inflated by
+    a process that died mid-request.
+    """
+    import logging
+    from sqlalchemy import text
+
+    log = logging.getLogger("nabz.db")
+    try:
+        with engine.begin() as conn:
+            result = conn.execute(
+                text(
+                    "UPDATE ai_usage_budgets SET reserved_microusd = 0 "
+                    "WHERE reserved_microusd > 0"
+                )
+            )
+            conn.execute(
+                text(
+                    "UPDATE ai_usage_events SET status = 'crashed' "
+                    "WHERE status = 'pending'"
+                )
+            )
+        if result.rowcount:
+            log.info(
+                "Released stale reservations on %d budget row(s) after restart.",
+                result.rowcount,
+            )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Could not release stale reservations: %s", exc)
+
+
 def init_db() -> None:
     """Create tables at startup. Idempotent — safe to call every launch.
 
@@ -71,6 +104,7 @@ def init_db() -> None:
     _ensure_sqlite_columns()
     _ensure_indexes()
     _normalize_existing_phones()
+    _release_stale_reservations()
 
 
 # Lightweight additive migration for the hackathon build: create_all() never
@@ -91,6 +125,7 @@ _EXPECTED_COLUMNS: dict[str, dict[str, str]] = {
         "bp_diastolic": "INTEGER",
         "bp_recorded_at": "DATE",
         "vitals_history": "JSON NOT NULL DEFAULT '[]'",
+        "handoff_nonce": "VARCHAR(32)",
     },
 }
 

@@ -111,6 +111,14 @@ def configuration_errors(settings: RuntimeSettings) -> list[str]:
         errors.append("incomplete_aws_credentials")
 
     if not settings.is_production:
+        # Staging must also reject weak JWT secrets — it may process real patient
+        # data and a compromised staging token can be replayed against production
+        # if the same secret is accidentally shared.
+        if settings.app_env == "staging" and (
+            settings.jwt_secret.lower() in _INSECURE_JWT_VALUES
+            or len(settings.jwt_secret) < 32
+        ):
+            errors.append("secure_jwt_secret_required_in_staging")
         return errors
 
     if settings.mock_mode:

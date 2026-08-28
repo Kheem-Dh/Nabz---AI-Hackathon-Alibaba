@@ -370,9 +370,9 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
         <div className="triage-start-head">
           <div>
             <div className="hero-greet-ur urdu" dir="rtl">
-              {profile.display_name}، آج طبیعت کیسی ہے؟
+              {profile.display_name}، آج آپ کی طبیعت کیسی ہے؟ مجھے بتائیں میں کیسے مدد کر سکتا ہوں
             </div>
-            <div className="hero-greet-en">Tell Nabz how {profile.display_name} feels</div>
+            <div className="hero-greet-en">Tell me how you're feeling, {profile.display_name} — I'm here to help.</div>
           </div>
         </div>
 

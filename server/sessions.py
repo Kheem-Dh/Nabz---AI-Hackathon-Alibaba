@@ -1,6 +1,7 @@
 """HTTP routes for the conversational triage state machine."""
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -582,7 +583,9 @@ async def answer_with_clinical_image(
             logger.warning("Triage image auto-Vault-save failed: %s", exc)
             db.rollback()
 
-    return _turn_from_session(db, session, profile)
+    return await asyncio.get_event_loop().run_in_executor(
+        None, _turn_from_session, db, session, profile
+    )
 
 
 @router.post("/retry/{session_id}", response_model=TriageTurn)

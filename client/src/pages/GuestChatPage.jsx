@@ -485,8 +485,8 @@ export default function GuestChatPage() {
         <div className={`guest-chat-scroll ${started ? 'has-conversation' : ''}`}>
           {!started && (
             <section className="guest-welcome">
-              <h1 className="urdu urdu-hero" dir="rtl">آج آپ کو کیا تکلیف ہے؟</h1>
-              <p className="guest-welcome-sub">What's worrying you today?</p>
+              <h1 className="urdu urdu-hero" dir="rtl">آج آپ کی طبیعت کیسی ہے؟ مجھے بتائیں میں کیسے مدد کر سکتا ہوں</h1>
+              <p className="guest-welcome-sub">Tell me how you're feeling — I'm here to help.</p>
               <div className="guest-voice-first">
                 <div className="guest-voice-rings"><i /><i /></div>
                 <MicButton listening={speech.listening} disabled={busy || !speech.supported || !consent} onClick={toggleVoice} />

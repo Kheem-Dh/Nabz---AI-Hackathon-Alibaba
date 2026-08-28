@@ -24,13 +24,14 @@ from __future__ import annotations
 
 import os
 import logging
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import urlparse
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from db import get_db
 from documents import list_profile_documents
@@ -45,7 +46,7 @@ HANDOFF_TTL_HOURS = int(os.getenv("NABZ_HANDOFF_TTL_HOURS", "2"))
 HANDOFF_KIND = "handoff"
 
 
-def _issue_handoff_token(account_id: int, profile_id: int) -> tuple[str, datetime]:
+def _issue_handoff_token(account_id: int, profile_id: int, nonce: str) -> tuple[str, datetime]:
     now = datetime.now(timezone.utc)
     exp = now + timedelta(hours=HANDOFF_TTL_HOURS)
     payload = {
@@ -53,13 +54,14 @@ def _issue_handoff_token(account_id: int, profile_id: int) -> tuple[str, datetim
         "sub": f"{account_id}:{profile_id}",
         "acc": account_id,
         "pid": profile_id,
+        "nonce": nonce,
         "iat": int(now.timestamp()),
         "exp": int(exp.timestamp()),
     }
     return jwt.encode(payload, _secret(), algorithm=JWT_ALG), exp
 
 
-def _decode_handoff_token(token: str) -> tuple[int, int]:
+def _decode_handoff_token(token: str) -> tuple[int, int, str | None]:
     try:
         payload = jwt.decode(token, _secret(), algorithms=[JWT_ALG])
     except jwt.ExpiredSignatureError as exc:
@@ -69,7 +71,7 @@ def _decode_handoff_token(token: str) -> tuple[int, int]:
     if payload.get("kind") != HANDOFF_KIND:
         raise HTTPException(status_code=401, detail="not_a_handoff_token")
     try:
-        return int(payload["acc"]), int(payload["pid"])
+        return int(payload["acc"]), int(payload["pid"]), payload.get("nonce")
     except (KeyError, ValueError, TypeError) as exc:
         raise HTTPException(status_code=401, detail="invalid_handoff_payload") from exc
 
@@ -192,10 +194,13 @@ def create_handoff(
     profile = db.get(Profile, profile_id)
     if not profile or profile.account_id != account.id:
         raise HTTPException(status_code=404, detail="profile_not_found")
-    token, exp = _issue_handoff_token(account.id, profile.id)
+    nonce = secrets.token_hex(16)
+    profile.handoff_nonce = nonce
+    db.commit()
+    token, exp = _issue_handoff_token(account.id, profile.id, nonce)
     # Fail at issuance rather than handing the patient an unreadable QR if a
     # deployment has an inconsistent signing configuration.
-    decoded_account_id, decoded_profile_id = _decode_handoff_token(token)
+    decoded_account_id, decoded_profile_id, _ = _decode_handoff_token(token)
     if (decoded_account_id, decoded_profile_id) != (account.id, profile.id):
         raise HTTPException(status_code=503, detail="handoff_signing_unavailable")
     base = _web_origin(request)
@@ -214,10 +219,21 @@ def create_handoff(
 
 @router.get("/api/handoff/{token}")
 def read_handoff(token: str, db: Session = Depends(get_db)) -> dict:
-    account_id, profile_id = _decode_handoff_token(token)
-    profile = db.get(Profile, profile_id)
+    account_id, profile_id, token_nonce = _decode_handoff_token(token)
+    profile = (
+        db.query(Profile)
+        .options(
+            selectinload(Profile.timeline),
+            selectinload(Profile.medicines),
+        )
+        .filter(Profile.id == profile_id)
+        .first()
+    )
     if not profile or profile.account_id != account_id:
         raise HTTPException(status_code=404, detail="handoff_target_gone")
+    # Nonce mismatch means the patient regenerated the QR — old link is revoked.
+    if profile.handoff_nonce is not None and token_nonce != profile.handoff_nonce:
+        raise HTTPException(status_code=410, detail="handoff_revoked")
     try:
         return _handoff_snapshot(db, profile)
     except HTTPException:

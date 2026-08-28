@@ -1339,17 +1339,42 @@ _FACILITY_INTENT_BY_LEVEL = {
     TriageLevel.HOME_CARE: "optional",
 }
 
+# Bare-substring patterns — every entry here triggers EMERGENCY immediately.
+# "want to die" is NOT included here because "I don't want to die" contains it;
+# instead it is caught by _NEGATION_AWARE_IMMEDIATE_PATTERNS below.
 _IMMEDIATE_MENTAL_HEALTH_PATTERNS = (
     "suicid", "kill myself", "end my life", "hurt myself", "self harm",
-    "self-harm", "overdose", "want to die", "خودکشی", "خود کو مار",
-    "جان دینا", "khudkushi", "khud ko mar", "jaan dena", "marna chahta",
-    "marna chahti", "apne aap ko nuksan",
+    "self-harm", "overdose", "خودکشی", "خود کو مار",
+    "جان دینا", "جان دے دوں", "khudkushi", "khud ko mar", "jaan dena",
+    "marna chahta", "marna chahti", "apne aap ko nuksan",
+    # Indirect expressions that are unambiguously suicidal in context:
+    "not worth living", "no reason to live", "better off dead",
+    "better off without me", "tired of living", "end it all",
+    "ending my life", "take my own life", "take my life",
+    "jeena nahi", "jina nahi", "zindagi khatam", "khud ko khatam",
+    "tang aa gaya hun zindagi se", "tang aa gayi hun zindagi se",
 )
+
+# Patterns that need negation-awareness before triggering EMERGENCY.
+# Each entry is (pattern_to_match, negation_words_that_cancel_it).
+_NEGATION_AWARE_IMMEDIATE_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("want to die", ("don't", "dont", "do not", "doesn't", "doesn't", "does not",
+                     "never", "not", "nahi", "nahin", "نہیں")),
+    ("wanting to die", ("don't", "dont", "do not", "not", "nahi", "nahin", "نہیں")),
+)
+
 _MENTAL_DISTRESS_PATTERNS = (
     "depress", "hopeless", "can't cope", "cannot cope", "panic attack",
     "severe anxiety", "hearing voices", "voices tell me", "being abused",
     "domestic violence", "مایوس", "ڈپریشن", "گھبراہٹ", "آوازیں سن",
     "na umeed", "bohat pareshan", "ghabrahat", "zehni dabao",
+    # Indirect distress expressions missed by the original list:
+    "don't want to be here", "dont want to be here",
+    "no point in living", "no point anymore", "no reason anymore",
+    "dark thoughts", "thoughts of death", "wish i was dead",
+    "wish i were dead", "life is not worth", "zindagi se tang",
+    "zindagi bekar", "zindagi nahi chahiye", "mujhe jeena nahi",
+    "jina nahi chahta", "jina nahi chahti",
 )
 _AFFIRMATIVE_SAFETY_ANSWERS = (
     "yes", "ہاں", "haan", "han", "plan", "means", "weapon", "pills",
@@ -1452,11 +1477,32 @@ def _mental_health_result(
     )
 
 
+def _negation_aware_immediate(transcript: str) -> bool:
+    """Return True if a negation-sensitive suicidal pattern is present without a
+    local negation cancelling it.  Checks a 35-character window before each
+    match so "I don't want to die" is correctly skipped while "I want to die"
+    triggers.
+    """
+    for pattern, negations in _NEGATION_AWARE_IMMEDIATE_PATTERNS:
+        start = 0
+        while True:
+            idx = transcript.find(pattern, start)
+            if idx == -1:
+                break
+            window = transcript[max(0, idx - 35):idx]
+            if not any(neg in window for neg in negations):
+                return True
+            start = idx + 1
+    return False
+
+
 def _mental_health_turn(
     profile: dict[str, Any], session_id: int, turns: list[dict],
 ) -> TriageTurn | None:
     transcript = _user_text(turns)
     if any(pattern in transcript for pattern in _IMMEDIATE_MENTAL_HEALTH_PATTERNS):
+        return _mental_health_result(profile, session_id, turns, immediate=True)
+    if _negation_aware_immediate(transcript):
         return _mental_health_result(profile, session_id, turns, immediate=True)
     distress = any(pattern in transcript for pattern in _MENTAL_DISTRESS_PATTERNS)
     safety_question_asked = any(
