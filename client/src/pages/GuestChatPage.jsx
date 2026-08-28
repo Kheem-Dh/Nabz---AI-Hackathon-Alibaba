@@ -216,6 +216,7 @@ export default function GuestChatPage() {
   const [expiresAt, setExpiresAt] = useState(restored?.expiresAt || '')
   const [messages, setMessages] = useState(restored?.messages || [])
   const [followups, setFollowups] = useState(restored?.followups || [])
+  const [pendingStart, setPendingStart] = useState(null)
   const [typed, setTyped] = useState('')
   const [followupText, setFollowupText] = useState('')
   const [draftAttachment, setDraftAttachment] = useState(null)
@@ -239,7 +240,7 @@ export default function GuestChatPage() {
   const assistantItems = messages.filter((item) => item.role === 'assistant')
   const currentTurn = [...messages].reverse().find((item) => item.role === 'assistant')?.turn || null
   const resultTurn = currentTurn?.type === 'result' ? currentTurn : null
-  const started = Boolean(stateToken || messages.length)
+  const started = Boolean(stateToken || messages.length || pendingStart)
 
   // Every newly returned assessment question is read once. The previous user
   // click primes the shared audio element, so this also works on mobile Safari
@@ -318,6 +319,18 @@ export default function GuestChatPage() {
     ])
   }
 
+  function visibleUserMessage(value, display = null) {
+    if (display) return {
+      text: display.english || value,
+      urdu: display.urdu || '',
+    }
+    const isUrdu = /[\u0600-\u06ff]/.test(value)
+    return {
+      text: isUrdu ? '' : value,
+      urdu: isUrdu ? value : '',
+    }
+  }
+
   async function start(text, display = null) {
     const value = text.trim()
     if (!value || busy) return
@@ -325,24 +338,26 @@ export default function GuestChatPage() {
       setError('Please confirm the temporary-session privacy note before starting.')
       return
     }
+    const userMessage = visibleUserMessage(value, display)
     tts.prime()
     tts.cancel()
+    setPendingStart(userMessage)
+    setTyped('')
     setBusy(true)
     setError('')
     const controller = new AbortController()
     controllerRef.current = controller
     try {
       const response = await guestTriageStart(value, true, controller.signal)
-      saveResponse(response, {
-        text: display?.english || value,
-        urdu: display?.urdu || '',
-      })
-      setTyped('')
+      saveResponse(response, userMessage)
       return true
     } catch (nextError) {
+      if (nextError.name === 'AbortError' && !nextError.timedOut) return false
+      setTyped(display?.english || value)
       setError(nextError.message || 'Nabz could not start the assessment. Please try again.')
       return false
     } finally {
+      setPendingStart(null)
       setBusy(false)
       controllerRef.current = null
     }
@@ -506,10 +521,12 @@ export default function GuestChatPage() {
 
   async function reset() {
     tts.cancel()
+    controllerRef.current?.abort()
     const oldToken = stateToken
     setStateToken('')
     setExpiresAt('')
     setMessages([])
+    setPendingStart(null)
     setFollowups([])
     setTyped('')
     setFollowupText('')
@@ -586,11 +603,18 @@ export default function GuestChatPage() {
           {started && (
             <section className="guest-timeline" aria-live="polite">
               <div className="guest-date-rule"><span>Temporary assessment · Today</span></div>
+              {pendingStart && (
+                <div className="guest-user-bubble guest-user-bubble-pending">
+                  {pendingStart.urdu && <span className="urdu" dir="rtl">{pendingStart.urdu}</span>}
+                  {pendingStart.text && <span>{pendingStart.text}</span>}
+                  <small className="urdu" dir="rtl">آپ کی بات مل گئی ہے ✓</small>
+                </div>
+              )}
               {messages.map((message, index) => {
                 if (message.role === 'user') {
                   return <div className="guest-user-bubble" key={`user-${index}`}>
                     {message.urdu && <span className="urdu" dir="rtl">{message.urdu}</span>}
-                    <span>{message.text}</span>
+                    {message.text && <span>{message.text}</span>}
                   </div>
                 }
                 if (message.turn.type === 'result') {
@@ -636,7 +660,11 @@ export default function GuestChatPage() {
                 />
               })}
               {busy && (
-                <div className="guest-thinking"><span className="guest-ai-avatar"><PulseIcon /></span><div><i /><i /><i /></div><p>Nabz is reviewing your answer and choosing the next clinically useful question…</p></div>
+                <div className="guest-thinking">
+                  <span className="guest-ai-avatar"><PulseIcon /></span>
+                  <div><i /><i /><i /></div>
+                  <p><strong className="urdu" dir="rtl">نبض آپ کی بات سمجھ رہا ہے…</strong><span>اگلا مناسب سوال تیار کیا جا رہا ہے</span></p>
+                </div>
               )}
               <div ref={endRef} />
             </section>

@@ -6379,7 +6379,12 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
 .guest-thinking > div { width: 54px; height: 33px; display: flex; align-items: center; justify-content: center; gap: 4px; border: 1px solid #d8e4e1; border-radius: 12px; background: #fff; }
 .guest-thinking i { width: 6px; height: 6px; border-radius: 50%; background: #7fb1a9; animation: guest-bounce 1s infinite ease-in-out; }
 .guest-thinking i:nth-child(2) { animation-delay: .15s; }.guest-thinking i:nth-child(3) { animation-delay: .3s; }
-.guest-thinking p { margin: 0; color: #738580; font-size: .67rem; }
+.guest-thinking p { margin: 0; display: grid; gap: 1px; color: #738580; font-size: .67rem; }
+.guest-thinking p strong { color: #24564e; font-size: .78rem; font-weight: 700; line-height: 1.8; }
+.guest-thinking p span { color: #7b8b87; font-size: .61rem; }
+.guest-user-bubble-pending { position: relative; animation: guest-pending-arrive .22s ease-out both; }
+.guest-user-bubble-pending small { margin-top: 3px; color: rgba(255,255,255,.72); font-size: .62rem; line-height: 1.6; }
+@keyframes guest-pending-arrive { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes guest-bounce { 0%,60%,100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-4px); opacity: 1; } }
 .guest-result-wrap { min-width: 0; }
 .guest-result-wrap > .stack { gap: 16px; }

@@ -12,9 +12,9 @@
 // step already gives the user a chance to edit before sending.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { getToken } from '../api'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
-const TOKEN_KEY = 'nabz_token'
 
 function pickMimeType() {
   if (typeof MediaRecorder === 'undefined') return null
@@ -88,7 +88,7 @@ export function useCloudVoiceCapture({ lang = 'ur' } = {}) {
       form.append('lang', lang)
       const filename = mime && mime.includes('mp4') ? 'nabz.mp4' : 'nabz.webm'
       form.append('file', blob, filename)
-      const token = localStorage.getItem(TOKEN_KEY) || ''
+      const token = getToken()
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
       const resp = await fetch(`${API_BASE}/api/voice/transcribe`, {
         method: 'POST',

@@ -122,7 +122,9 @@ def test_profile_rejects_implausible_newborn_weight(client, auth):
 
 def test_protected_routes_reject_without_token(client):
     assert client.get("/api/profiles").status_code == 401
-    assert client.get("/api/auth/me").status_code == 401
+    anonymous_me = client.get("/api/auth/me")
+    assert anonymous_me.status_code == 401
+    assert anonymous_me.headers["cache-control"].startswith("no-store")
     assert client.post("/api/triage/start", json={"profile_id": 1, "text": "x"}).status_code == 401
 
 
@@ -753,6 +755,15 @@ def test_document_extraction_is_bounded_and_available_to_doctor_summary(
     assert issued.status_code == 200, issued.text
     grant = issued.json()
     assert grant["url"].startswith("https://app.nabz.example/handoff/")
+
+    # A public doctor-view URL is not an account login. Replaying its signed
+    # token as Authorization must never expose the patient's private Vault.
+    replay = client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {grant['token']}"},
+    )
+    assert replay.status_code == 401
+    assert replay.json()["detail"] == "invalid_token_kind"
 
     # The QR target is public but bounded, and carries the extracted report
     # context the doctor needs rather than presenting an empty snapshot.

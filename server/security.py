@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import re
+import secrets
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -66,6 +67,8 @@ def issue_token(account_id: int) -> str:
     now = datetime.now(timezone.utc)
     payload = {
         "sub": str(account_id),
+        "kind": "account",
+        "jti": secrets.token_urlsafe(24),
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(hours=JWT_TTL_HOURS)).timestamp()),
     }
@@ -75,7 +78,14 @@ def issue_token(account_id: int) -> str:
 def decode_token(token: str) -> int:
     try:
         payload = jwt.decode(token, _secret(), algorithms=[JWT_ALG])
+        if payload.get("kind") != "account":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="invalid_token_kind",
+            )
         return int(payload["sub"])
+    except HTTPException:
+        raise
     except (jwt.PyJWTError, KeyError, ValueError) as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

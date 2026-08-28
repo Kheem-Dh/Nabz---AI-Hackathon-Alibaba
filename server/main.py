@@ -253,6 +253,12 @@ def create_app(settings: RuntimeSettings | None = None) -> FastAPI:
         )
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
+        # Authentication and health payloads must never be retained by a
+        # browser cache, service worker, CDN, or shared proxy. Audio is the one
+        # intentionally public/cacheable API response.
+        if request.url.path.startswith("/api/") and request.url.path != "/api/tts":
+            response.headers["Cache-Control"] = "no-store, private, max-age=0"
+            response.headers["Pragma"] = "no-cache"
         return response
 
     application.include_router(auth_router)

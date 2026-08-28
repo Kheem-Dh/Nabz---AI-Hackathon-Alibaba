@@ -1,18 +1,29 @@
 // Thin API client for the Nabz backend.
 // In dev, Vite proxies /api -> http://localhost:8000 (see vite.config.js).
-// Override the base with VITE_API_BASE. The JWT is read from localStorage and
-// attached to every request; AI keys NEVER live here — all AI goes via backend.
+// Override the base with VITE_API_BASE. The JWT is kept in tab-scoped
+// sessionStorage and attached to every request; AI keys NEVER live here.
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 const TOKEN_KEY = 'nabz_token'
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY) || ''
+  // Purge the persistent token format used by older releases.
+  try { localStorage.removeItem(TOKEN_KEY) } catch { /* ignore */ }
+  try {
+    return sessionStorage.getItem(TOKEN_KEY) || ''
+  } catch {
+    return ''
+  }
 }
 export function setToken(token) {
-  if (token) localStorage.setItem(TOKEN_KEY, token)
-  else localStorage.removeItem(TOKEN_KEY)
+  // A health session must never be restored from persistent browser storage
+  // or browser-profile migration.
+  try { localStorage.removeItem(TOKEN_KEY) } catch { /* ignore */ }
+  try {
+    if (token) sessionStorage.setItem(TOKEN_KEY, token)
+    else sessionStorage.removeItem(TOKEN_KEY)
+  } catch { /* private/locked-down browsers may deny storage */ }
 }
 
 function authHeaders(extra = {}) {
