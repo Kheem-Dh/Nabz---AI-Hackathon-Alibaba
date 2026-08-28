@@ -60,6 +60,14 @@ def test_guest_assessment_is_anonymous_opaque_and_completes(client):
         assert next_progress > previous_progress
         previous_progress = next_progress
     assert body["turn"]["type"] == "result"
+    with SessionLocal() as db:
+        temporary = db.query(GuestTriageSession).one()
+        assessment_questions = [
+            turn for turn in temporary.turns
+            if turn.get("role") == "assistant"
+            and turn.get("kind") in {"question", "image_request"}
+        ]
+        assert len(assessment_questions) <= 3
     assert body["turn"]["level"] in {"EMERGENCY", "DOCTOR_24H", "HOME_CARE"}
     assert _counts() == before
 
@@ -105,3 +113,38 @@ def test_guest_attachment_requires_consent_and_is_not_persisted(client):
     assert accepted.json()["mock"] is True
     with SessionLocal() as db:
         assert db.query(GuestTriageSession).count() == 0
+
+
+def test_guest_followup_stops_after_three_and_requests_registration(client):
+    started = client.post(
+        "/api/guest/triage/start",
+        json={"text": "I have a headache", "consent": True},
+    ).json()
+    token = started["state_token"]
+    turn = started["turn"]
+    while turn["type"] != "result":
+        response = client.post(
+            "/api/guest/triage/answer",
+            json={"state_token": token, "text": "No"},
+        )
+        assert response.status_code == 200
+        turn = response.json()["turn"]
+
+    for number in range(1, 4):
+        response = client.post(
+            "/api/guest/triage/chat",
+            json={"state_token": token, "text": f"Follow-up {number}"},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["followups_used"] == number
+        assert body["followups_limit"] == 3
+        assert body["registration_required"] is (number == 3)
+
+    blocked = client.post(
+        "/api/guest/triage/chat",
+        json={"state_token": token, "text": "Follow-up 4"},
+    )
+    assert blocked.status_code == 403
+    assert blocked.json()["detail"]["code"] == "guest_followup_limit_reached"
+    assert blocked.json()["detail"]["limit"] == 3

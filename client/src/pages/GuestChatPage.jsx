@@ -39,7 +39,7 @@ function loadDraft() {
   }
 }
 
-function QuestionCard({ turn, active, busy, onAnswer, onReplay, speaking }) {
+function QuestionCard({ turn, active, busy, onAnswer, onVoiceAnswer, onReplay, speaking, listening, speechSupported }) {
   const questionNumber = Math.max(1, turn.analysis?.questions_asked || 1)
   const reportedProgress = turn.analysis?.completeness || turn.analysis?.confidence || 0
   // Live providers occasionally omit confidence. Progress must still advance
@@ -78,7 +78,7 @@ function QuestionCard({ turn, active, busy, onAnswer, onReplay, speaking }) {
           {turn.quick_replies?.map((reply, index) => (
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || listening}
               key={`${reply.english}-${index}`}
               onClick={() => onAnswer(reply.english, reply)}
             >
@@ -86,8 +86,18 @@ function QuestionCard({ turn, active, busy, onAnswer, onReplay, speaking }) {
               <small>{reply.english}</small>
             </button>
           ))}
-          <button type="button" className="guest-own-words" onClick={() => document.getElementById('guest-message')?.focus()}>
-            اپنے الفاظ میں <small>Answer in your own words</small>
+          <button
+            type="button"
+            className={`guest-own-words ${listening ? 'recording' : ''}`}
+            onClick={onVoiceAnswer}
+            disabled={busy || !speechSupported}
+            aria-label={listening ? 'Stop recording and send this answer' : 'Answer this question by voice'}
+          >
+            <span className="guest-own-words-icon">{listening ? '■' : <SmallMicIcon />}</span>
+            <span className="guest-own-words-copy">
+              <span className="urdu" dir="rtl">اپنے الفاظ میں بتائیے</span>
+              <small>{listening ? 'Listening — tap to finish and send' : 'Answer by voice'}</small>
+            </span>
           </button>
         </div>
       )}
@@ -146,7 +156,8 @@ function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
     <section className="guest-followup" id="continue-care-chat">
       <div className="guest-followup-head">
         <span className="guest-ai-avatar"><PulseIcon /></span>
-        <div><strong>Ask about this assessment</strong><small>Your follow-up stays connected to the transcript above.</small></div>
+        <div><strong className="urdu" dir="rtl">اس جواب کے بارے میں پوچھیے</strong><small>Your question stays connected to the answer above.</small></div>
+        <span className="guest-followup-count">{Math.min(entries.length, 3)}/3 مفت سوال</span>
       </div>
       {entries.map((entry, index) => (
         <div className="guest-followup-pair" key={`${entry.question}-${index}`}>
@@ -157,7 +168,7 @@ function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
             {entry.answer.safety_note && <small>{entry.answer.safety_note}</small>}
             {entry.registration_required && (
               <a className="btn btn-primary guest-register-cta" href="/auth?mode=register">
-                Create private Vault to continue →
+                مفت والٹ بنا کر گفتگو جاری رکھیے →
               </a>
             )}
           </div>
@@ -169,8 +180,9 @@ function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
         if (!usedAll) return null
         return (
           <div className="guest-followup-limit-hint">
-            Guest follow-up limit reached ({last.followups_limit ?? 3}/{last.followups_limit ?? 3}).
-            Create your private Vault to keep asking and save this conversation.
+            <strong className="urdu" dir="rtl">آپ کے تین مفت سوال مکمل ہو گئے ہیں۔</strong>
+            <span className="urdu" dir="rtl">مزید پوچھنے اور یہ گفتگو محفوظ رکھنے کے لیے مفت نجی والٹ بنائیے۔</span>
+            <a href="/auth?mode=register">والٹ بنائیے — صرف 20 سیکنڈ</a>
           </div>
         )
       })()}
@@ -190,8 +202,8 @@ function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
         <button type="button" className={`guest-input-tool ${speech.listening ? 'recording' : ''}`} onClick={() => { setLocalError(''); speech.listening ? speech.stop() : speech.start() }} disabled={busy || !speech.supported} aria-label={speech.listening ? 'Stop voice input' : 'Start voice input'} title={speech.supported ? 'Speak your follow-up' : 'Voice input is not supported in this browser'}>
           {speech.listening ? '■' : <SmallMicIcon />}
         </button>
-        <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={limitReached ? 'Create a Vault to keep asking…' : (speech.listening ? 'Listening…' : 'Ask a follow-up about this result…')} disabled={limitReached} />
-        <button className="guest-followup-send" disabled={busy || limitReached || (!value.trim() && !attachment)}>{busy ? '…' : 'Ask →'}</button>
+        <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={limitReached ? 'مزید پوچھنے کے لیے والٹ بنائیے…' : (speech.listening ? 'سن رہا ہوں…' : 'اس جواب کے بارے میں سوال پوچھیے…')} disabled={limitReached} />
+        <button className="guest-followup-send" disabled={busy || limitReached || (!value.trim() && !attachment)}>{busy ? '…' : 'پوچھیے →'}</button>
       </form>
     </section>
   )
@@ -217,6 +229,7 @@ export default function GuestChatPage() {
   const controllerRef = useRef(null)
   const spokenTurnRef = useRef('')
   const spokenFollowupRef = useRef('')
+  const autoSubmitVoiceRef = useRef(false)
   const endRef = useRef(null)
   const resultRef = useRef(null)
   const fileRef = useRef(null)
@@ -275,8 +288,25 @@ export default function GuestChatPage() {
   }, [speech.transcript])
 
   useEffect(() => {
-    if (speech.error) setError('Voice input could not start. Check microphone permission and try again.')
+    if (speech.error) {
+      autoSubmitVoiceRef.current = false
+      setError('Voice input could not start. Check microphone permission and try again.')
+    }
   }, [speech.error])
+
+  // A voice turn is a complete interaction: once recognition ends (either
+  // because the user taps stop or the silence timer fires), send the final
+  // transcript without making the user press the arrow as a second step.
+  useEffect(() => {
+    if (speech.listening || !autoSubmitVoiceRef.current) return
+    const spokenText = speech.transcript.trim()
+    if (!spokenText) return
+    autoSubmitVoiceRef.current = false
+    speech.reset()
+    setTyped('')
+    if (started) answer(spokenText)
+    else start(spokenText)
+  }, [speech.listening, speech.transcript])
 
   function saveResponse(response, userMessage) {
     setStateToken(response.state_token)
@@ -418,6 +448,7 @@ export default function GuestChatPage() {
   async function submitTyped(event) {
     event.preventDefault()
     if (resultTurn) return
+    autoSubmitVoiceRef.current = false
     if (speech.listening) speech.stop()
     const typedValue = typed.trim()
     const attachmentContext = draftAttachment
@@ -441,7 +472,12 @@ export default function GuestChatPage() {
     tts.cancel()
     tts.prime()
     if (speech.listening) speech.stop()
-    else speech.start()
+    else {
+      autoSubmitVoiceRef.current = true
+      speech.reset()
+      setTyped('')
+      speech.start()
+    }
   }
 
   async function describeAttachment(file) {
@@ -481,7 +517,8 @@ export default function GuestChatPage() {
     setError('')
     spokenTurnRef.current = ''
     spokenFollowupRef.current = ''
-    setConsent(false)
+    autoSubmitVoiceRef.current = false
+    setConsent(true)
     speech.reset()
     sessionStorage.removeItem(STORAGE_KEY)
     if (oldToken) clearGuestTriage(oldToken).catch(() => {})
@@ -495,6 +532,12 @@ export default function GuestChatPage() {
         </button>
         <div className="guest-side-label">CONSULTING FOR</div>
         <div className="guest-person-card"><span>Y</span><div><strong>Yourself</strong><small>Temporary guest session</small></div></div>
+        {started && (
+          <button className="guest-side-new" onClick={reset}>
+            <span aria-hidden="true">＋</span>
+            <span><b className="urdu" dir="rtl">نئی گفتگو</b><small>Start a new chat</small></span>
+          </button>
+        )}
         <div className="guest-side-note">
           <strong>Private by design</strong>
           <p>This conversation is temporary, has no name attached, and expires automatically.</p>
@@ -507,7 +550,7 @@ export default function GuestChatPage() {
           <div className="guest-mobile-brand"><span><PulseIcon /></span><strong>Nabz</strong></div>
           <div className="guest-guide-status"><span className="guest-ai-avatar"><PulseIcon /></span><div><strong className="urdu" dir="rtl">نبض</strong><small>Nabz · Guest</small></div></div>
           <div className="guest-header-actions">
-            {started && <button onClick={reset} title="Clear chat">✕</button>}
+            {started && <button className="guest-header-new" onClick={reset} title="Start a new chat"><span className="urdu">نئی گفتگو</span></button>}
             <button onClick={() => navigate('/auth?mode=login')} className="urdu-btn"><span className="urdu" dir="rtl">لاگ اِن</span></button>
             <button className="primary urdu-btn" onClick={() => navigate('/auth?mode=register')}>
               <span className="urdu" dir="rtl">والٹ بنائیں</span>
@@ -525,14 +568,14 @@ export default function GuestChatPage() {
                 <MicButton listening={speech.listening} disabled={busy || !speech.supported || !consent} onClick={toggleVoice} />
                 <small className="guest-voice-hint">
                   {consent
-                    ? (speech.listening ? 'Listening — speak naturally' : 'Tap the mic and speak')
+                    ? (speech.listening ? 'Listening — tap again to finish and send' : 'Tap the mic and speak')
                     : 'Confirm the privacy note to enable voice'}
                 </small>
               </div>
               <div className="guest-starter-label"><span className="urdu" dir="rtl">یا ایک عام شکایت چنیں</span></div>
               <div className="guest-starters">
                 {STARTERS.map(([urdu, english]) => (
-                  <button key={english} onClick={() => start(english, { urdu, english })} disabled={busy}>
+                  <button key={english} onClick={() => start(english, { urdu, english })} disabled={busy || speech.listening}>
                     <span className="urdu" dir="rtl">{urdu}</span><small>{english}</small>
                   </button>
                 ))}
@@ -585,7 +628,10 @@ export default function GuestChatPage() {
                   active={active}
                   busy={busy}
                   speaking={tts.speaking}
+                  listening={speech.listening}
+                  speechSupported={speech.supported}
                   onAnswer={answer}
+                  onVoiceAnswer={toggleVoice}
                   onReplay={(text) => tts.speak(text)}
                 />
               })}

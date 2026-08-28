@@ -969,13 +969,14 @@ def _messages_for_turn(
     profile: dict[str, Any], session_id: int, turns: list[dict], *, repair: str | None = None,
 ) -> list[dict[str, str]]:
     asked = _count_questions(turns)
+    question_limit = 3 if profile.get("is_guest") else MAX_QUESTIONS
     payload = {
         "encounter_id": session_id,
         "encounter_variation_token": secrets.token_hex(6),
         "questions_already_asked": _asked_questions(turns),
         "question_count": asked,
-        "questions_remaining": max(MAX_QUESTIONS - asked, 0),
-        "must_return_result_now": asked >= MAX_QUESTIONS,
+        "questions_remaining": max(question_limit - asked, 0),
+        "must_return_result_now": asked >= question_limit,
         "PATIENT_VAULT_DATA": _profile_context(profile),
         "ENCOUNTER_TRANSCRIPT_DATA": _conversation_context(turns),
     }
@@ -1283,12 +1284,13 @@ def qwen_next_turn(
                 data = json.loads(_strip_fences(result.text))
                 turn = _turn_from_qwen_json(data, profile, session_id, turns)
                 asked = _count_questions(turns)
-                if asked >= MAX_QUESTIONS and turn.type != "result":
+                question_limit = 3 if profile.get("is_guest") else MAX_QUESTIONS
+                if asked >= question_limit and turn.type != "result":
                     raise ValueError("question ceiling reached; return a result")
                 # Hard floor: prevent 2-question triage failures. Non-emergency
                 # results require real anamnesis. The prompt asks for this but
                 # LLMs routinely defect on counting rules — enforce in code.
-                MIN_QUESTIONS_FOR_RESULT = 4
+                MIN_QUESTIONS_FOR_RESULT = min(4, question_limit)
                 if (
                     turn.type == "result"
                     and asked < MIN_QUESTIONS_FOR_RESULT

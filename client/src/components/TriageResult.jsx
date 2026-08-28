@@ -56,6 +56,149 @@ export default function TriageResult({
     })
   }
 
+  if (guest) {
+    const primaryCause = turn.possible_causes?.length
+      ? normalizeCause(turn.possible_causes[0])
+      : null
+    const urduSteps = turn.suggestions_urdu || []
+    const englishSteps = turn.suggestions_english || []
+    const stepCount = Math.min(Math.max(urduSteps.length, englishSteps.length), 3)
+    const treatmentIdea = turn.treatment_class_suggestions?.[0]
+
+    return (
+      <div className="guest-simple-result">
+        {turn.response_source === 'ai_unavailable' && (
+          <div className="notice notice-warn ai-unavailable-notice" role="alert">
+            <strong>طبی جائزہ اس وقت دستیاب نہیں</strong>
+            <span>یہ علامات کا مکمل تجزیہ نہیں ہے۔ براہِ کرم قریبی ڈاکٹر سے رابطہ کیجیے۔</span>
+            {onRetry && <button className="btn btn-primary" onClick={onRetry}>دوبارہ کوشش کریں</button>}
+          </div>
+        )}
+        {turn.response_source === 'safety_protocol' && (
+          <div className="notice notice-warn mental-safety-notice" role="alert">
+            <strong className="urdu" dir="rtl">آپ اکیلے نہیں ہیں — ابھی کسی قابلِ اعتماد شخص کو اپنے پاس بلائیے</strong>
+            <span className="urdu" dir="rtl">اگر خود کو محفوظ رکھنا مشکل لگ رہا ہو تو فوراً ریسکیو 1122 یا پولیس 15 سے رابطہ کیجیے، یا قریبی ایمرجنسی میں جائیے۔</span>
+            <div className="btn-row"><a className="btn btn-primary" href="tel:1122">1122 ملائیے</a><a className="btn btn-outline" href="tel:15">15 ملائیے</a></div>
+          </div>
+        )}
+
+        <article className={`guest-answer-sheet ${cfg.className}`} role="status">
+          <header className="guest-answer-status">
+            <span className="guest-answer-status-icon" aria-hidden="true">{cfg.icon}</span>
+            <div>
+              <small>نبض کی سمجھ · حتمی تشخیص نہیں</small>
+              <h2 className="urdu" dir="rtl">{cfg.urdu}</h2>
+              <span>{cfg.english}</span>
+            </div>
+            {turn.analysis?.questions_asked >= 3 && (
+              <span className="guest-question-limit">3 سوال مکمل</span>
+            )}
+          </header>
+
+          <div className="guest-answer-main">
+            <p className="guest-answer-urdu urdu" dir="rtl">{turn.advice_urdu}</p>
+            <p className="guest-answer-english">{turn.advice_english}</p>
+          </div>
+
+          {(turn.patient_facing_impression_urdu || primaryCause) && (
+            <section className="guest-understanding-block">
+              <span className="guest-visual-icon" aria-hidden="true">💡</span>
+              <div>
+                <h3 className="urdu" dir="rtl">سادہ الفاظ میں</h3>
+                {turn.patient_facing_impression_urdu && (
+                  <p className="urdu" dir="rtl">{turn.patient_facing_impression_urdu}</p>
+                )}
+                {primaryCause && (
+                  <small>{primaryCause.name_urdu || primaryCause.name_english} — یہ صرف ممکنہ وجہ ہے، پکی تشخیص نہیں۔</small>
+                )}
+              </div>
+            </section>
+          )}
+
+          {stepCount > 0 && (
+            <section className="guest-next-steps">
+              <div className="guest-simple-heading">
+                <span aria-hidden="true">✓</span>
+                <div><h3 className="urdu" dir="rtl">ابھی کیا کیجیے</h3><small>آسان اور محفوظ اگلے قدم</small></div>
+              </div>
+              <div className="guest-step-grid">
+                {Array.from({ length: stepCount }, (_, index) => (
+                  <div className="guest-step" key={index}>
+                    <b>{index + 1}</b>
+                    <div>
+                      {urduSteps[index] && <p className="urdu" dir="rtl">{urduSteps[index]}</p>}
+                      {englishSteps[index] && <small>{englishSteps[index]}</small>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {treatmentIdea && (
+            <section className="guest-medicine-note">
+              <span className="guest-visual-icon" aria-hidden="true">💊</span>
+              <div>
+                <h3 className="urdu" dir="rtl">دوا کے بارے میں</h3>
+                <p className="urdu" dir="rtl">{treatmentIdea.purpose_urdu || treatmentIdea.class_name_urdu || 'دوا لینے سے پہلے فارماسسٹ یا ڈاکٹر سے ضرور پوچھیے۔'}</p>
+                <small>یہ نسخہ نہیں ہے۔ دوا، مقدار اور آپ کے لیے موزوں ہونے کی تصدیق ضروری ہے۔</small>
+              </div>
+            </section>
+          )}
+
+          {turn.escalation_signs?.length > 0 && (
+            <section className="guest-danger-signs">
+              <div className="guest-simple-heading">
+                <span aria-hidden="true">!</span>
+                <div><h3 className="urdu" dir="rtl">فوراً مدد کب لینی ہے؟</h3><small>ان علامات میں انتظار نہ کیجیے</small></div>
+              </div>
+              <ul>{turn.escalation_signs.slice(0, 4).map((sign) => <li key={sign}>{sign}</li>)}</ul>
+              <a href="tel:1122">ایمرجنسی میں 1122 ملائیے</a>
+            </section>
+          )}
+
+          <div className="guest-answer-actions no-print">
+            {onReplay && <button className="btn btn-ghost" onClick={onReplay}>{speaking ? '■ آواز روکیں' : '🔊 جواب سنیں'}</button>}
+            <button className="btn btn-outline" onClick={() => setShowWhy((value) => !value)}>یہ نتیجہ کیوں؟</button>
+          </div>
+          {showWhy && <div className="guest-why-result"><p>{turn.reason_english}</p></div>}
+        </article>
+
+        {isEmergency && <a className="rescue-banner" href="tel:1122">🚑 <span className="urdu">ریسکیو 1122 کو کال کیجیے</span></a>}
+
+        {chatSlot}
+
+        <section className="guest-unlock-card">
+          <div className="guest-unlock-copy">
+            <span className="guest-unlock-kicker">مفت نجی والٹ</span>
+            <h2 className="urdu" dir="rtl">آپ کی صحت کی باتیں یاد رہیں، ہر بار دوبارہ نہ بتانی پڑیں</h2>
+            <p className="urdu" dir="rtl">والٹ بنانے سے رپورٹس، دوائیں، الرجی اور پچھلی گفتگو ایک محفوظ جگہ رہتی ہے۔ اگلی بار نبض بہتر رہنمائی دے سکتا ہے اور گھر کے افراد کا ریکارڈ الگ الگ محفوظ رہتا ہے۔</p>
+            <div className="guest-vault-benefits">
+              <span><b>📄</b><span className="urdu">رپورٹس محفوظ</span></span>
+              <span><b>💊</b><span className="urdu">دواؤں کی یادداشت</span></span>
+              <span><b>👨‍👩‍👧</b><span className="urdu">پورے گھر کا ریکارڈ</span></span>
+            </div>
+          </div>
+
+          <div className="guest-clinic-preview">
+            <div className="guest-clinic-map" aria-hidden="true">
+              <i>+</i><i>+</i><i>+</i>
+              <div><b className="urdu">قریبی کلینک</b><small>فاصلہ</small></div>
+              <div><b className="urdu">طبی مرکز</b><small>راستہ</small></div>
+            </div>
+            <div className="guest-clinic-lock">
+              <span aria-hidden="true">📍</span>
+              <strong className="urdu" dir="rtl">قریبی کلینک دیکھنے کے لیے</strong>
+              <small>اپنا علاقہ محفوظ طریقے سے استعمال کیجیے</small>
+            </div>
+          </div>
+
+          {onSave && <button className="guest-unlock-button" onClick={onSave}><span className="urdu">مفت والٹ بنائیے</span><small>صرف 20 سیکنڈ</small></button>}
+        </section>
+      </div>
+    )
+  }
+
   return (
     <div className="stack">
       {turn.response_source === 'ai_unavailable' && (

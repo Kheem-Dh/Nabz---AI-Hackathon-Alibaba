@@ -88,7 +88,7 @@ def _rate_limit(request: Request) -> None:
         events.append(now)
 
 
-GUEST_FOLLOWUP_LIMIT = int(os.getenv("NABZ_GUEST_FOLLOWUP_LIMIT", "3"))
+GUEST_FOLLOWUP_LIMIT = max(1, min(int(os.getenv("NABZ_GUEST_FOLLOWUP_LIMIT", "3")), 3))
 
 
 def _guest_profile() -> dict[str, Any]:
