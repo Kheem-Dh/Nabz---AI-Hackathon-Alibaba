@@ -37,6 +37,8 @@ def test_guest_assessment_is_anonymous_opaque_and_completes(client):
     assert len(token) >= 32
     assert body["turn"]["type"] == "question"
     assert body["turn"]["question_english"]
+    first_progress = body["turn"]["analysis"]["completeness"]
+    assert first_progress >= 0.15
     assert _counts() == before
 
     with SessionLocal() as db:
@@ -44,6 +46,7 @@ def test_guest_assessment_is_anonymous_opaque_and_completes(client):
         assert temporary.token_hash != token
         assert token not in str(temporary.turns)
 
+    previous_progress = first_progress
     for _ in range(6):
         response = client.post(
             "/api/guest/triage/answer",
@@ -53,6 +56,9 @@ def test_guest_assessment_is_anonymous_opaque_and_completes(client):
         body = response.json()
         if body["turn"]["type"] == "result":
             break
+        next_progress = body["turn"]["analysis"]["completeness"]
+        assert next_progress > previous_progress
+        previous_progress = next_progress
     assert body["turn"]["type"] == "result"
     assert body["turn"]["level"] in {"EMERGENCY", "DOCTOR_24H", "HOME_CARE"}
     assert _counts() == before

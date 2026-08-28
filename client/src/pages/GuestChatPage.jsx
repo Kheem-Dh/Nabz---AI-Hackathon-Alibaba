@@ -40,7 +40,12 @@ function loadDraft() {
 }
 
 function QuestionCard({ turn, active, busy, onAnswer, onReplay, speaking }) {
-  const progress = Math.max(8, Math.round((turn.analysis?.completeness || turn.analysis?.confidence || 0.15) * 100))
+  const questionNumber = Math.max(1, turn.analysis?.questions_asked || 1)
+  const reportedProgress = turn.analysis?.completeness || turn.analysis?.confidence || 0
+  // Live providers occasionally omit confidence. Progress must still advance
+  // with each persisted question instead of remaining on the 15% fallback.
+  const questionFloor = Math.min(0.15 + (questionNumber - 1) * 0.18, 0.87)
+  const progress = Math.min(95, Math.round(Math.max(reportedProgress, questionFloor) * 100))
   return (
     <article className={`guest-question-card ${active ? 'active' : 'answered'}`}>
       <div className="guest-question-meta">

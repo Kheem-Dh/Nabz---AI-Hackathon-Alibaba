@@ -180,16 +180,24 @@ def _next(db: Session, session: GuestTriageSession, token: str) -> GuestTriageTu
     db.commit()
     db.refresh(session)
     if turn.type == "question":
+        question_count = sum(
+            1 for item in session.turns
+            if item.get("role") == "assistant"
+            and item.get("kind") in {"question", "image_request"}
+        )
+        reported_progress = max(
+            turn.analysis.completeness,
+            turn.analysis.confidence,
+        )
+        question_floor = min(0.15 + max(0, question_count - 1) * 0.18, 0.87)
+        progress = max(reported_progress, question_floor)
         turn.analysis = TriageAnalysis(
             collected=turn.analysis.collected,
             still_checking_urdu=turn.analysis.still_checking_urdu,
             still_checking_english=turn.analysis.still_checking_english,
-            confidence=turn.analysis.confidence,
-            questions_asked=sum(
-                1 for item in session.turns
-                if item.get("role") == "assistant"
-                and item.get("kind") in {"question", "image_request"}
-            ),
+            confidence=progress,
+            completeness=progress,
+            questions_asked=question_count,
         )
     return GuestTriageTurnResponse(
         state_token=token,

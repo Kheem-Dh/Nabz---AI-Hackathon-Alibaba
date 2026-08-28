@@ -246,7 +246,7 @@ def create_app(settings: RuntimeSettings | None = None) -> FastAPI:
             "font-src 'self' https://fonts.gstatic.com data:; "
             "img-src 'self' data: blob:; "
             "connect-src 'self'; "
-            "media-src 'self' blob:; "
+            "media-src 'self' https://nabz-api.onrender.com blob: data:; "
             "object-src 'none'; "
             "base-uri 'self'; "
             "frame-ancestors 'none';"

@@ -11,6 +11,8 @@ const SPEECH_STATE_EVENT = 'nabz:speech-state'
 let activeAudio = null
 let sharedAudio = null
 let audioPrimed = false
+let activeFetchController = null
+let activeObjectUrl = ''
 
 // A few silent PCM samples in a valid WAV container. Playing this from the
 // user's first click blesses the shared media element on Safari/iOS, allowing
@@ -34,6 +36,10 @@ function emitSpeechState(speaking) {
 }
 
 export function stopAllSpeech() {
+  if (activeFetchController) {
+    activeFetchController.abort()
+    activeFetchController = null
+  }
   if (activeAudio) {
     const audio = activeAudio
     activeAudio = null
@@ -43,6 +49,10 @@ export function stopAllSpeech() {
     audio.pause()
     audio.removeAttribute('src')
     audio.load()
+  }
+  if (activeObjectUrl) {
+    URL.revokeObjectURL(activeObjectUrl)
+    activeObjectUrl = ''
   }
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.cancel()
@@ -126,23 +136,51 @@ export function useTextToSpeech() {
     }
     audio.pause()
     audio.muted = false
-    audio.src = ttsUrl(text, lang)
-    audio.load()
     let fallbackStarted = false
     const useBrowserFallback = () => {
       if (fallbackStarted || activeAudio !== audio) return
       fallbackStarted = true
       activeAudio = null
+      if (activeObjectUrl) {
+        URL.revokeObjectURL(activeObjectUrl)
+        activeObjectUrl = ''
+      }
       browserSpeak(text, lang)
     }
     activeAudio = audio
-    audio.onplay = () => emitSpeechState(true)
-    audio.onended = () => {
-      if (activeAudio === audio) activeAudio = null
-      emitSpeechState(false)
-    }
-    audio.onerror = useBrowserFallback
-    audio.play().catch(useBrowserFallback)
+    const controller = new AbortController()
+    activeFetchController = controller
+
+    // Fetch through connect-src, then play a same-page blob URL. Render hosts
+    // the web app and API on different domains; assigning the API URL directly
+    // to <audio> is blocked by the production media-src CSP even though JSON
+    // API requests are allowed.
+    fetch(ttsUrl(text, lang), { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error(`TTS HTTP ${response.status}`)
+        return response.blob()
+      })
+      .then((blob) => {
+        if (controller.signal.aborted || activeAudio !== audio) return
+        activeFetchController = null
+        activeObjectUrl = URL.createObjectURL(blob)
+        audio.src = activeObjectUrl
+        audio.load()
+        audio.onplay = () => emitSpeechState(true)
+        audio.onended = () => {
+          if (activeAudio === audio) activeAudio = null
+          if (activeObjectUrl) {
+            URL.revokeObjectURL(activeObjectUrl)
+            activeObjectUrl = ''
+          }
+          emitSpeechState(false)
+        }
+        audio.onerror = useBrowserFallback
+        audio.play().catch(useBrowserFallback)
+      })
+      .catch((error) => {
+        if (error?.name !== 'AbortError') useBrowserFallback()
+      })
   }, [browserSpeak])
 
   const prime = useCallback(() => {
