@@ -86,7 +86,7 @@ export default function TriageResult({
           <header className="guest-answer-status">
             <span className="guest-answer-status-icon" aria-hidden="true">{cfg.icon}</span>
             <div>
-              <small>نبض کی سمجھ · حتمی تشخیص نہیں</small>
+              <small>نبض کا ابتدائی جائزہ · حتمی تشخیص نہیں</small>
               <h2 className="urdu" dir="rtl">{cfg.urdu}</h2>
               <span>{cfg.english}</span>
             </div>
@@ -368,7 +368,7 @@ export default function TriageResult({
           <div className="care-plan-head">
             <span className="care-plan-icon">💊</span>
             <div>
-              <div className="urdu">مجوزہ دوا کا مشاورتی منصوبہ</div>
+              <div className="urdu">دوا سے متعلق عمومی رہنمائی</div>
               <small>Proposed medication discussion plan — not a prescription</small>
             </div>
             {turn.medication_plan?.status && (

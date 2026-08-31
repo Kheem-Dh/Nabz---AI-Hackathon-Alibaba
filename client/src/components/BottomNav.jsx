@@ -2,9 +2,9 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useProfiles } from '../context/ProfileContext'
 
 const STATIC_ITEMS = [
-  { to: '/', icon: 'home', en: 'Home', match: (p) => p === '/' },
-  { to: '/vault', icon: 'vault', en: 'Vault', match: (p) => p.startsWith('/vault') },
-  { to: '/clinics', icon: 'care', en: 'Care', match: (p) => p.startsWith('/clinics') },
+  { to: '/', icon: 'home', ur: 'گفتگو', en: 'Chat', match: (p) => p === '/' },
+  { to: '/vault', icon: 'vault', ur: 'والٹ', en: 'Vault', match: (p) => p.startsWith('/vault') },
+  { to: '/clinics', icon: 'care', ur: 'قریبی مراکز', en: 'Care', match: (p) => p.startsWith('/clinics') },
 ]
 
 function NavIcon({ name }) {
@@ -23,12 +23,14 @@ export default function BottomNav() {
     ? {
         to: `/profile/${active.id}`,
         icon: 'profile',
+        ur: 'پروفائل',
         en: 'Profile',
         match: (p) => p.startsWith('/profile'),
       }
     : {
         to: '/profile/new',
         icon: 'profile',
+        ur: 'پروفائل',
         en: 'Profile',
         match: (p) => p.startsWith('/profile'),
       }
@@ -50,7 +52,8 @@ export default function BottomNav() {
             <span className="nav-ico" aria-hidden="true">
               <NavIcon name={it.icon} />
             </span>
-            <span>{it.en}</span>
+            <span className="nav-label-ur urdu" lang="ur" dir="rtl">{it.ur}</span>
+            <small>{it.en}</small>
           </button>
         )
       })}

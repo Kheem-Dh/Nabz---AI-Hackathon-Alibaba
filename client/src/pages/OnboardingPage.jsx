@@ -40,10 +40,10 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0)
 
   const steps = [
-    { title: 'Welcome to Nabz', kicker: '01 · Getting started' },
-    { title: 'Where are you?', kicker: '02 · Care location' },
-    { title: 'How Nabz works', kicker: '03 · Safety first' },
-    { title: 'Ready when you are', kicker: '04 · Start a triage' },
+    { title: 'Welcome to Nabz', urdu: 'نبض میں خوش آمدید', kicker: '01 · Getting started', kickerUrdu: 'آغاز' },
+    { title: 'Where are you?', urdu: 'آپ کہاں ہیں؟', kicker: '02 · Care location', kickerUrdu: 'طبی سہولت کے لیے مقام' },
+    { title: 'How Nabz works', urdu: 'نبض کیسے کام کرتا ہے؟', kicker: '03 · Safety first', kickerUrdu: 'حفاظت پہلے' },
+    { title: 'Ready when you are', urdu: 'جب آپ تیار ہوں', kicker: '04 · Start a triage', kickerUrdu: 'طبی جائزہ شروع کیجیے' },
   ]
 
   function finish() {
@@ -57,8 +57,9 @@ export default function OnboardingPage() {
   return (
     <div className="page onboard-page">
       <div className="onboard-card">
-        <div className="onboard-kicker">{cur.kicker}</div>
-        <h1 className="onboard-title">{cur.title}</h1>
+        <div className="onboard-kicker"><span>{cur.kicker}</span><span className="urdu" lang="ur" dir="rtl">{cur.kickerUrdu}</span></div>
+        <h1 className="onboard-title urdu" lang="ur" dir="rtl">{cur.urdu}</h1>
+        <div className="onboard-title-en">{cur.title}</div>
 
         <div className="wiz-steps" aria-label="Onboarding progress">
           {steps.map((_, i) => (
@@ -69,8 +70,8 @@ export default function OnboardingPage() {
         {step === 0 && (
           <div className="onboard-body">
             <p className="onboard-lead urdu" dir="rtl">
-              {activeName}، خوش آمدید۔ نبض آپ کی آواز میں طبیعت سمجھتا ہے، خطرے کی
-              علامات فوری چیک کرتا ہے، اور آپ کے قریب مناسب کلینک یا ہسپتال بتاتا ہے۔
+              <bdi dir="auto">{activeName}</bdi>، خوش آمدید۔ نبض اردو، رومن اردو یا انگریزی میں آپ کی بات سنتا ہے،
+              خطرے کی علامات پہلے دیکھتا ہے، اور محفوظ اگلا قدم سمجھنے میں مدد دیتا ہے۔
             </p>
             <p className="onboard-lead">
               Welcome, <strong>{activeName}</strong>. Nabz listens in Urdu, checks for red
@@ -88,19 +89,21 @@ export default function OnboardingPage() {
 
         {step === 1 && (
           <div className="onboard-body">
+            <p className="onboard-lead urdu" lang="ur" dir="rtl">آپ کے مقام کی تصدیق ہو چکی ہے، اس لیے پہلے طبی جائزے ہی سے قریبی مراکز دکھائے جا سکیں گے۔</p>
             <p className="onboard-lead">Your care location was confirmed before this tour so nearby results are ready from the first assessment.</p>
             <div className="notice notice-info location-confirmed-onboard">
               <strong>⌖ {preference?.label}</strong>
               <span>{preference?.permission_state === 'granted' ? 'Using current-location coordinates' : 'Using your selected city centre'}</span>
             </div>
-            <button className="btn btn-outline" onClick={() => navigate('/location')}>Change location</button>
+            <button className="btn btn-outline" onClick={() => navigate('/location')}>جگہ تبدیل کیجیے · Change location</button>
           </div>
         )}
 
         {step === 2 && (
           <div className="onboard-body">
             <div className="onboard-safety">
-              <h3>What Nabz will and will not do</h3>
+              <h3 className="urdu" lang="ur" dir="rtl">نبض کیا کرے گا اور کیا نہیں کرے گا؟</h3>
+              <small className="onboard-heading-en">What Nabz will and will not do</small>
               <ul className="onboard-list">
                 <li>✅ Triage urgency — Emergency, See a doctor 24h, or Home care.</li>
                 <li>✅ Explain lab and prescription photos in simple Urdu.</li>
@@ -121,6 +124,7 @@ export default function OnboardingPage() {
 
         {step === 3 && (
           <div className="onboard-body">
+            <p className="onboard-lead urdu" lang="ur" dir="rtl">سب تیار ہے۔ اگلی اسکرین پر مائیک دبائیے اور بتائیے کہ <bdi dir="auto">{activeName}</bdi> کی طبیعت کیسی ہے۔ نبض ایک وقت میں صرف ضروری سوال پوچھے گا۔</p>
             <p className="onboard-lead">
               You're set up. Tap the microphone on the next screen and describe how
               <strong> {activeName}</strong> feels. Nabz will ask the single most useful
@@ -140,12 +144,12 @@ export default function OnboardingPage() {
             className="btn btn-ghost"
             onClick={() => { if (account?.id) markOnboarded(account.id); navigate('/', { replace: true }) }}
           >
-            Skip
+            چھوڑ دیجیے · Skip
           </button>
           <div style={{ display: 'flex', gap: 8 }}>
             {step > 0 && (
               <button className="btn btn-outline" onClick={() => setStep((s) => Math.max(0, s - 1))}>
-                Back
+                واپس · Back
               </button>
             )}
             {step < steps.length - 1 ? (
@@ -154,11 +158,11 @@ export default function OnboardingPage() {
                 onClick={() => setStep((s) => Math.min(steps.length - 1, s + 1))}
                 disabled={step === 1 && !preference}
               >
-                Next
+                اگلا · Next
               </button>
             ) : (
               <button className="btn btn-primary" onClick={finish}>
-                Start my first triage →
+                پہلا طبی جائزہ شروع کیجیے · Start →
               </button>
             )}
           </div>

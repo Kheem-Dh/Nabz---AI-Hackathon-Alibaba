@@ -369,8 +369,8 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
         {error && <div className="notice notice-warn">{error}</div>}
         <div className="triage-start-head">
           <div>
-            <div className="hero-greet-ur urdu" dir="rtl">
-              {profile.display_name}، آج آپ کی طبیعت کیسی ہے؟ مجھے بتائیں میں کیسے مدد کر سکتا ہوں
+            <div className="hero-greet-ur urdu" lang="ur" dir="rtl">
+              <bdi dir="auto">{profile.display_name}</bdi>، آج آپ کی طبیعت کیسی ہے؟ مجھے بتائیے کہ میں آپ کی کیا مدد کر سکتا ہوں۔
             </div>
             <div className="hero-greet-en">Tell me how you're feeling, {profile.display_name} — I'm here to help.</div>
           </div>
@@ -399,7 +399,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           />
           <div className="voice-first-copy">
             <strong>{recordingInitial ? 'Listening — tap to finish and send' : listeningInitial ? 'Preparing your words…' : 'Start with your voice'}</strong>
-            <span className="urdu">{recordingInitial ? 'اپنی بات مکمل ہونے پر مائیک دوبارہ دبائیے' : listeningInitial ? 'آپ کی آواز کو تحریر میں بدلا جا رہا ہے…' : 'مائیک دبائیں اور آرام سے اپنی بات بتائیں'}</span>
+            <span className="urdu" lang="ur" dir="rtl">{recordingInitial ? 'اپنی بات مکمل ہونے پر مائیک دوبارہ دبائیے' : listeningInitial ? 'آپ کی آواز کو تحریر میں بدلا جا رہا ہے…' : 'مائیک دبائیے اور اطمینان سے اپنی بات بتائیے'}</span>
             <small>{recordingInitial ? 'آپ کے الفاظ نیچے ساتھ ساتھ دکھائی دے رہے ہیں' : listeningInitial ? 'Your question will be sent automatically' : (speech.backend === 'live' ? 'Live transcript as you speak' : 'Secure cloud transcription after recording')}</small>
           </div>
         </div>
@@ -416,7 +416,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
             className={`urdu ${listeningInitial ? 'voice-transcript-field' : ''}`}
             dir="auto"
             rows={3}
-            placeholder={listeningInitial ? 'سن رہا ہوں…' : 'اپنی علامات تفصیل سے لکھیں…  Describe your symptoms naturally'}
+            placeholder={listeningInitial ? 'سن رہا ہوں…' : 'اپنی علامات تفصیل سے لکھیے…'}
             value={listeningInitial ? speech.transcript : typed}
             onChange={(e) => setTyped(e.target.value)}
             readOnly={listeningInitial}
@@ -440,11 +440,11 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           <footer>
             <button className={`care-tool ${listeningInitial ? 'recording' : ''}`} type="button" onClick={() => (listeningInitial ? speech.stop() : startVoice())} disabled={!speech.supported}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 10.5v.7a6.5 6.5 0 0 0 13 0v-.7M12 17.7V21" /></svg>
-              {listeningInitial ? 'Done & send' : 'Speak'}
+              {listeningInitial ? 'مکمل کرکے بھیجیے' : 'بولیے'}
             </button>
             <label className={`care-tool ${attaching ? 'busy' : ''}`} title="Attach a clinical image or PDF">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 12.5 5.8-5.8a3 3 0 0 1 4.2 4.2l-7.3 7.3a5 5 0 0 1-7.1-7.1l7.1-7.1" /></svg>
-              {attaching ? 'Reading…' : 'Attach'}
+              {attaching ? 'پڑھ رہے ہیں…' : 'فائل منسلک کیجیے'}
               <input type="file" hidden accept="image/*,.pdf,application/pdf" onChange={chooseInitialAttachment} />
             </label>
             <span>{speech.backend === 'live' ? 'Live transcript in Chrome' : 'Transcript appears after Done'} · Enter to send</span>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const STEPS = [
-  { number: '01', title: 'Share what you are feeling', urdu: 'اپنی کیفیت بیان کرنے کی سہولت', body: 'Speak naturally in Urdu, Roman Urdu or English. Typing is always available too.' },
+  { number: '01', title: 'Share what you are feeling', urdu: 'اپنی کیفیت اطمینان سے بتائیے', body: 'Speak naturally in Urdu, Roman Urdu or English. Typing is always available too.' },
   { number: '02', title: 'A short, thoughtful conversation', urdu: 'ضروری باتوں پر مختصر گفتگو', body: 'Nabz asks only the questions that help make the next step clearer.' },
   { number: '03', title: 'Understand what to do next', urdu: 'آپ کے لیے مناسب اگلا قدم', body: 'See practical guidance, warning signs and when it may be better to seek care.' },
 ]
@@ -12,7 +12,7 @@ const FEATURES = [
   { icon: 'voice', eyebrow: 'VOICE + TEXT', title: 'A conversation in your language', urdu: 'جس زبان میں آپ آسانی محسوس کریں', body: 'Urdu, Roman Urdu and English are understood, so health questions can begin naturally.' },
   { icon: 'family', eyebrow: 'FAMILY CARE', title: 'Separate care for every person', urdu: 'ہر فرد کی صحت کا الگ اور واضح ریکارڈ', body: 'Parents, children and grandparents each have their own timeline, medicines and documents.' },
   { icon: 'vault', eyebrow: 'PRIVATE VAULT', title: 'Reports become useful context', urdu: 'رپورٹس محفوظ بھی، سمجھنے میں آسان بھی', body: 'Keep reviewed reports and prescriptions ready for a future conversation or doctor visit.' },
-  { icon: 'location', eyebrow: 'CARE NEARBY', title: 'Find the right place for care', urdu: 'ضرورت کے مطابق قریبی نگہداشت', body: 'Use your confirmed location to see nearby clinics, hospitals, labs and emergency care.' },
+  { icon: 'location', eyebrow: 'CARE NEARBY', title: 'Find the right place for care', urdu: 'قریب ہی مناسب طبی سہولت تلاش کیجیے', body: 'Use your confirmed location to see nearby clinics, hospitals, labs and emergency care.' },
 ]
 
 function Icon({ name }) {
@@ -127,7 +127,7 @@ export default function LandingPage() {
           <div className="landing-hero-copy">
             <div className="landing-kicker"><span /> HEALTH GUIDANCE THAT LISTENS</div>
             <h1>Your health questions,<br/><em>heard with care.</em></h1>
-            <p className="landing-hero-urdu urdu" dir="rtl">اپنی کیفیت اطمینان سے بیان کیجیے، نبض اگلا مناسب قدم سمجھنے میں آپ کی مدد کرے گا۔</p>
+            <p className="landing-hero-urdu urdu" lang="ur" dir="rtl">اپنی کیفیت اطمینان سے بتائیے، نبض مناسب اگلا قدم سمجھنے میں آپ کی مدد کرے گا۔</p>
             <p className="landing-lead">Talk through symptoms, keep family health records organised and understand when it may be time to seek care—all in one calm, bilingual space.</p>
             <div className="landing-hero-actions">
               <button className="landing-primary" onClick={openChat}>{account ? 'Continue to Nabz' : 'Start a private conversation'} <Icon name="arrow" /></button>
@@ -157,7 +157,7 @@ export default function LandingPage() {
 
         <section className="landing-section steps-section landing-flow-section" id="how" data-reveal>
           <span className="landing-flow-node" aria-hidden="true"><Icon name="pulse" /></span>
-          <SectionHead kicker="A CALMER WAY TO BEGIN" title="From a concern to a clearer next step." urdu="بات آپ کی کیفیت سے شروع ہوتی ہے، اور مقصد بہتر سمجھ تک پہنچنا ہے۔" body="One connected conversation keeps the person, their context and the next decision together." />
+          <SectionHead kicker="A CALMER WAY TO BEGIN" title="From a concern to a clearer next step." urdu="بات آپ کی کیفیت سے شروع ہوتی ہے، تاکہ صورتِ حال کو بہتر طور پر سمجھا جا سکے۔" body="One connected conversation keeps the person, their context and the next decision together." />
           <div className="landing-steps">
             {STEPS.map((step) => (
               <article className="landing-step" key={step.number}>
@@ -207,7 +207,7 @@ export default function LandingPage() {
           <div className="safety-copy">
             <span className="landing-kicker light">HONEST ABOUT ITS LIMITS</span>
             <h2>Helpful guidance.<br/>Clear boundaries.</h2>
-            <p className="landing-section-urdu urdu" dir="rtl">نبض عمومی رہنمائی فراہم کرتا ہے؛ تشخیص یا ڈاکٹر کی جگہ لینے کا دعویٰ نہیں کرتا۔</p>
+            <p className="landing-section-urdu urdu" lang="ur" dir="rtl">نبض صرف عمومی رہنمائی فراہم کرتا ہے؛ یہ تشخیص نہیں کرتا اور ڈاکٹر کا متبادل نہیں ہے۔</p>
             <p>Nabz helps organise what you know, surface warning signs and make the next step easier to understand. It does not replace professional medical care.</p>
             <ul>
               <li><Icon name="shield" /> You review extracted report and prescription details before saving</li>
@@ -219,7 +219,7 @@ export default function LandingPage() {
             <span className="safety-card-icon"><Icon name="pulse" /></span>
             <small>WHEN SOMETHING FEELS SERIOUS</small>
             <h3>Please seek urgent help.</h3>
-            <p className="urdu" dir="rtl">اگر صورتحال سنگین محسوس ہو تو براہِ کرم فوراً ۱۱۲۲ سے رابطہ کیجیے یا قریبی ایمرجنسی میں تشریف لے جائیے۔</p>
+            <p className="urdu" lang="ur" dir="rtl">اگر صورتِ حال سنگین محسوس ہو تو فوراً ۱۱۲۲ سے رابطہ کیجیے یا قریبی ہسپتال کے ایمرجنسی شعبے میں جائیے۔</p>
             <p>Do not wait for an AI response in an emergency.</p>
             <button onClick={openChat}>Open Nabz health guide <Icon name="arrow" /></button>
           </div>

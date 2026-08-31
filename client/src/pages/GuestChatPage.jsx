@@ -424,7 +424,7 @@ export default function GuestChatPage() {
           question: typedQuestion,
           answer: {
             answer_english: nextError.body.detail.message,
-            answer_urdu: 'مفت گیسٹ سوالات ختم ہو گئے ہیں۔ اپنی نجی والٹ بنائیں (20 سیکنڈ، مفت) تاکہ گفتگو جاری رکھ سکیں اور اسے اپنے فیملی ریکارڈ میں محفوظ کر سکیں۔',
+            answer_urdu: 'آپ کے مفت سوال مکمل ہو گئے ہیں۔ اپنی نجی والٹ بنائیے (صرف 20 سیکنڈ، بالکل مفت) تاکہ گفتگو جاری رکھی جا سکے اور اسے خاندانی ریکارڈ میں محفوظ کیا جا سکے۔',
             safety_note: 'Guest follow-up limit reached.',
           },
           registration_required: true,
@@ -570,7 +570,7 @@ export default function GuestChatPage() {
             {started && <button className="guest-header-new" onClick={reset} title="Start a new chat"><span className="urdu">نئی گفتگو</span></button>}
             <button onClick={() => navigate('/auth?mode=login')} className="urdu-btn"><span className="urdu" dir="rtl">لاگ اِن</span></button>
             <button className="primary urdu-btn" onClick={() => navigate('/auth?mode=register')}>
-              <span className="urdu" dir="rtl">والٹ بنائیں</span>
+              <span className="urdu" lang="ur" dir="rtl">والٹ بنائیے</span>
             </button>
           </div>
         </header>
@@ -578,18 +578,18 @@ export default function GuestChatPage() {
         <div className={`guest-chat-scroll ${started ? 'has-conversation' : ''}`}>
           {!started && (
             <section className="guest-welcome">
-              <h1 className="urdu urdu-hero" dir="rtl">آج آپ کی طبیعت کیسی ہے؟ مجھے بتائیں میں کیسے مدد کر سکتا ہوں</h1>
+              <h1 className="urdu urdu-hero" lang="ur" dir="rtl">آج آپ کی طبیعت کیسی ہے؟ مجھے بتائیے کہ میں آپ کی کیا مدد کر سکتا ہوں۔</h1>
               <p className="guest-welcome-sub">Tell me how you're feeling — I'm here to help.</p>
               <div className="guest-voice-first">
                 <div className="guest-voice-rings"><i /><i /></div>
                 <MicButton listening={speech.listening} disabled={busy || !speech.supported || !consent} onClick={toggleVoice} />
                 <small className="guest-voice-hint">
                   {consent
-                    ? (speech.listening ? 'Listening — tap again to finish and send' : 'Tap the mic and speak')
-                    : 'Confirm the privacy note to enable voice'}
+                    ? (speech.listening ? 'مکمل کرکے بھیجنے کے لیے مائیک دوبارہ دبائیے' : 'مائیک دبائیے اور بولیے')
+                    : 'آواز استعمال کرنے کے لیے رازداری کی اجازت دیجیے'}
                 </small>
               </div>
-              <div className="guest-starter-label"><span className="urdu" dir="rtl">یا ایک عام شکایت چنیں</span></div>
+              <div className="guest-starter-label"><span className="urdu" lang="ur" dir="rtl">یا کوئی عام علامت منتخب کیجیے</span></div>
               <div className="guest-starters">
                 {STARTERS.map(([urdu, english]) => (
                   <button key={english} onClick={() => start(english, { urdu, english })} disabled={busy || speech.listening}>
@@ -607,7 +607,7 @@ export default function GuestChatPage() {
                 <div className="guest-user-bubble guest-user-bubble-pending">
                   {pendingStart.urdu && <span className="urdu" dir="rtl">{pendingStart.urdu}</span>}
                   {pendingStart.text && <span>{pendingStart.text}</span>}
-                  <small className="urdu" dir="rtl">آپ کی بات مل گئی ہے ✓</small>
+                  <small className="urdu" lang="ur" dir="rtl">آپ کی بات موصول ہو گئی ہے ✓</small>
                 </div>
               )}
               {messages.map((message, index) => {
@@ -691,7 +691,9 @@ export default function GuestChatPage() {
                     submitTyped(event)
                   }
                 }}
-                placeholder={started ? 'Answer in Urdu, Roman Urdu or English…' : 'Describe your symptoms…'}
+                dir="auto"
+                placeholder={started ? 'اپنا جواب لکھیے…' : 'اپنی علامات لکھیے…'}
+                aria-label={started ? 'اپنا جواب لکھیے' : 'اپنی علامات لکھیے'}
               />
               <button type="button" className={`guest-composer-mic ${speech.listening ? 'recording' : ''}`} onClick={toggleVoice} disabled={busy || !speech.supported || (!started && !consent)} aria-label={speech.listening ? 'Stop voice input' : 'Start voice input'}>
                 {speech.listening ? '■' : <SmallMicIcon />}
@@ -704,7 +706,7 @@ export default function GuestChatPage() {
                 <button type="button" onClick={() => setDraftAttachment(null)} aria-label="Remove attachment">×</button>
               </div>
             )}
-            <div className="guest-composer-note"><span>AI health guidance—not a diagnosis</span><span>Emergency? Call 1122 now</span><span>Temporary session · no account required</span></div>
+            <div className="guest-composer-note"><span>عمومی AI رہنمائی · تشخیص نہیں</span><span>ایمرجنسی؟ ابھی 1122 ملائیے</span><span>عارضی گفتگو · اکاؤنٹ ضروری نہیں</span></div>
           </div>
         )}
       </main>

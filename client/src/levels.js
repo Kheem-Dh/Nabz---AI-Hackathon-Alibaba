@@ -5,17 +5,17 @@ export const LEVELS = {
   EMERGENCY: {
     key: 'EMERGENCY',
     className: 'level-emergency',
-    urdu: 'فوری علاج',
+    urdu: 'فوری طبی مدد',
     english: 'EMERGENCY',
-    sub: 'ابھی ہسپتال جائیں / Go to hospital now',
+    sub: 'فوراً ہسپتال جائیے / Go to hospital now',
     icon: '🚑',
   },
   DOCTOR_24H: {
     key: 'DOCTOR_24H',
     className: 'level-doctor',
-    urdu: '24 گھنٹے میں ڈاکٹر',
+    urdu: '24 گھنٹے میں ڈاکٹر سے رجوع',
     english: 'See a doctor within 24 hours',
-    sub: 'جلد ڈاکٹر سے ملیں / Visit a doctor soon',
+    sub: '24 گھنٹے کے اندر ڈاکٹر سے ملیے / See a doctor within 24 hours',
     icon: '🩺',
   },
   HOME_CARE: {
@@ -23,7 +23,7 @@ export const LEVELS = {
     className: 'level-home',
     urdu: 'گھر پر دیکھ بھال',
     english: 'Home care',
-    sub: 'آرام کریں اور خیال رکھیں / Rest and monitor',
+    sub: 'آرام کیجیے اور علامات پر نظر رکھیے / Rest and monitor',
     icon: '🏠',
   },
 }

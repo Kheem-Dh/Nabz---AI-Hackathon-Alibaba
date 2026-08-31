@@ -183,7 +183,7 @@ export default function PrivacyPage({ required = false, initialStatus = null, on
             ['🚫', 'AI ٹریننگ نہیں', 'Never used to train AI'],
             ['🧾', 'محفوظ آڈٹ ریکارڈ', 'Privacy-safe audit trail'],
             ['🗑️', 'کسی بھی وقت حذف کریں', 'Delete anytime'],
-            ['🔐', 'پاس ورڈ hash میں', 'Passwords stored as hash'],
+            ['🔐', 'پاس ورڈ محفوظ ہیش کی صورت میں', 'Passwords stored as a secure hash'],
           ].map(([ico, ur, en], i) => (
             <div className="privacy-right-card" key={i}>
               <span className="privacy-right-ico" aria-hidden="true">{ico}</span>

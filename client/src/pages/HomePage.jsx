@@ -163,13 +163,13 @@ export default function HomePage() {
 
         {!service?.unavailable && service?.ai_configured === false && (
           <div className="notice notice-warn service-warning">
-            <strong className="urdu" dir="rtl">اسیسمنٹ فی الحال دستیاب نہیں۔</strong>
+            <strong className="urdu" lang="ur" dir="rtl">طبی جائزہ فی الحال دستیاب نہیں۔</strong>
             <small> Clinical assessment temporarily unavailable — your Vault is still open.</small>
           </div>
         )}
         {service?.unavailable && (
           <div className="notice notice-warn service-warning">
-            <strong className="urdu" dir="rtl">کنیکشن نہیں مل رہا۔</strong>
+            <strong className="urdu" lang="ur" dir="rtl">رابطہ قائم نہیں ہو رہا۔</strong>
             <small> For severe symptoms, seek urgent care.</small>
           </div>
         )}

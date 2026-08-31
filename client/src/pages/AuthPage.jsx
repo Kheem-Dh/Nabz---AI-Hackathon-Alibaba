@@ -157,7 +157,10 @@ export default function AuthPage() {
           <span><b className="urdu">نبض</b><small>NABZ</small></span>
         </button>
         <span className="auth-nav-context">Secure family health access</span>
-        <button className="auth-home-link" onClick={() => navigate('/')}>← Back to home</button>
+        <button className="auth-home-link" onClick={() => navigate('/')} aria-label="واپس ہوم پر جائیں · Back to home">
+          <span aria-hidden="true">←</span>
+          <span className="auth-home-copy"><span className="urdu" lang="ur" dir="rtl">واپس</span><small>Home</small></span>
+        </button>
       </header>
       <main className="auth-wrap">
       <div className="auth-card">
@@ -166,7 +169,8 @@ export default function AuthPage() {
           <div className="tag-ur urdu">آپ کی آواز، آپ کی صحت</div>
           <div className="tag-en">NABZ · Your voice, your health</div>
           <div className="auth-value">
-            <h1>Your family health space</h1>
+            <h1 className="urdu" lang="ur" dir="rtl">آپ کے خاندان کی صحت کے لیے محفوظ جگہ</h1>
+            <h2>Your family health space</h2>
             <p>Talk through symptoms, keep medical records organised and find appropriate care nearby.</p>
             <div><span>✓</span> Urdu, Roman Urdu and English</div>
             <div><span>✓</span> Separate history for every family member</div>
@@ -180,13 +184,13 @@ export default function AuthPage() {
               className={`auth-tab ${mode === 'login' ? 'active' : ''}`}
               onClick={() => { setMode('login'); setError(''); setErrors({}) }}
             >
-              لاگ اِن · Login
+              <span className="urdu" lang="ur" dir="rtl">لاگ اِن</span><small>Login</small>
             </button>
             <button
               className={`auth-tab ${mode === 'register' ? 'active' : ''}`}
               onClick={() => { setMode('register'); setError(''); setErrors({}) }}
             >
-              نیا اکاؤنٹ · Register
+              <span className="urdu" lang="ur" dir="rtl">نیا اکاؤنٹ</span><small>Register</small>
             </button>
           </div>
 
@@ -204,7 +208,7 @@ export default function AuthPage() {
             {mode === 'register' && (
               <div className={`field ${errors.fullName ? 'has-error' : ''}`}>
                 <label htmlFor="fname">
-                  <span className="ur urdu">پورا نام</span> Full name
+                  <span className="ur urdu" lang="ur" dir="rtl">پورا نام</span><span>Full name</span>
                 </label>
                 <input
                   id="fname"
@@ -222,8 +226,8 @@ export default function AuthPage() {
             )}
             <div className={`field ${errors.phone ? 'has-error' : ''}`}>
               <label htmlFor="phone">
-                <span className="ur urdu">{mode === 'register' ? 'فون نمبر' : 'فون یا ای میل'}</span>{' '}
-                {mode === 'register' ? 'Phone number' : 'Phone number or email'}
+                <span className="ur urdu" lang="ur" dir="rtl">{mode === 'register' ? 'فون نمبر' : 'فون یا ای میل'}</span>
+                <span>{mode === 'register' ? 'Phone number' : 'Phone number or email'}</span>
               </label>
               <input
                 id="phone"
@@ -249,8 +253,8 @@ export default function AuthPage() {
             {mode === 'register' && (
               <div className={`field ${errors.email ? 'has-error' : ''}`}>
                 <label htmlFor="email">
-                  <span className="ur urdu">ای میل</span> Email{' '}
-                  <span className="muted" style={{ fontWeight: 400 }}>(optional)</span>
+                  <span className="ur urdu" lang="ur" dir="rtl">ای میل</span>
+                  <span>Email <span className="muted" style={{ fontWeight: 400 }}>(optional)</span></span>
                 </label>
                 <input
                   id="email"
@@ -269,7 +273,7 @@ export default function AuthPage() {
             {mode === 'register' && (
               <div className={`field ${errors.dateOfBirth ? 'has-error' : ''}`}>
                 <label htmlFor="registration-dob">
-                  <span className="ur urdu">تاریخ پیدائش</span> Date of birth
+                  <span className="ur urdu" lang="ur" dir="rtl">تاریخِ پیدائش</span><span>Date of birth</span>
                 </label>
                 <input
                   id="registration-dob"
@@ -293,7 +297,7 @@ export default function AuthPage() {
             )}
             <div className={`field ${errors.password ? 'has-error' : ''}`}>
               <label htmlFor="pw">
-                <span className="ur urdu">پاس ورڈ</span> Password
+                <span className="ur urdu" lang="ur" dir="rtl">پاس ورڈ</span><span>Password</span>
               </label>
               <div className="pw-row">
                 <input
@@ -328,25 +332,25 @@ export default function AuthPage() {
 
             {mode === 'login' && (
               <button type="button" className="forgot-link" onClick={() => navigate('/forgot-password')}>
-                Forgot password?
+                پاس ورڈ بھول گئے؟ · Forgot password?
               </button>
             )}
 
-            <button className="btn btn-primary" disabled={busy}>
-              {busy ? '…' : mode === 'register' ? 'اکاؤنٹ بنائیں · Create account' : 'لاگ اِن · Login'}
+            <button className="btn btn-primary auth-submit" disabled={busy}>
+              {busy ? '…' : mode === 'register' ? <><span className="urdu" lang="ur" dir="rtl">اکاؤنٹ بنائیے</span><small>Create account</small></> : <><span className="urdu" lang="ur" dir="rtl">لاگ اِن</span><small>Login</small></>}
             </button>
           </form>
 
           <p className="form-hint">
             {mode === 'login' ? (
               <>
-                No account?{' '}
-                <span className="link" onClick={() => setMode('register')}>Register</span>
+                اکاؤنٹ نہیں ہے؟ · No account?{' '}
+                <span className="link" onClick={() => setMode('register')}>اکاؤنٹ بنائیے · Register</span>
               </>
             ) : (
               <>
-                Already have one?{' '}
-                <span className="link" onClick={() => setMode('login')}>Login</span>
+                پہلے سے اکاؤنٹ ہے؟ · Already registered?{' '}
+                <span className="link" onClick={() => setMode('login')}>لاگ اِن · Login</span>
               </>
             )}
           </p>

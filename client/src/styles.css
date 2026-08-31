@@ -8072,6 +8072,108 @@ h1, h2, h3 { letter-spacing: -.01em; }
 
 /* END PRECISION OVERRIDES */
 
+/* Urdu copy and bidirectional controls — 2026-09 QA pass */
+.auth-home-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+.auth-home-copy { display: inline-flex; align-items: center; gap: 5px; }
+.auth-home-copy .urdu { font-size: .82rem; line-height: 1.2; }
+.auth-home-copy small { font-size: .66rem; }
+.auth-page .auth-tab {
+  display: grid;
+  place-items: center;
+  gap: 0;
+  line-height: 1.15;
+}
+.auth-page .auth-tab .urdu { font-size: .82rem; line-height: 1.55; }
+.auth-page .auth-tab small { font-size: .61rem; font-weight: 650; opacity: .72; }
+.auth-page .field label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  direction: rtl;
+}
+.auth-page .field label .urdu { line-height: 1.7; }
+.auth-page .field label > span:not(.urdu) { direction: ltr; }
+.auth-submit {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.auth-submit .urdu { font-size: .9rem; line-height: 1.5; }
+.auth-submit small { font-size: .68rem; font-weight: 700; }
+.auth-value h1.urdu {
+  margin-bottom: 0 !important;
+  font-size: clamp(1.45rem, 2.2vw, 1.9rem) !important;
+  line-height: 1.8;
+  text-align: right;
+}
+.auth-value h2 { margin: 0 0 12px; font-size: 1.35rem; line-height: 1.2; }
+.onboard-kicker { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.onboard-kicker .urdu { font-size: .76rem; line-height: 1.5; letter-spacing: 0; text-transform: none; }
+.onboard-title.urdu { margin-bottom: 0; font-size: 1.65rem; line-height: 1.75; }
+.onboard-title-en { margin: -3px 0 14px; color: var(--muted, #6b7c79); font-size: .78rem; font-weight: 650; }
+.onboard-safety h3.urdu { margin-bottom: 0; font-size: 1rem; line-height: 1.8; text-align: right; }
+.onboard-heading-en { display: block; margin-bottom: 8px; color: var(--muted, #6b7c79); font-size: .68rem; }
+.verify-title h2.urdu { margin-top: 24px; margin-bottom: 0; font-size: clamp(1.45rem, 4vw, 1.85rem); line-height: 1.75; letter-spacing: 0; overflow-wrap: anywhere; text-align: right; }
+.verify-title-en { display: block; margin-top: 0; color: #71847f; font-size: .68rem; }
+.verify-title p.urdu { text-align: right; }
+.verify-destination p.urdu { line-height: 2; text-align: right; }
+.verify-destination > small { display: block; margin-top: 1px; color: #82918d; font-size: .63rem; }
+.verify-code-field > label { display: grid; gap: 0; text-align: right; }
+.verify-code-field > label .urdu { line-height: 1.65; }
+.verify-code-field > label small { color: #82918d; font-size: .58rem; font-weight: 600; }
+.verify-foot { font-family: var(--font-ur); direction: rtl; font-size: .65rem; }
+.trust-bar .urdu { line-height: 1.5; }
+.nav-item { gap: 0; }
+.nav-item .nav-label-ur { font-size: .7rem; line-height: 2; }
+.nav-item small { font-size: .52rem; line-height: 1.1; font-weight: 650; }
+.guest-voice-hint,
+.guest-composer-note { font-family: var(--font-ur); direction: rtl; }
+.guest-voice-first { gap: 5px; margin-bottom: 18px; }
+.guest-voice-first .mic-button .mic-label { min-height: 23px; line-height: 1.65; }
+.guest-voice-hint { min-height: 22px; line-height: 2; }
+.guest-composer textarea:placeholder-shown { font-family: var(--font-ur); direction: rtl; }
+.guest-composer-note { font-size: .64rem; }
+.verify-banner > span:nth-child(2) { display: flex; min-width: 0; align-items: baseline; gap: 7px; }
+.verify-banner .urdu { flex: 0 0 auto; line-height: 1.7; }
+.verify-banner-en { min-width: 0; }
+
+@media (max-width: 430px) {
+  .auth-home-link { width: auto; min-width: 58px; padding-inline: 9px; font-size: inherit; overflow: visible; }
+  .auth-home-link::before { content: none; }
+  .auth-home-copy small { display: none; }
+  .guest-composer-note { font-size: .56rem; }
+  .verify-banner > span:nth-child(2) { display: grid; gap: 0; }
+  .verify-banner .urdu { line-height: 1.55; }
+  .verify-banner-en { font-size: .62rem; }
+}
+
+@media (max-width: 640px) {
+  .nav-item small { display: none; }
+  .segmented {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
+    border-radius: 16px;
+  }
+  .seg-btn {
+    min-width: 0;
+    min-height: 72px;
+    padding: 7px 4px;
+    justify-content: center;
+    white-space: normal;
+  }
+  .seg-btn .urdu { font-size: .76rem; line-height: 1.75; }
+  .seg-btn .seg-en { font-size: .54rem; line-height: 1.25; overflow-wrap: anywhere; }
+}
+
 /* ============================================================
    LANDING PAGE REDESIGN — English primary, Urdu secondary
    2026-08-29  (v2: hover-overlay cards, no 3D flip)

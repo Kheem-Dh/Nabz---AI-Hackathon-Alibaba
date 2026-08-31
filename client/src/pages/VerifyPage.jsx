@@ -148,12 +148,13 @@ export default function VerifyPage() {
 
       <section className="verify-panel">
         <div className="verify-panel-inner">
-          <button className="back-link" onClick={() => navigate(-1)}>← Back to workspace</button>
+          <button className="back-link" onClick={() => navigate(-1)}>← واپس · Back to workspace</button>
           <div className="verify-brand"><span>نبض</span><b>NABZ</b></div>
           <div className="verify-title">
             <span>SECURE VERIFICATION</span>
-            <h2>{verified ? 'Verification complete' : stage === 'sent' ? 'Check your messages' : 'Verify your account'}</h2>
-            <p className="urdu">اپنے نجی ہیلتھ والٹ کو محفوظ بنائیں</p>
+            <h2 className="urdu" lang="ur" dir="rtl">{verified ? 'تصدیق مکمل ہو گئی' : stage === 'sent' ? 'اپنے پیغامات دیکھیے' : 'اپنے اکاؤنٹ کی تصدیق کیجیے'}</h2>
+            <small className="verify-title-en">{verified ? 'Verification complete' : stage === 'sent' ? 'Check your messages' : 'Verify your account'}</small>
+            <p className="urdu" lang="ur" dir="rtl">اپنے نجی ہیلتھ والٹ کو محفوظ بنائیے</p>
           </div>
 
           <div className="verify-channels" role="tablist" aria-label="Verification method">
@@ -174,34 +175,35 @@ export default function VerifyPage() {
               Your {channel} is verified{channel === 'phone' ? ` (${account?.phone})` : ` (${account?.email})`}.
             </p>
             <button className="btn btn-primary" onClick={() => navigate('/')}>
-              Continue to Nabz →
+              نبض پر جائیے · Continue →
             </button>
           </div>
         ) : (
           <>
             <div className="verify-destination">
               <span>{channel === 'phone' ? 'WHATSAPP CODE' : 'EMAIL CODE'}</span>
-              <p>We’ll send a 6-digit code {channel === 'phone' ? 'on WhatsApp' : 'by email'} to <b>{channel === 'phone' ? account?.phone : account?.email}</b>.</p>
+              <p className="urdu" lang="ur" dir="rtl">ہم 6 ہندسوں کا کوڈ <b><bdi dir="ltr">{channel === 'phone' ? account?.phone : account?.email}</bdi></b> پر {channel === 'phone' ? 'واٹس ایپ کے ذریعے' : 'ای میل کے ذریعے'} بھیجیں گے۔</p>
+              <small>We’ll send a 6-digit code {channel === 'phone' ? 'on WhatsApp' : 'by email'}.</small>
             </div>
 
             {error && <div className="form-error">{error}</div>}
 
             {stage === 'idle' ? (
               <button className="btn btn-primary verify-main-action" disabled={busy || cooldown > 0} onClick={send}>
-                {busy ? 'Sending…' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Send secure code →'}
+                {busy ? 'بھیجا جا رہا ہے…' : cooldown > 0 ? `${cooldown}s بعد دوبارہ بھیجیے` : 'محفوظ کوڈ بھیجیے · Send code →'}
               </button>
             ) : (
               <form className="stack" onSubmit={submit}>
                 {message && <div className="notice notice-info">{message}</div>}
                 {devCode && (
                   <div className="notice notice-warn verify-test-code" role="status">
-                    <b>Test code</b>
+                    <b>ٹیسٹ کوڈ · Test code</b>
                     <span>{devCode}</span>
-                    <small>Visible only for an approved demo phone.</small>
+                    <small>صرف منظور شدہ ڈیمو فون کے لیے دکھائی دیتا ہے۔ · Approved demo phone only.</small>
                   </div>
                 )}
                 <div className="verify-code-field">
-                  <label>Enter the 6-digit code</label>
+                  <label><span className="urdu" lang="ur" dir="rtl">6 ہندسوں کا کوڈ درج کیجیے</span><small>Enter the 6-digit code</small></label>
                   <div className="verify-digits" onPaste={(event) => {
                     const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
                     if (pasted) {
@@ -226,16 +228,16 @@ export default function VerifyPage() {
                   </div>
                 </div>
                 <button className="btn btn-primary verify-main-action" disabled={busy || code.some((digit) => !digit)}>
-                  {busy ? 'Verifying…' : 'Verify and continue →'}
+                  {busy ? 'تصدیق ہو رہی ہے…' : 'تصدیق کرکے آگے بڑھیے · Continue →'}
                 </button>
-                <div className="verify-resend">Didn’t receive it? <button type="button" disabled={cooldown > 0 || busy} onClick={send}>{cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}</button></div>
+                <div className="verify-resend">کوڈ نہیں ملا؟ · Didn’t receive it? <button type="button" disabled={cooldown > 0 || busy} onClick={send}>{cooldown > 0 ? `${cooldown}s بعد دوبارہ` : 'دوبارہ بھیجیے · Resend'}</button></div>
               </form>
             )}
           </>
         )}
           </div>
-          <div className="verify-foot"><span>◇ Single-use code</span><span>⌁ Expires automatically</span><span>▣ No medical data in messages</span></div>
-          <button className="verify-skip" onClick={() => navigate('/')}>Not now — continue without verification</button>
+          <div className="verify-foot"><span>◇ ایک بار استعمال</span><span>⌁ خودکار میعاد</span><span>▣ پیغام میں طبی ڈیٹا نہیں</span></div>
+          <button className="verify-skip" onClick={() => navigate('/')}>ابھی نہیں — بغیر تصدیق آگے بڑھیے · Not now</button>
         </div>
       </section>
     </div>

@@ -13,6 +13,7 @@ export default function VerifyBanner() {
   if (!phonePending && !emailPending) return null
 
   const what = phonePending ? 'phone number' : 'email'
+  const whatUrdu = phonePending ? 'اپنے فون نمبر' : 'اپنی ای میل'
 
   return (
     <button
@@ -36,8 +37,8 @@ export default function VerifyBanner() {
     >
       <span aria-hidden="true">🔔</span>
       <span style={{ flex: 1 }}>
-        <span className="urdu" style={{ marginInlineEnd: 6 }}>اپنا نمبر تصدیق کریں</span>
-        Verify your {what} to secure this account
+        <span className="urdu" lang="ur" dir="rtl">{whatUrdu} کی تصدیق کیجیے۔</span>
+        <span className="verify-banner-en">Verify your {what} to secure this account</span>
       </span>
       <span aria-hidden="true">›</span>
     </button>

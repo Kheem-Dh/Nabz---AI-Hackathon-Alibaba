@@ -10,7 +10,7 @@ import { useLocationPref } from '../context/LocationContext'
 const CATEGORIES = [
   { key: 'clinical', label: 'Clinics & hospitals', urdu: 'کلینک اور ہسپتال' },
   { key: 'blood_bank', label: 'Blood donation', urdu: 'خون کے عطیہ کے مراکز' },
-  { key: 'pharmacy', label: 'Pharmacies', urdu: 'میڈیکل اسٹور' },
+  { key: 'pharmacy', label: 'Pharmacies', urdu: 'میڈیکل اسٹورز' },
 ]
 
 export default function ClinicsPage() {
@@ -103,9 +103,9 @@ export default function ClinicsPage() {
           disabled={refreshingLocation || geo.status === 'detecting'}
         >
           {refreshingLocation || geo.status === 'detecting' ? (
-            <><span className="urdu" dir="rtl">مقام پتہ کر رہا ہوں…</span></>
+            <><span className="urdu" lang="ur" dir="rtl">مقام معلوم کیا جا رہا ہے…</span></>
           ) : (
-            <>📍 <span className="urdu" dir="rtl">میری موجودہ جگہ استعمال کریں</span></>
+            <>📍 <span className="urdu" lang="ur" dir="rtl">میری موجودہ جگہ استعمال کیجیے</span></>
           )}
         </button>
       </div>
@@ -118,7 +118,7 @@ export default function ClinicsPage() {
             className={`seg-btn ${category === c.key ? 'active' : ''}`}
             onClick={() => setCategory(c.key)}
           >
-            <span className="urdu">{c.urdu}</span>
+            <span className="urdu" lang="ur" dir="rtl">{c.urdu}</span>
             <span className="seg-en">{c.label}</span>
           </button>
         ))}
@@ -127,7 +127,7 @@ export default function ClinicsPage() {
       {geo.error === 'denied' && (
         <div className="notice notice-warn">
           <span className="urdu">
-            براؤزر نے مقام دینے سے انکار کر دیا — نتائج آپ کی درج کردہ شہر کی بنیاد پر ہیں۔
+            براؤزر نے مقام کی اجازت نہیں دی — نتائج آپ کے درج کردہ شہر کی بنیاد پر ہیں۔
           </span>
           <span>
             Browser denied location — results use your saved city instead. You can retry
@@ -217,7 +217,7 @@ export default function ClinicsPage() {
       </div>
 
       <a className="rescue-banner" href="tel:1122">
-        🚑 <span className="ur urdu">ہنگامی حالت میں ریسکیو 1122</span>
+        🚑 <span className="ur urdu" lang="ur" dir="rtl">ہنگامی حالت میں ریسکیو 1122 کو کال کیجیے</span>
       </a>
     </div>
   )
