@@ -188,8 +188,8 @@ def request_otp(
 ) -> OtpSendResponse:
     """Send a one-time code to the account's phone or email.
 
-    In mock mode / without an SMS or SMTP provider, the code is returned as
-    `dev_code` so the flow is demoable with zero credentials.
+    A local/test fallback may return `dev_code`. Public deployments require
+    both an explicit opt-in and an exact demo-recipient allowlist match.
     """
     result = request_code(db, account, payload.channel.value)
     return OtpSendResponse(**result)

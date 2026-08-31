@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import uuid
 
+import verification
+
 
 def _register(client, email=None):
     phone = f"03{uuid.uuid4().int % 10**9:09d}"
@@ -51,6 +53,71 @@ def test_phone_otp_request_and_verify(client):
     assert ok.json()["phone_verified"] is True
     # /me now reflects it.
     assert client.get("/api/auth/me", headers=headers).json()["phone_verified"] is True
+
+
+def test_whatsapp_cloud_api_uses_authentication_template(monkeypatch):
+    captured = {}
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+    def fake_post(url, **kwargs):
+        captured["url"] = url
+        captured.update(kwargs)
+        return Response()
+
+    monkeypatch.setenv("WHATSAPP_PHONE_NUMBER_ID", "123456789")
+    monkeypatch.setenv("WHATSAPP_ACCESS_TOKEN", "test-token")
+    monkeypatch.setenv("WHATSAPP_TEMPLATE_NAME", "nabz_verification")
+    monkeypatch.setattr(verification.httpx, "post", fake_post)
+
+    assert verification._deliver_whatsapp("+92 300-1234567", "654321") is True
+    assert captured["url"].endswith("/123456789/messages")
+    assert captured["headers"]["Authorization"] == "Bearer test-token"
+    assert captured["json"]["to"] == "923001234567"
+    template = captured["json"]["template"]
+    assert template["name"] == "nabz_verification"
+    assert template["components"][0]["parameters"][0]["text"] == "654321"
+    assert template["components"][1]["parameters"][0]["text"] == "654321"
+
+
+def test_production_never_returns_undelivered_otp(client, monkeypatch):
+    headers, _account, _phone = _register(client)
+    monkeypatch.setenv("APP_ENV", "production")
+
+    sent = client.post("/api/auth/request-otp", headers=headers, json={"channel": "phone"})
+
+    assert sent.status_code == 200
+    assert sent.json()["sent"] is False
+    assert sent.json()["dev_code"] is None
+    assert "could not deliver" in sent.json()["message"].lower()
+
+
+def test_production_demo_fallback_requires_exact_recipient(client, monkeypatch):
+    headers, account, _phone = _register(client)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("NABZ_EXPOSE_DEV_OTP", "true")
+    monkeypatch.setenv("NABZ_DEMO_OTP_RECIPIENTS", account["phone"])
+
+    sent = client.post("/api/auth/request-otp", headers=headers, json={"channel": "phone"})
+
+    assert sent.status_code == 200
+    assert sent.json()["sent"] is False
+    assert sent.json()["dev_code"].isdigit()
+    assert "test code below" in sent.json()["message"].lower()
+
+
+def test_dev_otp_requires_explicit_opt_in(client, monkeypatch):
+    headers, _account, _phone = _register(client)
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("NABZ_EXPOSE_DEV_OTP", "false")
+
+    sent = client.post("/api/auth/request-otp", headers=headers, json={"channel": "phone"})
+
+    assert sent.status_code == 200
+    assert sent.json()["sent"] is False
+    assert sent.json()["dev_code"] is None
 
 
 def test_wrong_code_is_rejected(client):

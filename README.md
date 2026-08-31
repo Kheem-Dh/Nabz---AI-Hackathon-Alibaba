@@ -378,10 +378,41 @@ NABZ_VL_MODEL=qwen3.7-plus
 JWT_SECRET=replace-with-a-long-random-secret
 MOCK_MODE=false
 NABZ_ENABLE_DEMO=false
+NABZ_EXPOSE_DEV_OTP=false
+NABZ_DEMO_OTP_RECIPIENTS=
 CORS_ORIGINS=http://localhost:5173,http://localhost:5174
 ```
 
 `MOCK_MODE=true` can provide synthetic lab, prescription, and demo-document data. Clinical triage still needs a working DashScope key; there is no production rule-based triage fallback.
+
+For limited, no-card phone verification during development, use Meta's
+WhatsApp Cloud API test number and add only the intended test recipients to
+its allowlist. Create an authentication template with one code variable and a
+copy-code button, then configure the backend service:
+
+```env
+WHATSAPP_PHONE_NUMBER_ID=your-test-phone-number-id
+WHATSAPP_ACCESS_TOKEN=your-cloud-api-token
+WHATSAPP_TEMPLATE_NAME=nabz_verification
+WHATSAPP_TEMPLATE_LANGUAGE=en_US
+WHATSAPP_TEMPLATE_COPY_CODE=true
+```
+
+This test-number route is intentionally recipient-limited. Moving to arbitrary
+production recipients requires a production WhatsApp Business setup and may
+incur Meta authentication-message charges. Email verification remains the
+unrestricted demo fallback.
+
+For a public demo, you can show a fallback test code only for specific tester
+phones when WhatsApp test delivery rejects them:
+
+```env
+NABZ_EXPOSE_DEV_OTP=true
+NABZ_DEMO_OTP_RECIPIENTS=+923001234567,+923111234567
+```
+
+Never use a wildcard or place ordinary user numbers in this list. A number not
+listed here receives a delivery error and cannot self-verify from the UI.
 
 ### 3. Start the backend
 

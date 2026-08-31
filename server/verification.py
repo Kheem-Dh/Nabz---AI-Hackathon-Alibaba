@@ -1,15 +1,17 @@
-"""Phone (SMS) + email one-time-code verification.
+"""Phone (WhatsApp/SMS) + email one-time-code verification.
 
 Design goals, matching the rest of Nabz:
-- **Demoable with zero credentials.** In MOCK_MODE (or when no SMS/SMTP provider
-  is configured) the code is logged and returned in the API response as
-  `dev_code`, so the whole verify flow works on a laptop with no accounts.
+- **Locally testable with zero credentials.** With the explicit
+  ``NABZ_EXPOSE_DEV_OTP=true`` opt-in, a missing provider can return the logged
+  code. Public deployments additionally require an exact demo-recipient match.
 - **Soft gate.** Verifying is encouraged, not enforced — an account can use the
   app while unverified; the UI shows a "verify" banner.
 - **Safe.** Codes are short-lived, attempt-limited, single-use, and stored only
   as an HMAC hash — never in plaintext.
 
 Real delivery is best-effort and fully optional:
+- WhatsApp Cloud API when WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN /
+  WHATSAPP_TEMPLATE_NAME are set. This is tried before the optional SMS fallback.
 - SMS via Twilio when TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM are set.
 - Email via SMTP when SMTP_HOST (+ optional SMTP_USER/SMTP_PASSWORD/SMTP_FROM) is set.
 """
@@ -43,6 +45,28 @@ def _secret() -> str:
     return os.getenv("JWT_SECRET", "change-me-nabz-dev-secret")
 
 
+def _destination_key(destination: str) -> str:
+    value = destination.strip().lower()
+    return value if "@" in value else "".join(character for character in value if character.isdigit())
+
+
+def _expose_dev_code(destination: str) -> bool:
+    """Allow fallback codes locally, or for explicit production demo recipients."""
+    enabled = os.getenv("NABZ_EXPOSE_DEV_OTP", "false").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+    if not enabled:
+        return False
+    if os.getenv("APP_ENV", "development").strip().lower() != "production":
+        return True
+    allowed = {
+        _destination_key(item)
+        for item in os.getenv("NABZ_DEMO_OTP_RECIPIENTS", "").split(",")
+        if item.strip()
+    }
+    return _destination_key(destination) in allowed
+
+
 def _now() -> datetime:
     """Naive UTC — SQLite stores naive datetimes; keep comparisons consistent."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
@@ -72,6 +96,61 @@ def _destination(account: Account, channel: str) -> str:
 
 
 # --- Delivery (best-effort; never blocks the flow) ---------------------------
+
+def _deliver_whatsapp(destination: str, code: str) -> bool:
+    """Send an approved WhatsApp authentication template through Meta Cloud API.
+
+    Meta's test phone number can be used without a payment card for its limited
+    recipient allowlist. A production business number may be billed by Meta.
+    """
+    phone_number_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip()
+    token = os.getenv("WHATSAPP_ACCESS_TOKEN", "").strip()
+    template_name = os.getenv("WHATSAPP_TEMPLATE_NAME", "").strip()
+    language = os.getenv("WHATSAPP_TEMPLATE_LANGUAGE", "en_US").strip() or "en_US"
+    if not (phone_number_id and token and template_name):
+        return False
+
+    # Cloud API expects digits only; stored PK numbers are canonical +92....
+    recipient = "".join(character for character in destination if character.isdigit())
+    template: dict = {
+        "name": template_name,
+        "language": {"code": language},
+        "components": [
+            {
+                "type": "body",
+                "parameters": [{"type": "text", "text": code}],
+            }
+        ],
+    }
+    # Authentication templates normally include a copy-code URL button. Allow
+    # body-only custom templates by explicitly disabling this component.
+    include_button = (os.getenv("WHATSAPP_TEMPLATE_COPY_CODE", "true").strip() or "true").lower()
+    if include_button in {"1", "true", "yes", "on"}:
+        template["components"].append({
+            "type": "button",
+            "sub_type": "url",
+            "index": "0",
+            "parameters": [{"type": "text", "text": code}],
+        })
+    try:
+        response = httpx.post(
+            f"https://graph.facebook.com/v23.0/{phone_number_id}/messages",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": recipient,
+                "type": "template",
+                "template": template,
+            },
+            timeout=10,
+        )
+        response.raise_for_status()
+        return True
+    except Exception as exc:  # noqa: BLE001
+        logger.error("WhatsApp OTP send failed: %s", exc)
+        return False
+
 
 def _deliver_sms(destination: str, code: str) -> bool:
     sid = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
@@ -119,7 +198,9 @@ def _deliver_email(destination: str, code: str) -> bool:
 
 
 def _deliver(channel: str, destination: str, code: str) -> bool:
-    return _deliver_sms(destination, code) if channel == "phone" else _deliver_email(destination, code)
+    if channel == "phone":
+        return _deliver_whatsapp(destination, code) or _deliver_sms(destination, code)
+    return _deliver_email(destination, code)
 
 
 # --- Public API --------------------------------------------------------------
@@ -129,7 +210,7 @@ def is_verified(account: Account, channel: str) -> bool:
 
 
 def request_code(db: Session, account: Account, channel: str) -> dict:
-    """Create + send a one-time code. Returns a response dict (dev_code in mock)."""
+    """Create and send a code, with an explicitly authorized demo fallback."""
     if channel not in VALID_CHANNELS:
         raise HTTPException(status_code=400, detail="invalid_channel")
     destination = _destination(account, channel)
@@ -188,11 +269,12 @@ def request_code(db: Session, account: Account, channel: str) -> dict:
     delivered = _deliver(channel, destination, code)
 
     if not delivered:
-        # No provider (or send failed) — surface the code so the flow is still
-        # usable, and log it. dev_code is ONLY returned when we couldn't deliver.
+        # Keep local/test diagnosis possible without exposing a code in the
+        # production response or browser UI.
         logger.info("[DEV OTP] %s → %s : %s", channel, destination, code)
 
     masked = _mask(destination, channel)
+    fallback_visible = not delivered and _expose_dev_code(destination)
     return {
         "channel": channel,
         "sent": delivered,
@@ -201,10 +283,15 @@ def request_code(db: Session, account: Account, channel: str) -> dict:
         "message": (
             f"Code sent to {masked}"
             if delivered
-            else f"Demo mode — code shown here (would be sent to {masked})"
+            else (
+                "WhatsApp test delivery was unavailable. Use the test code below."
+                if fallback_visible and channel == "phone"
+                else "We could not deliver a code right now. Please try email instead."
+            )
         ),
-        # Present only when we could not really deliver (mock or no provider).
-        "dev_code": None if delivered else code,
+        # Public deployments may expose a fallback only for exact, explicitly
+        # configured demo recipients. This must never be an open-ended fallback.
+        "dev_code": code if fallback_visible else None,
     }
 
 
@@ -320,7 +407,6 @@ def request_password_reset(db: Session, identifier: str) -> dict:
     ))
     db.commit()
     delivered = _deliver(delivery_channel, destination, code)
-    is_production = os.getenv("APP_ENV", "development").strip().lower() == "production"
     if not delivered:
         logger.info("[DEV PASSWORD RESET] %s → %s : %s", delivery_channel, destination, code)
     return {
@@ -329,7 +415,7 @@ def request_password_reset(db: Session, identifier: str) -> dict:
         # not expose account/provider state through this public endpoint.
         "sent": True,
         "message": generic["message"],
-        "dev_code": code if not delivered and not is_production else None,
+        "dev_code": code if not delivered and _expose_dev_code(destination) else None,
     }
 
 

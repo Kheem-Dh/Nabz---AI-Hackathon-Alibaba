@@ -125,7 +125,7 @@ class AuthResponse(BaseModel):
     account: AccountOut
 
 
-# --- Verification (phone SMS OTP + email code) -------------------------------
+# --- Verification (phone WhatsApp/SMS OTP + email code) ----------------------
 
 class OtpChannel(str, Enum):
     phone = "phone"
@@ -155,8 +155,8 @@ class OtpSendResponse(BaseModel):
     already_verified: bool = False
     expires_in_seconds: int = 0
     message: str = ""
-    # Present ONLY when the code could not really be delivered (mock / no
-    # provider) so the demo stays usable. Never populated in real delivery.
+    # Explicit development/demo fallback only. Public deployments additionally
+    # require an exact configured recipient allowlist match.
     dev_code: Optional[str] = None
 
 

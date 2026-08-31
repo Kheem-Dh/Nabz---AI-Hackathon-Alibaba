@@ -9,7 +9,6 @@ export default function ForgotPasswordPage() {
   const [identifier, setIdentifier] = useState('')
   const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
-  const [devCode, setDevCode] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -22,7 +21,6 @@ export default function ForgotPasswordPage() {
     try {
       const result = await requestPasswordReset(identifier.trim())
       setMessage(result.message)
-      setDevCode(result.dev_code || '')
       setStage('confirm')
     } catch (err) {
       setError(err.message || 'Could not request a reset code.')
@@ -82,11 +80,6 @@ export default function ForgotPasswordPage() {
           </form>
         ) : (
           <form onSubmit={finish}>
-            {devCode && (
-              <div className="notice notice-info reset-demo-code">
-                Development code: <strong>{devCode}</strong>
-              </div>
-            )}
             <div className="field">
               <label htmlFor="reset-code">Six-digit code</label>
               <input

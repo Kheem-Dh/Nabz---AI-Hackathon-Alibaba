@@ -137,7 +137,8 @@ export const confirmPasswordReset = (identifier, code, new_password) =>
 
 export const getMe = () => jsonReq('/api/auth/me', 'GET')
 
-// Verification (soft gate). requestOtp returns { dev_code } in mock mode.
+// Verification (soft gate). A code is rendered only when the backend explicitly
+// authorizes a recipient-scoped demo fallback.
 export const requestOtp = (channel) =>
   jsonReq('/api/auth/request-otp', 'POST', { channel })
 

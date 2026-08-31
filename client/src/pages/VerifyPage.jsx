@@ -4,8 +4,6 @@ import { useAuth } from '../context/AuthContext'
 import { requestOtp, verifyOtp } from '../api'
 
 // Soft-gate verification screen: pick a channel, send a code, enter it.
-// In mock/dev mode the backend returns the code as `dev_code`, which we show
-// so the flow is demoable without an SMS/SMTP provider.
 export default function VerifyPage() {
   const { account, applyAccount } = useAuth()
   const navigate = useNavigate()
@@ -56,6 +54,9 @@ export default function VerifyPage() {
     setMessage('')
     try {
       const res = await requestOtp(channel)
+      if (!res.sent && !res.already_verified && !res.dev_code) {
+        throw new Error(res.message || 'Could not deliver the code.')
+      }
       setStage('sent')
       setDevCode(res.dev_code || null)
       setMessage(res.message || 'Code sent.')
@@ -157,7 +158,7 @@ export default function VerifyPage() {
 
           <div className="verify-channels" role="tablist" aria-label="Verification method">
             <button className={channel === 'phone' ? 'active' : ''} onClick={() => setChannel('phone')}>
-              <span>◉</span><div><strong>Phone</strong><small>{account?.phone}</small></div>
+              <span>◉</span><div><strong>WhatsApp</strong><small>{account?.phone}</small></div>
             </button>
             <button className={channel === 'email' ? 'active' : ''} onClick={() => setChannel('email')} disabled={!hasEmail} title={hasEmail ? '' : 'No email on this account'}>
               <span>✉</span><div><strong>Email</strong><small>{hasEmail ? account?.email : 'Not added'}</small></div>
@@ -179,8 +180,8 @@ export default function VerifyPage() {
         ) : (
           <>
             <div className="verify-destination">
-              <span>{channel === 'phone' ? 'SMS CODE' : 'EMAIL CODE'}</span>
-              <p>We’ll send a 6-digit code to <b>{channel === 'phone' ? account?.phone : account?.email}</b>.</p>
+              <span>{channel === 'phone' ? 'WHATSAPP CODE' : 'EMAIL CODE'}</span>
+              <p>We’ll send a 6-digit code {channel === 'phone' ? 'on WhatsApp' : 'by email'} to <b>{channel === 'phone' ? account?.phone : account?.email}</b>.</p>
             </div>
 
             {error && <div className="form-error">{error}</div>}
@@ -193,11 +194,10 @@ export default function VerifyPage() {
               <form className="stack" onSubmit={submit}>
                 {message && <div className="notice notice-info">{message}</div>}
                 {devCode && (
-                  <div className="notice notice-warn">
-                    <b>Demo mode</b> — your code is <b style={{ fontSize: 18, letterSpacing: 2 }}>{devCode}</b>
-                    <div style={{ fontSize: 11, marginTop: 2 }}>
-                      (shown because no SMS/email provider is configured)
-                    </div>
+                  <div className="notice notice-warn verify-test-code" role="status">
+                    <b>Test code</b>
+                    <span>{devCode}</span>
+                    <small>Visible only for an approved demo phone.</small>
                   </div>
                 )}
                 <div className="verify-code-field">
@@ -234,7 +234,7 @@ export default function VerifyPage() {
           </>
         )}
           </div>
-          <div className="verify-foot"><span>◇ Single-use code</span><span>⌁ Expires automatically</span><span>▣ No medical data in SMS</span></div>
+          <div className="verify-foot"><span>◇ Single-use code</span><span>⌁ Expires automatically</span><span>▣ No medical data in messages</span></div>
           <button className="verify-skip" onClick={() => navigate('/')}>Not now — continue without verification</button>
         </div>
       </section>

@@ -14,6 +14,8 @@ from pathlib import Path
 # --- Configure environment before any app import --------------------------
 os.environ["MOCK_MODE"] = "true"
 os.environ["APP_ENV"] = "test"
+os.environ["NABZ_EXPOSE_DEV_OTP"] = "true"
+os.environ["NABZ_DEMO_OTP_RECIPIENTS"] = ""
 os.environ["NABZ_ENABLE_DEMO"] = "true"
 os.environ.pop("DASHSCOPE_API_KEY", None)
 os.environ.pop("OPENAI_API_KEY", None)
@@ -25,6 +27,9 @@ os.environ["NABZ_ADMIN_IDENTIFIERS"] = "admin@nabz.test"
 # email/SMS. Set to empty (not pop) so main.py's load_dotenv can't re-populate.
 for _provider_var in (
     "SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM",
+    "WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_ACCESS_TOKEN",
+    "WHATSAPP_TEMPLATE_NAME", "WHATSAPP_TEMPLATE_LANGUAGE",
+    "WHATSAPP_TEMPLATE_COPY_CODE",
     "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM",
 ):
     os.environ[_provider_var] = ""
