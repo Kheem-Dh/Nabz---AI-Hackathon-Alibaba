@@ -559,6 +559,23 @@ variables are unavailable to the built browser app, and admin authorization is
 intentionally decided only by the API. The Static Site needs only
 `VITE_API_BASE` pointing to the public backend URL.
 
+For a short Render demo without an S3/R2 account, the backend can explicitly
+use its local disk until the next restart or deploy. Set these variables on the
+**backend Web Service**:
+
+```env
+APP_ENV=production
+NABZ_STORAGE_BACKEND=local
+NABZ_ALLOW_EPHEMERAL_LOCAL_STORAGE=true
+DATABASE_URL=sqlite:////data/nabz.db
+NABZ_UPLOAD_DIR=/data/uploads
+```
+
+This is intentionally opt-in and is not durable storage: Render may clear the
+local filesystem when the service is restarted or a new build is deployed.
+Use private S3/R2 storage before storing real medical records or running a
+durable production service.
+
 Nabz stores append-only, versioned choices for health-data storage and AI
 processing. New registrations accept them during profile completion; existing
 accounts see a one-time privacy gate. Users can review or withdraw consent and

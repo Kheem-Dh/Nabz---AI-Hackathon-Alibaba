@@ -58,6 +58,10 @@ class RuntimeSettings:
     aws_secret_access_key: str
     cors_origins: tuple[str, ...]
     readiness_check_s3: bool
+    # Explicit demo-only escape hatch for hosts without object storage. The
+    # default remains fail-closed in production because local disks are not
+    # durable across a Render deploy/restart.
+    allow_ephemeral_local_storage: bool = False
 
     @property
     def is_production(self) -> bool:
@@ -99,6 +103,9 @@ class RuntimeSettings:
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY", "").strip(),
             cors_origins=origins,
             readiness_check_s3=_boolean("NABZ_READINESS_CHECK_S3", is_production),
+            allow_ephemeral_local_storage=_boolean(
+                "NABZ_ALLOW_EPHEMERAL_LOCAL_STORAGE", False
+            ),
         )
 
 
@@ -134,16 +141,17 @@ def configuration_errors(settings: RuntimeSettings) -> list[str]:
         or len(settings.jwt_secret) < 32
     ):
         errors.append("secure_jwt_secret_required")
-    if settings.storage_backend != "s3":
+    if settings.storage_backend != "s3" and not settings.allow_ephemeral_local_storage:
         errors.append("s3_storage_required_in_production")
-    if not settings.s3_bucket or _placeholder(settings.s3_bucket):
-        errors.append("s3_bucket_required")
-    if not settings.s3_region and not settings.s3_endpoint_url:
-        errors.append("s3_region_or_endpoint_required")
-    if settings.s3_endpoint_url and (
-        not settings.aws_access_key_id or not settings.aws_secret_access_key
-    ):
-        errors.append("s3_compatible_credentials_required")
+    if settings.storage_backend == "s3":
+        if not settings.s3_bucket or _placeholder(settings.s3_bucket):
+            errors.append("s3_bucket_required")
+        if not settings.s3_region and not settings.s3_endpoint_url:
+            errors.append("s3_region_or_endpoint_required")
+        if settings.s3_endpoint_url and (
+            not settings.aws_access_key_id or not settings.aws_secret_access_key
+        ):
+            errors.append("s3_compatible_credentials_required")
     return errors
 
 

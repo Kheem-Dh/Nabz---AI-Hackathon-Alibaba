@@ -31,6 +31,7 @@ def _production_settings() -> RuntimeSettings:
         aws_secret_access_key="",
         cors_origins=(),
         readiness_check_s3=False,
+        allow_ephemeral_local_storage=False,
     )
 
 
@@ -57,9 +58,16 @@ def test_production_configuration_rejects_mock_local_and_missing_secrets():
         "dashscope_api_key_required",
         "secure_jwt_secret_required",
         "s3_storage_required_in_production",
-        "s3_bucket_required",
-        "s3_region_or_endpoint_required",
     }
+
+
+def test_production_can_explicitly_use_ephemeral_local_storage_for_demo():
+    demo = replace(
+        _production_settings(),
+        storage_backend="local",
+        allow_ephemeral_local_storage=True,
+    )
+    assert configuration_errors(demo) == []
 
 
 def test_invalid_production_configuration_fails_application_startup():
