@@ -1,7 +1,12 @@
 <!doctype html>
 <html lang="en" dir="ltr" class="notranslate" translate="no">
   <head>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://nabz-api.onrender.com; media-src 'self' https://nabz-api.onrender.com blob: data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';" />
+    <!-- frame-ancestors is intentionally omitted here — browsers silently
+         ignore it in a <meta> tag per spec (it only works via a real HTTP
+         header), so it stays out to avoid a misleading console warning.
+         nginx.conf sets the authoritative header in production, alongside
+         X-Frame-Options: DENY, which covers the same protection. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://nabz-api.onrender.com; media-src 'self' https://nabz-api.onrender.com blob: data:; object-src 'none'; base-uri 'self';" />
     <meta charset="UTF-8" />
     <!-- Nabz authors Urdu and English separately. Browser auto-translation
          translates the Urdu copy into a second English copy (for example,

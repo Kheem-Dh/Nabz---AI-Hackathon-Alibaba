@@ -1395,7 +1395,15 @@ def _user_text(turns: list[dict]) -> str:
 def _mental_health_result(
     profile: dict[str, Any], session_id: int, turns: list[dict], *, immediate: bool,
 ) -> TriageTurn:
-    name = _bounded_text(profile.get("display_name") or "آپ", 80)
+    raw_name = _bounded_text(profile.get("display_name") or "", 80)
+    # Guest sessions use the literal pronoun "آپ" ("you") as a placeholder
+    # display_name. Addressing a distressed patient by that placeholder reads
+    # as "You, I am sorry..." in Urdu and literally embeds Urdu script inside
+    # the English sentence ("آپ, I am sorry..."). When there's no real name,
+    # drop the vocative entirely — both languages read naturally without one.
+    has_real_name = bool(raw_name) and raw_name != "آپ"
+    urdu_prefix = f"{raw_name}، " if has_real_name else ""
+    en_prefix = f"{raw_name}, " if has_real_name else ""
     # Umang Pakistan (Rozan) — a real, free, confidential mental-health
     # helpline. Included so a distressed user has a specific line to call
     # for a supportive conversation, not just the emergency services.
@@ -1403,13 +1411,13 @@ def _mental_health_result(
     umang_en = "Umang Pakistan (Rozan), a free confidential mental-health line: 0311-7786264 (daily)."
     if immediate:
         advice_urdu = (
-            f"{name}، مجھے افسوس ہے کہ آپ اس تکلیف سے گزر رہے ہیں۔ ابھی اکیلے نہ رہیں۔ "
+            f"{urdu_prefix}مجھے افسوس ہے کہ آپ اس تکلیف سے گزر رہے ہیں۔ ابھی اکیلے نہ رہیں۔ "
             "فوری طور پر کسی قابلِ اعتماد شخص کو اپنے پاس بلائیں، نقصان پہنچانے والی چیزوں سے "
             "فاصلہ کریں اگر محفوظ ہو، اور ریسکیو 1122، پولیس 15، یا قریبی ایمرجنسی سے رابطہ کریں۔ "
             f"{umang_ur}."
         )
         advice_english = (
-            f"{name}, I am sorry you are going through this. Do not stay alone right now. "
+            f"{en_prefix}I am sorry you are going through this. Do not stay alone right now. "
             "Ask a trusted person to stay with you, move away from anything you could use to "
             "hurt yourself if it is safe, and contact Rescue 1122, Police 15, or the nearest emergency department now. "
             f"{umang_en}"
@@ -1419,13 +1427,13 @@ def _mental_health_result(
         escalation = ["Any intention, plan, access to means, recent attempt, or inability to stay safe"]
     else:
         advice_urdu = (
-            f"{name}، آپ کی بات اہم ہے اور آپ کو یہ اکیلے برداشت نہیں کرنا چاہیے۔ آج ہی کسی "
+            f"{urdu_prefix}آپ کی بات اہم ہے اور آپ کو یہ اکیلے برداشت نہیں کرنا چاہیے۔ آج ہی کسی "
             "قابلِ اعتماد شخص کو بتائیں اور ذہنی صحت کے ماہر یا ڈاکٹر سے جلد رابطہ کریں۔ اگر خود کو "
             "نقصان پہنچانے کا خیال یا خطرہ بڑھے تو فوراً 1122، 15، یا قریبی ایمرجنسی جائیں۔ "
             f"{umang_ur}."
         )
         advice_english = (
-            f"{name}, what you are experiencing matters and you should not carry it alone. Tell a "
+            f"{en_prefix}What you are experiencing matters and you should not carry it alone. Tell a "
             "trusted person today and arrange prompt support from a mental-health professional or clinician. "
             "If thoughts of self-harm appear or safety becomes uncertain, call 1122 or 15 or go to the nearest emergency department. "
             f"{umang_en}"
@@ -1434,7 +1442,7 @@ def _mental_health_result(
         follow_up = "Arrange mental-health or primary-care support today."
         escalation = ["New self-harm thoughts, a plan, access to means, severe confusion, or inability to stay safe"]
     return TriageTurn(
-        type="result", session_id=session_id, patient_name=name,
+        type="result", session_id=session_id, patient_name=raw_name or "آپ",
         encounter_title="Mental-health safety support",
         level=level, advice_urdu=advice_urdu, advice_english=advice_english,
         reason_english=(
