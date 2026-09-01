@@ -119,13 +119,19 @@ export function useCloudVoiceCapture({ lang = 'ur' } = {}) {
     reset()
     setError(null)
     try {
+      // Use `ideal:` constraints — plain values are treated as EXACT by
+      // Chromium, which throws OverconstrainedError on any mic/OS combo that
+      // can't hit them precisely (a real live bug reported by users where
+      // Chrome's URL bar showed the mic permission granted but Nabz still
+      // said "voice input could not start"). Ideal lets the browser pick the
+      // closest available config instead of failing outright.
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 16000,
+          channelCount: { ideal: 1 },
+          echoCancellation: { ideal: true },
+          noiseSuppression: { ideal: true },
+          autoGainControl: { ideal: true },
+          sampleRate: { ideal: 16000 },
         },
       })
       streamRef.current = stream
@@ -160,8 +166,21 @@ export function useCloudVoiceCapture({ lang = 'ur' } = {}) {
       }, 250)
       setListening(true)
     } catch (err) {
+      // Surface the DOMException name so the UI (or user reporting a bug)
+      // can distinguish permission-denied from hardware failures from
+      // overconstrained-mic — all three previously collapsed into a single
+      // opaque "voice input could not start" message.
       const name = err?.name || ''
-      setError(name === 'NotAllowedError' ? 'not-allowed' : (err?.message || 'mic-failed'))
+      let code = 'mic-failed'
+      if (name === 'NotAllowedError' || name === 'SecurityError') code = 'not-allowed'
+      else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') code = 'no-device'
+      else if (name === 'NotReadableError' || name === 'TrackStartError') code = 'device-busy'
+      else if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError') code = 'constraints'
+      else if (name === 'AbortError') code = 'aborted'
+      if (typeof console !== 'undefined') {
+        console.warn('[nabz] mic start failed:', name, err?.message)
+      }
+      setError(code)
       stopMediaTracks()
     }
   }, [supported, reset, cleanupTimer, stopMediaTracks, uploadBlob])

@@ -70,21 +70,16 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   useEffect(() => {
     if (!speech.error) return
     submittedRef.current = false
-    if (phase === 'listening') {
-      setPhase('idle')
-      setError(
-        speech.error === 'not-allowed'
-          ? 'Microphone permission was denied. Allow it in browser settings, then try again.'
-          : 'Voice input could not start. Check the microphone and try again.',
-      )
-    } else if (phase === 'answering-voice') {
-      setPhase('question')
-      setError(
-        speech.error === 'not-allowed'
-          ? 'Microphone permission was denied. Allow it in browser settings, then try again.'
-          : 'Voice input could not start. Check the microphone and try again.',
-      )
+    const map = {
+      'not-allowed': 'Microphone permission was denied. Allow it in browser settings, then try again.',
+      'no-device': 'No microphone found on this device.',
+      'device-busy': 'Microphone is in use by another app. Close it and try again.',
+      'constraints': 'This device could not start the microphone at the requested settings. Try again.',
+      'no-speech': "I couldn't hear anything — please try again.",
     }
+    const msg = map[speech.error] || 'Voice input could not start. Try again, or type your answer.'
+    if (phase === 'listening') { setPhase('idle'); setError(msg) }
+    else if (phase === 'answering-voice') { setPhase('question'); setError(msg) }
   }, [phase, speech.error])
 
   function beginRequest() {

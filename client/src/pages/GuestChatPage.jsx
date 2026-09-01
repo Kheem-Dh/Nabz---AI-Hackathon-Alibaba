@@ -127,7 +127,15 @@ function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
   }, [speech.transcript, onChange])
 
   useEffect(() => {
-    if (speech.error) setLocalError('Voice input could not start. Check microphone permission and try again.')
+    if (!speech.error) return
+    const map = {
+      'not-allowed': 'Microphone permission denied. Allow it in your browser settings, then try again.',
+      'no-device': 'No microphone found on this device.',
+      'device-busy': 'Microphone is in use by another app. Close it and try again.',
+      'constraints': 'This device could not start the microphone at the requested settings. Try again.',
+      'no-speech': "I couldn't hear anything — please try again.",
+    }
+    setLocalError(map[speech.error] || 'Voice input could not start. Try again, or type instead.')
   }, [speech.error])
 
   async function chooseAttachment(event) {
@@ -289,10 +297,16 @@ export default function GuestChatPage() {
   }, [speech.transcript])
 
   useEffect(() => {
-    if (speech.error) {
-      autoSubmitVoiceRef.current = false
-      setError('Voice input could not start. Check microphone permission and try again.')
+    if (!speech.error) return
+    autoSubmitVoiceRef.current = false
+    const map = {
+      'not-allowed': 'Microphone permission denied. Allow it in your browser settings, then try again.',
+      'no-device': 'No microphone found on this device.',
+      'device-busy': 'Microphone is in use by another app. Close it and try again.',
+      'constraints': 'This device could not start the microphone at the requested settings. Try again.',
+      'no-speech': "I couldn't hear anything — please try again.",
     }
+    setError(map[speech.error] || 'Voice input could not start. Try again, or type instead.')
   }, [speech.error])
 
   // A voice turn is a complete interaction: once recognition ends (either

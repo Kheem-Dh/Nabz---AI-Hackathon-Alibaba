@@ -1,0 +1,55 @@
+# Render Blueprint — declarative infrastructure config for the Nabz stack.
+#
+# The two things this file exists to lock down:
+#
+#   1. Real HTTP security headers on the frontend Static Site. Render Static
+#      Sites do NOT read a Netlify-style `_headers` file; they use the
+#      `headers` block below. Setting them any other way (e.g. via <meta>)
+#      silently doesn't work for headers like frame-ancestors, which is
+#      exactly the trap the earlier setup fell into.
+#
+#   2. Permissions-Policy: microphone=(self) — without this header some
+#      browsers block getUserMedia even on HTTPS with permission granted.
+#
+# Environment variables are still managed in the Render dashboard (secrets
+# do not belong in this file, and this file is committed to the repo).
+services:
+  - name: nabz-web
+    type: web
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./client/dist
+    rootDir: client
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: geolocation=(self), microphone=(self), camera=(self)
+      - path: /*
+        name: Content-Security-Policy
+        value: >-
+          default-src 'self';
+          script-src 'self';
+          style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+          font-src 'self' https://fonts.gstatic.com data:;
+          img-src 'self' data: blob:;
+          connect-src 'self' https://nabz-api.onrender.com;
+          media-src 'self' https://nabz-api.onrender.com blob: data:;
+          object-src 'none';
+          base-uri 'self';
+          frame-ancestors 'none';
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache, no-store, must-revalidate
