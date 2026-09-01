@@ -2,8 +2,10 @@
 
 The frontend records audio with MediaRecorder (works in Firefox, in-app
 browsers, and offline Safari where webkitSpeechRecognition doesn't) and POSTs
-the blob here. We forward to Qwen3.5-Omni via DashScope's OpenAI-compatible
-chat.completions endpoint using an audio content-part.
+the blob here. Qwen3.5-Omni via DashScope is the primary path (supports
+Urdu + mixed Urdu/English natively). OpenAI Whisper is the automatic
+fallback — same failover contract already established for text triage and
+vision, without which a dead Qwen quota takes voice input down completely.
 
 Mock mode returns a canned Urdu transcript so demos work with zero credentials.
 Language is Urdu by default but caller can override via ?lang=ur|en|hi.
@@ -11,6 +13,7 @@ Language is Urdu by default but caller can override via ?lang=ur|en|hi.
 from __future__ import annotations
 
 import base64
+import io
 import logging
 import os
 from typing import Optional
@@ -28,6 +31,7 @@ MAX_AUDIO_BYTES = 15 * 1024 * 1024  # 15 MB — ~2 min of Opus at 128 kbps
 # The legacy qwen-omni-turbo only supports Chinese/English audio input.
 # Qwen3.5-Omni explicitly supports Urdu and mixed Urdu/English speech.
 _OMNI_MODEL = os.getenv("NABZ_STT_MODEL", "qwen3.5-omni-plus")
+_WHISPER_MODEL = os.getenv("NABZ_STT_FALLBACK_MODEL", "whisper-1")
 
 _ACCEPTED_MIMES = {
     "audio/webm", "audio/ogg", "audio/opus", "audio/mp4", "audio/mpeg",
@@ -85,8 +89,9 @@ async def transcribe(
     if is_mock_mode():
         return _mock_urdu_transcript(lang)
 
-    api_key = os.getenv("DASHSCOPE_API_KEY", "").strip()
-    if not api_key:
+    qwen_key = os.getenv("DASHSCOPE_API_KEY", "").strip()
+    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if not qwen_key and not openai_key:
         raise HTTPException(status_code=503, detail="voice_transcription_unavailable")
 
     fmt = _MIME_TO_FORMAT.get(content_type) or (
@@ -94,6 +99,45 @@ async def transcribe(
         else "mp3" if (file.filename or "").lower().endswith(".mp3")
         else "webm"
     )
+
+    raw = ""
+    provider = ""
+
+    # --- Primary: Qwen3.5-Omni via DashScope --------------------------------
+    if qwen_key:
+        try:
+            raw = _transcribe_qwen(audio, content_type, fmt, lang, qwen_key)
+            provider = "qwen"
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Qwen STT failed (model=%s: %s) — trying OpenAI Whisper fallback",
+                _OMNI_MODEL, exc,
+            )
+
+    # --- Fallback: OpenAI Whisper ------------------------------------------
+    if not raw and openai_key:
+        try:
+            raw = _transcribe_whisper(audio, file.filename or "audio.webm", content_type, lang, openai_key)
+            provider = "openai_whisper"
+        except Exception as exc:  # noqa: BLE001
+            logger.error("OpenAI Whisper STT also failed: %s", exc, exc_info=True)
+
+    if not raw:
+        # Never fabricate a patient's words in live mode. The frontend keeps
+        # the recording flow recoverable and lets the user retry or type.
+        raise HTTPException(status_code=503, detail="voice_transcription_failed")
+
+    return TranscriptOut(transcript=raw, language=lang, provider=provider or "cloud")
+
+
+# ---------------------------------------------------------------------------
+# Provider adapters
+# ---------------------------------------------------------------------------
+
+def _transcribe_qwen(audio: bytes, content_type: str, fmt: str, lang: str, api_key: str) -> str:
+    """Qwen3.5-Omni via DashScope's OpenAI-compatible chat.completions."""
+    from openai import OpenAI
+
     b64 = base64.b64encode(audio).decode("ascii")
     data_url = f"data:{content_type or 'audio/webm'};base64,{b64}"
 
@@ -108,48 +152,62 @@ async def transcribe(
         "If mixed Urdu/English, keep both in the language they were spoken."
     )
 
-    try:
-        from openai import OpenAI
+    client = OpenAI(api_key=api_key, base_url=DASHSCOPE_BASE_URL, timeout=45)
+    completion = client.chat.completions.create(
+        model=_OMNI_MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": user_part_text},
+                    {"type": "input_audio", "input_audio": {"data": data_url, "format": fmt}},
+                ],
+            },
+        ],
+        temperature=0.0,
+        modalities=["text"],
+        stream=True,
+        stream_options={"include_usage": True},
+    )
+    parts: list[str] = []
+    for chunk in completion:
+        if chunk.choices and chunk.choices[0].delta.content:
+            parts.append(chunk.choices[0].delta.content)
+    raw = "".join(parts).strip()
+    if not raw:
+        raise RuntimeError("qwen returned empty transcript")
+    return raw
 
-        client = OpenAI(
-            api_key=api_key,
-            base_url=DASHSCOPE_BASE_URL,
-            timeout=45,
-        )
-        completion = client.chat.completions.create(
-            model=_OMNI_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": user_part_text},
-                        {"type": "input_audio", "input_audio": {"data": data_url, "format": fmt}},
-                    ],
-                },
-            ],
-            temperature=0.0,
-            modalities=["text"],
-            stream=True,
-            stream_options={"include_usage": True},
-        )
-        parts: list[str] = []
-        for chunk in completion:
-            if chunk.choices and chunk.choices[0].delta.content:
-                parts.append(chunk.choices[0].delta.content)
-        raw = "".join(parts).strip()
-        if not raw:
-            raise RuntimeError("speech model returned an empty transcript")
-    except Exception as exc:  # noqa: BLE001
-        logger.error("Cloud STT failed (model=%s): %s", _OMNI_MODEL, exc, exc_info=True)
-        # Never fabricate a patient's words in live mode. The frontend keeps
-        # the recording flow recoverable and lets the user retry or type.
-        raise HTTPException(
-            status_code=503,
-            detail="voice_transcription_failed",
-        ) from exc
 
-    return TranscriptOut(transcript=raw, language=lang, provider="cloud")
+def _transcribe_whisper(audio: bytes, filename: str, content_type: str, lang: str, api_key: str) -> str:
+    """OpenAI Whisper — proper audio-transcription endpoint, not chat.
+
+    Whisper covers 90+ languages including Urdu natively. Passing `language=ur`
+    is a hint, not a hard constraint — mixed Urdu/English speech still
+    transcribes reasonably.
+    """
+    from openai import OpenAI
+
+    # Whisper needs a file-like object with a proper filename + MIME so it
+    # can pick the right decoder. Reuse the browser-sent filename/type.
+    fh = io.BytesIO(audio)
+    fh.name = filename or "audio.webm"
+
+    client = OpenAI(api_key=api_key, timeout=45)
+    # Whisper accepts 'ur' as the ISO-639-1 code for Urdu; other short codes
+    # like 'en' and 'hi' are also valid. Anything else, we omit the hint.
+    lang_hint = (lang or "").split("-")[0].lower()
+    kwargs: dict = {"model": _WHISPER_MODEL, "file": fh, "response_format": "text"}
+    if lang_hint in {"ur", "en", "hi", "ar", "fa"}:
+        kwargs["language"] = lang_hint
+
+    result = client.audio.transcriptions.create(**kwargs)
+    # response_format="text" returns a plain string, not an object with .text.
+    raw = (result if isinstance(result, str) else getattr(result, "text", "")).strip()
+    if not raw:
+        raise RuntimeError("whisper returned empty transcript")
+    return raw
 
 
 @router.get("/health")
