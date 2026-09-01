@@ -64,6 +64,29 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
     if (['result', 'error'].includes(phase)) setPendingVoiceText('')
   }, [phase])
 
+  // Permission failures and recorder start errors happen asynchronously.
+  // Return to the phase the user came from so the mic remains retryable
+  // instead of leaving new chat stuck in the non-recording "listening" UI.
+  useEffect(() => {
+    if (!speech.error) return
+    submittedRef.current = false
+    if (phase === 'listening') {
+      setPhase('idle')
+      setError(
+        speech.error === 'not-allowed'
+          ? 'Microphone permission was denied. Allow it in browser settings, then try again.'
+          : 'Voice input could not start. Check the microphone and try again.',
+      )
+    } else if (phase === 'answering-voice') {
+      setPhase('question')
+      setError(
+        speech.error === 'not-allowed'
+          ? 'Microphone permission was denied. Allow it in browser settings, then try again.'
+          : 'Voice input could not start. Check the microphone and try again.',
+      )
+    }
+  }, [phase, speech.error])
+
   function beginRequest() {
     requestControllerRef.current?.abort()
     const controller = new AbortController()

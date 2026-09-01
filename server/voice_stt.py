@@ -15,11 +15,9 @@ import logging
 import os
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
-from models_db import Account
-from security import get_current_account
 from triage import is_mock_mode
 from vision import DASHSCOPE_BASE_URL
 
@@ -72,7 +70,6 @@ def _mock_urdu_transcript(lang: str) -> TranscriptOut:
 async def transcribe(
     lang: str = Form("ur"),
     file: UploadFile = File(...),
-    account: Account = Depends(get_current_account),
 ) -> TranscriptOut:
     audio = await file.read()
     if not audio:

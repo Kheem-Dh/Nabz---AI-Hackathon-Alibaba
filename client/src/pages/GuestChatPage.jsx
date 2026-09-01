@@ -10,7 +10,7 @@ import {
   guestTriageStart,
   retryGuestTriage,
 } from '../api'
-import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
+import { useVoiceInput } from '../hooks/useVoiceInput'
 import { useTextToSpeech } from '../hooks/useTextToSpeech'
 
 const STORAGE_KEY = 'nabz_guest_assessment_v1'
@@ -116,7 +116,7 @@ function SmallMicIcon() {
 function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
   const lastEntry = entries[entries.length - 1]
   const limitReached = Boolean(lastEntry?.registration_required)
-  const speech = useSpeechRecognition({ lang: 'ur-PK', silenceMs: 4500 })
+  const speech = useVoiceInput({ lang: 'ur-PK', silenceMs: 4500 })
   const [attachment, setAttachment] = useState(null)
   const [attaching, setAttaching] = useState(false)
   const [localError, setLocalError] = useState('')
@@ -235,7 +235,7 @@ export default function GuestChatPage() {
   const resultRef = useRef(null)
   const fileRef = useRef(null)
   const tts = useTextToSpeech()
-  const speech = useSpeechRecognition({ lang: 'ur-PK', silenceMs: 4500 })
+  const speech = useVoiceInput({ lang: 'ur-PK', silenceMs: 4500 })
 
   const assistantItems = messages.filter((item) => item.role === 'assistant')
   const currentTurn = [...messages].reverse().find((item) => item.role === 'assistant')?.turn || null

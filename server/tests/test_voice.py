@@ -16,6 +16,17 @@ def test_mock_voice_transcription_is_marked_mock(client, auth):
     assert response.json()["language"] == "ur"
 
 
+def test_guest_voice_transcription_does_not_require_an_account(client):
+    response = client.post(
+        "/api/voice/transcribe",
+        data={"lang": "ur"},
+        files={"file": ("speech.webm", b"mock-audio", "audio/webm")},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["provider"] == "mock"
+
+
 def test_live_voice_failure_never_returns_a_canned_transcript(client, auth, monkeypatch):
     headers, _account, _profile_id = auth
     monkeypatch.setattr(voice_stt, "is_mock_mode", lambda: False)

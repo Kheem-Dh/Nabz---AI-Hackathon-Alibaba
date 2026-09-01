@@ -13,11 +13,14 @@
     "cap:open:android": "cap open android",
     "cap:add:ios": "cap add ios",
     "cap:open:ios": "cap open ios",
-    "mobile:build": "npm run build && cap sync",
+    "mobile:build": "VITE_API_BASE=${VITE_API_BASE:-https://nabz-api.onrender.com} npm run build && cap sync",
     "mobile:android": "npm run mobile:build && cap open android",
     "mobile:ios": "npm run mobile:build && cap open ios"
   },
   "dependencies": {
+    "@capacitor/android": "^7.6.9",
+    "@capacitor/cli": "^7.6.9",
+    "@capacitor/core": "^7.6.9",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
