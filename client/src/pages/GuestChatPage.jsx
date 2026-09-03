@@ -134,6 +134,7 @@ function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
       'device-busy': 'Microphone is busy — check that no call or voice app is active, then tap again.',
       'constraints': 'This device could not start the microphone at the requested settings. Try again.',
       'no-speech': "I couldn't hear anything — please try again.",
+      'mic-failed': 'The phone microphone could not start. Close other voice or call apps, then try once more.',
     }
     setLocalError(map[speech.error] || 'Voice input could not start. Try again, or type instead.')
   }, [speech.error])
@@ -305,6 +306,7 @@ export default function GuestChatPage() {
       'device-busy': 'Microphone is busy — check that no call or voice app is active, then tap again.',
       'constraints': 'This device could not start the microphone at the requested settings. Try again.',
       'no-speech': "I couldn't hear anything — please try again.",
+      'mic-failed': 'The phone microphone could not start. Close other voice or call apps, then try once more.',
     }
     setError(map[speech.error] || 'Voice input could not start. Try again, or type instead.')
   }, [speech.error])

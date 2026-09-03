@@ -27,6 +27,17 @@ def test_guest_voice_transcription_does_not_require_an_account(client):
     assert response.json()["provider"] == "mock"
 
 
+def test_android_native_wav_is_accepted(client):
+    response = client.post(
+        "/api/voice/transcribe",
+        data={"lang": "ur"},
+        files={"file": ("nabz.wav", b"RIFF-native-pcm-audio", "audio/wav")},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["provider"] == "mock"
+
+
 def test_live_voice_failure_never_returns_a_canned_transcript(client, auth, monkeypatch):
     """When BOTH STT providers are unavailable, return 503 —
     never fabricate patient speech."""

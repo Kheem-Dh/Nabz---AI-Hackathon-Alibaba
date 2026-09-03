@@ -76,6 +76,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
       'device-busy': 'Microphone is busy — check that no call or voice app is active, then tap again.',
       'constraints': 'This device could not start the microphone at the requested settings. Try again.',
       'no-speech': "I couldn't hear anything — please try again.",
+      'mic-failed': 'The phone microphone could not start. Close other voice or call apps, then try once more.',
     }
     const msg = map[speech.error] || 'Voice input could not start. Try again, or type your answer.'
     if (phase === 'listening') { setPhase('idle'); setError(msg) }

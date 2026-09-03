@@ -5,6 +5,7 @@
 // speech started from any page or component.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 const SPEECH_STATE_EVENT = 'nabz:speech-state'
@@ -185,6 +186,13 @@ export function useTextToSpeech() {
 
   const prime = useCallback(() => {
     if (audioPrimed) return
+    // Capacitor configures Android WebView media playback without a user-
+    // gesture requirement. Playing a silent clip here only creates competing
+    // audio focus immediately before native microphone capture on some OEMs.
+    if (Capacitor.getPlatform() === 'android') {
+      audioPrimed = true
+      return
+    }
     const audio = getSharedAudio()
     if (!audio) return
     const oldMuted = audio.muted

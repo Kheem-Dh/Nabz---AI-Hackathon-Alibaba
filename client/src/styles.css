@@ -6775,6 +6775,21 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
   .guest-composer > .guest-composer-mic { width: 34px; height: 34px; }
 }
 
+.app-recovery {
+  min-height: 100dvh;
+  padding: 32px 22px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  background: #f6f5f1;
+  color: #153d36;
+  text-align: center;
+}
+.app-recovery strong { font-size: 1.5rem; line-height: 2; }
+.app-recovery p { max-width: 420px; margin: 0; color: #687d78; line-height: 1.6; }
+.app-recovery button { min-height: 46px; padding: 0 20px; border: 0; border-radius: 12px; background: #0f9d8a; color: #fff; font-weight: 750; }
+
 /* Treatment-class suggestions — pharmacy-counter ideas, NOT prescription */
 .tx-class-card { margin-top: 16px; padding: 16px; border: 1px solid #e6ded0; border-radius: 14px; background: #fff9ec; }
 .tx-class-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }

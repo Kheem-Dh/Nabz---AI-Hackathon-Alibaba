@@ -232,7 +232,7 @@ export function useCloudVoiceCapture({ lang = 'ur' } = {}) {
       else if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError') code = 'constraints'
       else if (name === 'AbortError') code = 'aborted'
       if (typeof console !== 'undefined') {
-        console.warn('[nabz] mic start failed:', name, err?.message)
+        console.warn('[nabz] mic start failed:', code, name, err?.message)
       }
       setError(code)
       stopMediaTracks()
