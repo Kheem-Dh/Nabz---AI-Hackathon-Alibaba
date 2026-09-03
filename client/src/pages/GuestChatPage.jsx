@@ -592,8 +592,8 @@ export default function GuestChatPage() {
         <div className={`guest-chat-scroll ${started ? 'has-conversation' : ''}`}>
           {!started && (
             <section className="guest-welcome">
-              <h1 className="urdu urdu-hero" lang="ur" dir="rtl">آج آپ کی طبیعت کیسی ہے؟ مجھے بتائیے کہ میں آپ کی کیا مدد کر سکتا ہوں۔</h1>
-              <p className="guest-welcome-sub">Tell me how you're feeling — I'm here to help.</p>
+              <h1 className="urdu urdu-hero" lang="ur" dir="rtl">آج آپ کی طبیعت کیسی ہے؟</h1>
+              <p className="guest-welcome-sub"><span className="urdu" lang="ur" dir="rtl">مجھے بتائیے، میں آپ کی مدد کروں گا۔</span><span className="guest-welcome-en">Tell me how you're feeling — I'm here to help.</span></p>
               <div className="guest-voice-first">
                 <div className="guest-voice-rings"><i /><i /></div>
                 <MicButton listening={speech.listening} disabled={busy || !speech.supported || !consent} onClick={toggleVoice} />
@@ -709,9 +709,13 @@ export default function GuestChatPage() {
                 placeholder={started ? 'اپنا جواب لکھیے…' : 'اپنی علامات لکھیے…'}
                 aria-label={started ? 'اپنا جواب لکھیے' : 'اپنی علامات لکھیے'}
               />
-              <button type="button" className={`guest-composer-mic ${speech.listening ? 'recording' : ''}`} onClick={toggleVoice} disabled={busy || !speech.supported || (!started && !consent)} aria-label={speech.listening ? 'Stop voice input' : 'Start voice input'}>
-                {speech.listening ? '■' : <SmallMicIcon />}
-              </button>
+              {/* Hide the composer mic while the big center mic is on-screen (welcome state)
+                  to avoid the double-mic ambiguity. Show it once the conversation has started. */}
+              {started && (
+                <button type="button" className={`guest-composer-mic ${speech.listening ? 'recording' : ''}`} onClick={toggleVoice} disabled={busy || !speech.supported} aria-label={speech.listening ? 'Stop voice input' : 'Start voice input'} title={speech.listening ? 'Stop recording' : 'Speak your reply'}>
+                  {speech.listening ? '■' : <SmallMicIcon />}
+                </button>
+              )}
               <button className="guest-composer-send" disabled={busy || (!typed.trim() && !draftAttachment) || (!started && !consent)} aria-label="Send message">{busy ? '…' : '↑'}</button>
             </form>
             {draftAttachment && (
@@ -720,7 +724,14 @@ export default function GuestChatPage() {
                 <button type="button" onClick={() => setDraftAttachment(null)} aria-label="Remove attachment">×</button>
               </div>
             )}
-            <div className="guest-composer-note"><span>عمومی AI رہنمائی · تشخیص نہیں</span><span>ایمرجنسی؟ ابھی 1122 ملائیے</span><span>عارضی گفتگو · اکاؤنٹ ضروری نہیں</span></div>
+            <div className="guest-composer-note">
+              <a href="tel:1122" className="guest-emergency-pill" aria-label="Call emergency services 1122">
+                <span aria-hidden="true">🚨</span>
+                <span className="urdu" lang="ur" dir="rtl">ایمرجنسی؟</span>
+                <strong>1122</strong>
+              </a>
+              <span className="guest-composer-fineprint"><span className="urdu" lang="ur" dir="rtl">عمومی AI رہنمائی · تشخیص نہیں</span><span className="urdu" lang="ur" dir="rtl">عارضی گفتگو · اکاؤنٹ ضروری نہیں</span></span>
+            </div>
           </div>
         )}
       </main>

@@ -313,7 +313,7 @@ export default function AuthPage() {
                       password: mode === 'register' ? validatePassword(password) : (password ? null : 'Enter your password.'),
                     }))
                   }
-                  placeholder="••••••••"
+                  placeholder={mode === 'register' ? 'Choose a password' : 'Your password'}
                   autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
                   required
                 />
