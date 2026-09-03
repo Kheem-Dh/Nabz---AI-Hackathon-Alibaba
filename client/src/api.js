@@ -2,8 +2,10 @@
 // In dev, Vite proxies /api -> http://localhost:8000 (see vite.config.js).
 // Override the base with VITE_API_BASE. The JWT is kept in tab-scoped
 // sessionStorage and attached to every request; AI keys NEVER live here.
+import { Capacitor } from '@capacitor/core'
 
-const API_BASE = import.meta.env.VITE_API_BASE || ''
+const NATIVE_API_BASE = 'https://nabz-api.onrender.com'
+const API_BASE = import.meta.env.VITE_API_BASE || (Capacitor.isNativePlatform() ? NATIVE_API_BASE : '')
 const TOKEN_KEY = 'nabz_token'
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 

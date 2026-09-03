@@ -15,7 +15,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Capacitor, registerPlugin } from '@capacitor/core'
 import { getToken } from '../api'
 
-const API_BASE = import.meta.env.VITE_API_BASE || ''
+const API_BASE = import.meta.env.VITE_API_BASE || (Capacitor.isNativePlatform() ? 'https://nabz-api.onrender.com' : '')
 const NativeVoiceRecorder = registerPlugin('NativeVoiceRecorder')
 
 function base64ToBlob(data, mimeType) {

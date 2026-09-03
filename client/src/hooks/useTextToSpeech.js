@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 
-const API_BASE = import.meta.env.VITE_API_BASE || ''
+const API_BASE = import.meta.env.VITE_API_BASE || (Capacitor.isNativePlatform() ? 'https://nabz-api.onrender.com' : '')
 const SPEECH_STATE_EVENT = 'nabz:speech-state'
 let activeAudio = null
 let sharedAudio = null
