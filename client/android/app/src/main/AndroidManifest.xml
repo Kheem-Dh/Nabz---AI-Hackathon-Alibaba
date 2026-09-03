@@ -39,4 +39,9 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Capacitor's BridgeWebChromeClient.onPermissionRequest requests BOTH
+         RECORD_AUDIO and MODIFY_AUDIO_SETTINGS when a WebView getUserMedia
+         call asks for audio. Missing this permission was the root cause of
+         mic silently failing across v2.0-v2.3. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 </manifest>
