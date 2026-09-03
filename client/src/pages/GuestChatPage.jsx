@@ -131,7 +131,7 @@ function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
     const map = {
       'not-allowed': 'Microphone permission denied. Allow it in your browser settings, then try again.',
       'no-device': 'No microphone found on this device.',
-      'device-busy': 'Microphone is in use by another app. Close it and try again.',
+      'device-busy': 'Microphone is busy — check that no call or voice app is active, then tap again.',
       'constraints': 'This device could not start the microphone at the requested settings. Try again.',
       'no-speech': "I couldn't hear anything — please try again.",
     }
@@ -302,7 +302,7 @@ export default function GuestChatPage() {
     const map = {
       'not-allowed': 'Microphone permission denied. Allow it in your browser settings, then try again.',
       'no-device': 'No microphone found on this device.',
-      'device-busy': 'Microphone is in use by another app. Close it and try again.',
+      'device-busy': 'Microphone is busy — check that no call or voice app is active, then tap again.',
       'constraints': 'This device could not start the microphone at the requested settings. Try again.',
       'no-speech': "I couldn't hear anything — please try again.",
     }

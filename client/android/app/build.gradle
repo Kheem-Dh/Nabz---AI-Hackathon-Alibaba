@@ -7,8 +7,8 @@ android {
         applicationId "pk.nabz.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "2.0.0"
+        versionCode 5
+        versionName "2.3.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -43,6 +43,17 @@ dependencies {
 }
 
 apply from: 'capacitor.build.gradle'
+
+// capacitor.build.gradle pins sourceCompatibility to VERSION_21, but Java 21
+// is not universally installed (Ubuntu 22.04 ships JDK 17 by default). Java 17
+// is Android's current baseline and Capacitor supports it fine — override
+// after the generated file to keep the build working on any JDK 17+ host.
+android {
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
 
 try {
     def servicesJSON = file('google-services.json')

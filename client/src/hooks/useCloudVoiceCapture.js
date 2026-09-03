@@ -125,15 +125,31 @@ export function useCloudVoiceCapture({ lang = 'ur' } = {}) {
       // Chrome's URL bar showed the mic permission granted but Nabz still
       // said "voice input could not start"). Ideal lets the browser pick the
       // closest available config instead of failing outright.
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: { ideal: 1 },
-          echoCancellation: { ideal: true },
-          noiseSuppression: { ideal: true },
-          autoGainControl: { ideal: true },
-          sampleRate: { ideal: 16000 },
-        },
-      })
+      let stream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: { ideal: 1 },
+            echoCancellation: { ideal: true },
+            noiseSuppression: { ideal: true },
+            autoGainControl: { ideal: true },
+            sampleRate: { ideal: 16000 },
+          },
+        })
+      } catch (firstErr) {
+        // Android WebView (Chinese OEMs especially) frequently throws
+        // NotReadableError on the first attempt even when nothing else is
+        // holding the mic — the WebRTC audio pipeline needs a moment to
+        // reinitialize. Wait briefly and retry with plain `{audio: true}`
+        // to bypass constraint negotiation entirely.
+        const n = firstErr?.name || ''
+        if (n === 'NotReadableError' || n === 'TrackStartError' || n === 'AbortError') {
+          await new Promise((r) => setTimeout(r, 500))
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        } else {
+          throw firstErr
+        }
+      }
       streamRef.current = stream
       const mimeType = pickMimeType()
       const rec = mimeType

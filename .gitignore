@@ -28,6 +28,26 @@ server/_alembic_tmp.db
 server/_mig_test.db
 server/uploads/
 
+# AI coding tools — never commit these to a public repo
+.claude/
+.codex/
+.aider/
+.aider*
+.cursor/
+.cursorrules
+.continue/
+.windsurf/
+.chatgpt/
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+COPILOT.md
+
+# Build artefacts we don't want in the public repo
+*.apk
+Nabz-Technical-Document.docx
+Nabz-Technical-Document.pdf
+
 # OS / editors
 .DS_Store
 Thumbs.db

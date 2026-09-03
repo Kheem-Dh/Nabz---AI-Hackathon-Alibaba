@@ -24,6 +24,25 @@ allprojects {
     }
 }
 
+// Force every module (including the capacitor-android node_module which pins
+// Java 21) down to Java 17 so the build works on standard Ubuntu JDK 17.
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+        project.tasks.withType(JavaCompile).configureEach {
+            sourceCompatibility = '17'
+            targetCompatibility = '17'
+        }
+    }
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
