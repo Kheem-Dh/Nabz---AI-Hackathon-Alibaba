@@ -1,0 +1,500 @@
+================================================================================
+NABZ — DECK KNOWLEDGE BASE
+================================================================================
+Every fact, number, quote, and technical detail the redesigned deck may use.
+If a claim is not in this file, DO NOT invent it. Facts marked (est.) are
+approximations from public sources; the rest are hard product truth.
+Last updated: 2026-09-03. Product version: v2.4.0 · versionCode 6.
+
+================================================================================
+0. PRODUCT ONE-LINER
+================================================================================
+Nabz (Urdu نبض, "pulse") is an Urdu-first, voice-first AI health triage
+web + mobile app for Pakistan. A patient describes symptoms in Urdu, Roman
+Urdu, English, or a code-switched mix — by voice or by typing — and Nabz
+returns a structured triage in the same language: what the symptoms most
+likely mean, red flags to watch for, urgency level, and concrete next steps.
+
+Nabz is not a doctor. It is the layer that meets patients where they already
+are — on WhatsApp voice notes, on low-cost Android phones — and gets them
+to the right care faster.
+
+================================================================================
+1. THE PROBLEM (stat block)
+================================================================================
+- 1 : 1,300  — doctor-to-patient ratio in Pakistan (est., WHO figures)
+- ~90       — mental-health professionals for 240 M people (est., WHO)
+- ~40%      — adult literacy in written English (est., UNESCO)
+- ~120 M    — smartphones in Pakistan, mostly low-cost Android (est.)
+- 240 M     — total population
+
+Voice-native and voice-first. Two of three target users have limited
+written English. All three own a phone.
+
+================================================================================
+2. TARGET USERS (three personas)
+================================================================================
+1. Primary earner
+   Won't queue at a clinic for a day of wages.
+2. Night-shift caregiver (usually a woman)
+   Triaging fever in a child at 11 pm.
+3. Student in crisis
+   Mental-health emergency at 3 am, no one to call.
+
+================================================================================
+3. SCOPE BOUNDARIES
+================================================================================
+In-scope:
+- Symptom triage in Urdu / Roman Urdu / English
+- Red-flag detection and 1122 emergency escalation
+- Prescription and lab-report OCR read-back
+- Nearby-care lookup (hospital, pharmacy)
+- Doctor handoff via a one-time link
+- Family-profile vault with per-profile history
+
+Out-of-scope (say this explicitly):
+- Prescribing medicine or dose changes
+- Replacing a doctor for chronic conditions
+- Storing PHI beyond the user's own device / vault
+- Booking appointments or payments
+- Insurance claims processing
+- Continuous monitoring / wearable integration
+
+================================================================================
+4. FEATURE MATRIX (Guest · Registered · Doctor)
+================================================================================
+Capability                       Guest         Registered      Doctor
+------------------------------------------------------------------------
+Voice + text triage              Yes           Yes             View
+Emergency (1122) escalation      Yes           Yes             N/A
+Mental-health first-response     Yes           Yes             View
+Prescription / lab-report OCR    Yes           Yes             Yes
+DailyMed drug-label lookup       Yes           Yes             Yes
+Nearby hospital / pharmacy       Yes           Yes             No
+TTS Urdu read-out                Yes           Yes             Yes
+Persistent history               Session       Yes             One session
+Family Vault (multi-profile)     No            Yes             No
+Uploads persist                  No            Yes             View
+AI budget cap                    $0.30/guest   $0.50/account   inherited
+Auth                             None          Email OTP + PW  Handoff JWT
+
+Every "Yes" ships in v2.4.0.
+
+================================================================================
+5. TWELVE HEADLINE FEATURES
+================================================================================
+1. Urdu-primary UI with RTL layout, Nastaliq for headers, Naskh for body.
+2. Voice-first capture via MediaRecorder — works in Firefox, Chrome, Safari,
+   in-app browsers.
+3. Mixed-language transcription — Urdu, Roman Urdu, English, code-switched.
+4. Deterministic emergency detector — cardiac, obstetric, poisoning, stroke.
+5. Mental-health first-response with negation-aware (35-char window) detector.
+6. Prescription and lab-report OCR via Qwen VL — photograph a hand-written
+   prescription and hear it read back.
+7. DailyMed live drug-label lookup — real ingredient / interaction data,
+   4-second timeout.
+8. Nearby care via OpenStreetMap Overpass — hospitals and pharmacies, no
+   Google fee, more privacy-friendly.
+9. Family Vault — one account, isolated per-profile history.
+10. Doctor handoff — one-time JWT link lets a physician read one session
+    without registering.
+11. PWA + Android APK from one React codebase (Capacitor 7).
+12. Per-account and per-guest USD budget caps, enforced server-side.
+
+================================================================================
+6. SYSTEM ARCHITECTURE (three tiers)
+================================================================================
+CLIENT TIER
+  Web PWA (React 18 + Vite 6)
+    - Urdu-first UI, sessionStorage JWT
+    - MediaRecorder → /api/voice/transcribe
+  Android APK (Capacitor 7)
+    - WebView + Capacitor's own BridgeWebChromeClient
+    - RECORD_AUDIO + MODIFY_AUDIO_SETTINGS runtime permission
+    - Nabz pulse waveform launcher icon
+  Voice Capture Hook (useCloudVoiceCapture.js)
+    - MediaRecorder with ideal-constraint audio
+    - Auto-retry on NotReadableError
+  Triage Conversation UI (guest + authed)
+  Family Vault + Nearby Care
+  Auth Flow (Email OTP via Gmail SMTP, JWT account + handoff kinds,
+             rate-limited login/register/OTP)
+
+SERVER TIER — FastAPI on Render
+  main.py         — app factory, CORS, health
+  auth.py         — OTP / JWT / SMTP / IP-deque rate limit
+  triage.py       — structured triage + safety detectors
+  guest_triage.py — anonymous flow, $0.30 guest budget
+  voice_stt.py    — Qwen3.5-Omni STT + Whisper fallback
+  voice_tts.py    — Qwen3.5-Omni Urdu narration
+  vision.py       — Qwen VL / qwen-vl-ocr, 45 s timeout
+  nearby.py       — Overpass POI lookup
+  dailymed.py     — 4 s live drug label lookup
+  handoff.py      — doctor handoff, single-use JWT
+  profiles.py     — family profile CRUD + isolation
+  vault.py        — per-profile upload directory
+  models.py       — SQLAlchemy tables
+  settings.py     — env parsing, budget caps
+  Storage: SQLite on persistent disk /data
+  Real security headers via nginx.conf + render.yaml
+
+AI + EXTERNAL SERVICES
+  Alibaba DashScope (Primary)
+    - qwen3.7-plus       — text triage
+    - qwen3.5-omni-plus  — STT + TTS
+    - qwen-vl-ocr        — image OCR
+    - OpenAI-compatible endpoint
+  OpenAI (Fallback)
+    - gpt-4o-mini        — text
+    - whisper-1          — STT
+    - Per-account cap $0.50 / per-guest $0.30
+  Gmail SMTP           — OTP delivery, port 587 STARTTLS
+  DailyMed API         — live drug labels, 4 s timeout
+  OpenStreetMap Overpass — nearby hospitals + pharmacies
+  Every LLM call — deterministic safety guardrails first.
+
+================================================================================
+7. REQUEST PATH — SYMPTOM VOICE NOTE, ELEVEN STEPS
+================================================================================
+1.  Patient taps mic on guest chat page.
+2.  Browser / WebView calls navigator.mediaDevices.getUserMedia with
+    ideal-constraint audio; MediaRecorder writes audio/webm blob.
+3.  Client POSTs blob multipart to /api/voice/transcribe.
+4.  voice_stt.py checks mock mode, then tries Qwen3.5-Omni via DashScope
+    (audio inlined as data-URL).
+5.  On Qwen failure (quota, timeout, empty transcript) falls back to
+    OpenAI Whisper with the raw bytes.
+6.  Endpoint returns {transcript, language, provider}. Never a fabricated
+    transcript in live mode.
+7.  Client posts transcript to /api/triage; server runs deterministic
+    emergency + mental-health detectors first.
+8.  If neither pattern fires, Qwen3.7-plus generates a structured JSON
+    triage (symptoms, red flags, urgency, plan).
+9.  Cost is metered against per-account (or per-guest) USD budget; overshoot
+    switches to fallback or refuses.
+10. Response rendered Urdu-first with bilingual bullets and, on emergency,
+    a 1122-call banner.
+11. Patient optionally taps TTS; client streams Qwen3.5-Omni Urdu audio back.
+
+================================================================================
+8. AI LAYER — MODEL ROLES + FALLBACK + COST
+================================================================================
+Role             Primary                Fallback              Cost lever
+--------------------------------------------------------------------------
+Text triage      qwen3.7-plus           gpt-4o-mini           ≤ NABZ_AI_MAX_OUTPUT_TOKENS
+Speech-to-text   qwen3.5-omni-plus      whisper-1             ≤ 15 MB audio, ~2 min
+Text-to-speech   qwen3.5-omni-plus      — (silent skip)       Skipped if user muted
+Image OCR        qwen3.7-plus (VL)      qwen-vl-ocr           45 s timeout
+
+Budget caps (hard, server-enforced):
+  NABZ_REGISTERED_AI_BUDGET_USD = 0.50  (per registered account)
+  NABZ_GUEST_AI_BUDGET_USD      = 0.30  (per anonymous session)
+
+Every AI call is metered in USD before it is issued. If the running spend on
+the current account plus the estimated cost of the next call would exceed
+the cap, the request is served by the cheaper fallback if one exists,
+otherwise refused with a graceful message. The client cannot raise the cap.
+
+================================================================================
+9. SAFETY GUARDRAILS — THREE DETERMINISTIC LAYERS
+================================================================================
+Layer                  | Fires when                            | Action
+----------------------------------------------------------------------------
+Emergency              | Cardiac / stroke / obstetric /        | Return 1122
+                       | poisoning / trauma phrase             | banner + safe
+                       |                                       | text · SKIP LLM
+Mental-health          | Suicidal / self-harm phrase           | Warm response
+(immediate)            | · negation-aware 35-char window       | + helpline
+                       |                                       | · SKIP LLM
+Mental-health          | Softer distress cues                  | Steer LLM
+(distress)             |                                       | toward
+                       |                                       | supportive tone
+
+Negation example: "میں خودکشی نہیں کروں گا" ("I will not commit suicide")
+does NOT fire the immediate MH detector — the 35-char negation window
+catches "نہیں" ("not") preceding the crisis phrase.
+
+Design principle: safety is enforced in code, not prompts. Nothing a patient
+(or an attacker impersonating one) types will bypass the deterministic
+detectors. The LLM sees text only after detectors have had first look.
+
+================================================================================
+10. SECURITY POSTURE — TWELVE CONTROLS
+================================================================================
+1.  TLS everywhere            — Render-managed cert · Capacitor cleartext:false
+2.  Real CSP header           — via nginx.conf + render.yaml (meta tag was inert)
+3.  X-Frame-Options: DENY     — click-jacking prevention
+4.  Permissions-Policy        — geolocation, mic, camera restricted to self
+5.  Two JWT kinds             — account vs handoff, kind-checked server-side
+6.  Per-IP rate limit         — 429 auth_rate_limit on burst attempts
+7.  bcrypt password hashing   — via passlib · Argon2id migration planned
+8.  Hashed one-shot OTP       — expires in minutes
+9.  Per-profile isolation     — vault dirs per profile · 403 on cross-read
+10. CORS allow-list           — no wildcard in prod
+11. Server-side USD caps      — client cannot raise them
+12. Prompt-injection safe     — deterministic detectors run first
+
+================================================================================
+11. AUTH MODEL
+================================================================================
+Two JWT kinds so a stolen doctor-handoff link cannot be replayed as an
+account login, and vice-versa.
+
+Kind      | Issued when                    | Scope                        | Lifetime
+------------------------------------------------------------------------------
+account   | After OTP verify or password   | Read/write own account       | Session
+          | login                          | and its profiles             | (sessionStorage)
+handoff   | Patient generates doctor link  | Read one specific triage     | Short,
+          |                                | session only                 | single-use
+
+Family isolation — every authed request carries an active profile ID. The
+server rejects any query that tries to read a profile the account does not
+own with 403. Vault files live under a per-profile directory.
+
+================================================================================
+12. DATA MODEL (SQLite)
+================================================================================
+accounts         id, email, password_hash, created_at
+profiles         id, account_id FK, display_name, dob, relation
+triage_sessions  id, profile_id FK, started_at, provider
+triage_messages  id, session_id FK, role, text, meta_json
+vault_files      id, profile_id FK, path, mime, uploaded_at
+otp_codes        email, code_hash, expires_at, consumed
+handoff_tokens   jti, session_id FK, used, expires_at
+rate_limit       (in-memory deque, per-IP, process-local)
+
+================================================================================
+13. TECH STACK — ONE ROW PER COMPONENT
+================================================================================
+Layer          | Technology                     | Version    | Why
+------------------------------------------------------------------------------
+Frontend       | React                          | 18         | Mature RTL, ecosystem
+Build          | Vite                           | 6          | Sub-second HMR
+Mobile         | Capacitor                      | 7          | APK from same bundle
+Voice capture  | MediaRecorder API              | native     | Cross-browser
+Backend        | FastAPI                        | 0.115+     | Pydantic v2, async, OpenAPI
+ORM            | SQLAlchemy                     | 2          | Typed, Postgres-ready
+Database       | SQLite                         | 3          | Persistent-disk, zero-ops
+Auth           | PyJWT                          | 2          | Two token kinds
+Email OTP      | Gmail SMTP + STARTTLS          | port 587   | Free, ~3 s delivery
+Primary LLM    | Qwen3.7-plus (DashScope)       | plus       | Native Urdu, cheap
+Primary STT/TTS| Qwen3.5-Omni-plus              | plus       | One model, Urdu-native
+Vision OCR     | Qwen-VL / qwen-vl-ocr          | latest     | Reads hand-written Urdu
+Fallback LLM   | OpenAI gpt-4o-mini             | preview    | Same schema, cheap
+Fallback STT   | OpenAI whisper-1               | v1         | Only fallback that speaks Urdu well
+Drug labels    | NIH DailyMed                   | live       | Authoritative
+Maps / POIs    | OpenStreetMap Overpass         | public     | No Google fee
+Hosting        | Render                         | Web + Static| Free tier ok
+CDN / HTTPS    | Render-managed                 | Let's Encrypt| Free TLS
+
+================================================================================
+14. MOBILE APK RELEASE HISTORY
+================================================================================
+v2.0.0 · versionCode 2  — Initial APK
+v2.1.0 · versionCode 3  — Whisper STT fallback + ideal-constraint mic + headers
+v2.2.0 · versionCode 4  — WebChromeClient permission handler + Nabz launcher icon
+v2.3.0 · versionCode 5  — Reverted viewport-fit=cover (status-bar fix) + NotReadableError retry
+v2.4.0 · versionCode 6  — Root-cause mic fix: reverted to Capacitor's own
+                          BridgeWebChromeClient + added MODIFY_AUDIO_SETTINGS
+                          permission that Capacitor's handler needs
+
+================================================================================
+15. QUALITY ASSURANCE SUMMARY (SQA cases passed)
+================================================================================
+1.  Guest triage flow (voice + typed, Urdu + English + mixed) — PASS
+2.  Registration + OTP (Gmail ~3 s round-trip)                — PASS
+3.  Authed chat + Family Vault + per-profile isolation        — PASS
+4.  Nearby care / PWA install / TTS Urdu read-out             — PASS
+5.  Visual + responsive matrix (360/375/393/768/1440/1920)    — Zero horizontal scroll
+6.  Live production on Render (STT fallback, headers, SMTP)   — PASS
+7.  Zoom + dark-mode + cross-browser                          — PASS (best effort)
+8.  Rate limiting (8th–11th burst attempt)                    — 429 auth_rate_limit
+9.  Handoff token misuse (replay at account endpoint)         — 401 not_a_handoff_token
+10. Voice fallback (Qwen killed, expect Whisper)              — provider = openai_whisper
+11. Never-fabricate invariant (both providers dead)           — 503 voice_transcription_unavailable
+
+================================================================================
+16. ROADMAP
+================================================================================
+Now — v2.4
+  Voice-first triage
+  Family Vault
+  Emergency + MH guardrails
+  APK + PWA
+
+Q4 2026
+  WhatsApp OTP via Twilio Verify (SMS deliverability in PK is unreliable,
+    WhatsApp is universal)
+  Postgres migration
+  Refresh-token rotation
+  Redis-backed rate limit
+
+H1 2027
+  Doctor panel — verified physicians
+  Booking + telehealth handoff
+  Formal medical safety review (Pakistani physician panel)
+  iOS build via Capacitor
+
+H2 2027+
+  Regional expansion (Bangla, Pashto)
+  Wearable + BP-cuff intake
+  Insurance-partner API
+  On-device Qwen for offline mode
+
+================================================================================
+17. KNOWN LIMITATIONS
+================================================================================
+- SQLite is single-writer; migrate to Postgres for production concurrency.
+- In-process rate-limit deque does not survive a restart or scale to
+  multiple workers — needs Redis.
+- No refresh-token rotation yet; access tokens are session-scoped.
+- Password reset flow deferred; OTP hardening (per-account attempt cap)
+  deferred.
+- Nominatim disabled on live (rate limits); currently rely on client-provided
+  coordinates only.
+- Real OTP provider (Twilio Verify) planned instead of Gmail SMTP for WhatsApp.
+- Accessibility pass — screen-reader labels for RTL controls, keyboard-only
+  navigation still to complete.
+- Formal medical review of safety-detector patterns pending.
+
+================================================================================
+18. THE ASK
+================================================================================
+Three concrete asks:
+
+1. Alibaba Cloud credits
+   Bootstrap a public pilot in one Karachi (or Islamabad) clinic — a few
+   hundred users, six-week feedback loop.
+
+2. Introductions to a Pakistani physician panel
+   Formal review of the safety-detector patterns. Urdu clinical vocabulary
+   is nuanced and deserves clinician review.
+
+3. A partner hospital
+   Wire the doctor-handoff into one real workflow so we can measure
+   "time to triage → time to care".
+
+================================================================================
+19. TEAM
+================================================================================
+Kheem Parkash Dharmani  —  Machine Learning Engineer  (Team lead)
+  dharmanikheem@gmail.com
+  +92 336 3182779
+  Full end-to-end build — architecture, model choice, safety layer, UI,
+  APK, deployment.
+
+Muhammad Hassan  —  Co-founder
+  mhassandata@gmail.com
+
+Faiza Ali  —  Team member
+  faizaali.ds@gmail.com
+
+Project ID:   P00918
+Project name: Nabz (نبض)
+Focus area:   Healthcare
+Region:       Islamabad Region
+
+================================================================================
+20. LIVE LINKS + BRAND
+================================================================================
+Live web:  https://nabz-web.onrender.com
+API:       https://nabz-api.onrender.com
+GitHub:    (public repo, link in submission portal)
+
+Brand:
+  Urdu wordmark: نبض  (Nastaliq, teal)
+  Latin wordmark: Nabz
+  Tagline (EN):  Urdu-first, voice-first AI health triage
+  Tagline (UR):  آپ کی آواز، آپ کی صحت
+  Pulse waveform logo: SVG path
+    M96 260 h84 l30 -80 40 176 34 -112 26 60 h106
+    (stroke #FFFFFF, width 26, linecap round, on teal square rx=112)
+
+Colors:
+  Primary teal    #0F9D8A
+  Dark teal       #0B7D6E
+  Teal tint       #ECFDF7
+  Ink             #0F172A
+  Soft ink        #334155
+  Muted           #64748B
+  Off-white bg    #FAFAF7
+  Coral (emergency, mental-health only) #EF4444
+  Amber (cost / budget only)            #F59E0B
+
+Typography:
+  Titles       Cambria / Fraunces (serif), bold, 34-40 pt
+  Body         Inter / Calibri (sans), 12-15 pt
+  Urdu        Noto Nastaliq Urdu, line-height 1.75
+  Kicker      uppercase, 3-4 pt letter-spacing, 11 pt, teal
+
+================================================================================
+21. LIKELY JUDGE QUESTIONS + CANONICAL ANSWERS
+================================================================================
+Q: Why Alibaba Qwen and not GPT?
+A: Qwen3.7-plus and Qwen3.5-Omni carry Urdu, Roman Urdu, and mixed
+   code-switched Pakistani speech natively — no MT hop, no meaning loss.
+   GPT-4o-mini is our budget-capped fallback: same schema, different
+   provider, so a Qwen quota blip does not take the demo down.
+
+Q: How do you handle a medical emergency?
+A: Deterministic pattern list runs BEFORE the LLM. When it fires — cardiac,
+   stroke, obstetric, poisoning, trauma cues — we skip the LLM entirely and
+   return a fixed safe response with a 1122 call banner. Guardrails cannot
+   be prompt-injected because they are in code, not in a prompt.
+
+Q: What if a suicidal patient uses Nabz?
+A: A negation-aware mental-health detector fires on immediate crisis phrases
+   in Urdu and English, with a 35-character negation window so
+   "میں خودکشی نہیں کروں گا" does not misfire. When it fires we return a
+   warm, culturally-appropriate response with a helpline and skip the LLM.
+
+Q: How much does one triage cost?
+A: A typical text-only triage is a few tenths of a US cent on Qwen. Voice
+   adds STT — still under one cent per turn. Hard USD cap per account ($0.50)
+   and per guest ($0.30), server-side; the client cannot raise it.
+
+Q: What happens if Qwen goes down mid-demo?
+A: Speech: automatic Whisper fallback with the same audio bytes; the response
+   body reports the provider so we can see it happened. Text: gpt-4o-mini
+   with the same JSON schema. Both were tested by killing the primary key
+   in a test.
+
+Q: Is my voice sent to a Chinese server?
+A: Voice is sent to Alibaba DashScope over TLS for transcription. We do not
+   store audio on our server — it is streamed in-memory and discarded once
+   the transcript returns. For patients who prefer, the fallback path uses
+   OpenAI Whisper.
+
+Q: How is a family member's data isolated?
+A: Every request carries an active profile ID. The server rejects any query
+   that tries to read a profile the current account does not own with 403.
+   Vault files live under per-profile directories.
+
+Q: How does the doctor handoff work?
+A: Patient consents in-app; server mints a short-lived, single-use JWT of
+   a distinct kind ("handoff", not "account"). Doctor opens the link — no
+   signup — and gets read-only access to that one session. Replay is refused.
+
+Q: Why sessionStorage instead of localStorage for the JWT?
+A: A health session should not survive a browser profile migration or a
+   shared device. sessionStorage clears on tab close by design.
+
+Q: What is your test story?
+A: End-to-end pytest suite covering: never-fabricate invariant (503 when
+   both STT providers dead), Whisper fallback happy path, handoff token
+   kind check, rate-limit trigger, and the deterministic emergency + MH
+   detectors.
+
+Q: Why an APK and not just a PWA?
+A: Pakistani Android users install APKs directly; the WhatsApp habit is to
+   receive the file, not visit a URL. Capacitor lets us ship both from one
+   React codebase — no separate mobile team, no split roadmap.
+
+Q: What is your fallback if the demo Wi-Fi dies?
+A: The PWA installs and boots offline; typed triage works with a graceful
+   "voice unavailable" if STT cannot reach the network. The APK bundles the
+   entire frontend; only the AI calls need connectivity.
+
+================================================================================
+END OF FILE
+================================================================================

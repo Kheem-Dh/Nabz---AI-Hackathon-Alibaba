@@ -1,5 +1,7 @@
 package pk.nabz.app;
 
+import android.os.Bundle;
+
 import com.getcapacitor.BridgeActivity;
 
 /**
@@ -12,4 +14,13 @@ import com.getcapacitor.BridgeActivity;
  * the first tap. The AndroidManifest declares the permissions; Capacitor
  * does the rest.
  */
-public class MainActivity extends BridgeActivity {}
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        // The WebView recorder is inconsistent across Android System WebView
+        // versions. Register a small native AAC recorder for the APK while the
+        // web app keeps its MediaRecorder implementation.
+        registerPlugin(NativeVoiceRecorderPlugin.class);
+        super.onCreate(savedInstanceState);
+    }
+}

@@ -12,9 +12,18 @@
 // step already gives the user a chance to edit before sending.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import { getToken } from '../api'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
+const NativeVoiceRecorder = registerPlugin('NativeVoiceRecorder')
+
+function base64ToBlob(data, mimeType) {
+  const raw = window.atob(data)
+  const bytes = new Uint8Array(raw.length)
+  for (let index = 0; index < raw.length; index += 1) bytes[index] = raw.charCodeAt(index)
+  return new Blob([bytes], { type: mimeType })
+}
 
 function pickMimeType() {
   if (typeof MediaRecorder === 'undefined') return null
@@ -34,12 +43,14 @@ function pickMimeType() {
 }
 
 export function useCloudVoiceCapture({ lang = 'ur' } = {}) {
-  const supported =
+  const native = typeof window !== 'undefined' && Capacitor.getPlatform() === 'android'
+  const webSupported =
     typeof window !== 'undefined' &&
     typeof MediaRecorder !== 'undefined' &&
     typeof navigator !== 'undefined' &&
     !!navigator.mediaDevices &&
     !!navigator.mediaDevices.getUserMedia
+  const supported = native || webSupported
 
   const [listening, setListening] = useState(false)
   const [transcript, setTranscript] = useState('')
@@ -52,6 +63,8 @@ export function useCloudVoiceCapture({ lang = 'ur' } = {}) {
   const startedAtRef = useRef(0)
   const timerRef = useRef(null)
   const submittingRef = useRef(false)
+  const nativeRecordingRef = useRef(false)
+  const nativeStartingRef = useRef(false)
 
   const stopMediaTracks = useCallback(() => {
     const stream = streamRef.current
@@ -79,6 +92,11 @@ export function useCloudVoiceCapture({ lang = 'ur' } = {}) {
     setError(null)
     setElapsedMs(0)
     submittingRef.current = false
+    if (nativeRecordingRef.current || nativeStartingRef.current) {
+      nativeRecordingRef.current = false
+      nativeStartingRef.current = false
+      NativeVoiceRecorder.cancel().catch(() => {})
+    }
   }, [cleanupTimer, stopMediaTracks])
 
   const uploadBlob = useCallback(async (blob, mime) => {
@@ -119,6 +137,25 @@ export function useCloudVoiceCapture({ lang = 'ur' } = {}) {
     reset()
     setError(null)
     try {
+      if (native) {
+        // Native AAC capture avoids WebView releases that expose getUserMedia
+        // and grant permission but fail to start an audio MediaRecorder.
+        nativeStartingRef.current = true
+        await NativeVoiceRecorder.start()
+        if (!nativeStartingRef.current) {
+          NativeVoiceRecorder.cancel().catch(() => {})
+          return
+        }
+        nativeStartingRef.current = false
+        nativeRecordingRef.current = true
+        startedAtRef.current = Date.now()
+        timerRef.current = window.setInterval(() => {
+          setElapsedMs(Date.now() - startedAtRef.current)
+        }, 250)
+        setListening(true)
+        return
+      }
+
       // Use `ideal:` constraints — plain values are treated as EXACT by
       // Chromium, which throws OverconstrainedError on any mic/OS combo that
       // can't hit them precisely (a real live bug reported by users where
@@ -182,12 +219,13 @@ export function useCloudVoiceCapture({ lang = 'ur' } = {}) {
       }, 250)
       setListening(true)
     } catch (err) {
+      nativeStartingRef.current = false
       // Surface the DOMException name so the UI (or user reporting a bug)
       // can distinguish permission-denied from hardware failures from
       // overconstrained-mic — all three previously collapsed into a single
       // opaque "voice input could not start" message.
       const name = err?.name || ''
-      let code = 'mic-failed'
+      let code = err?.code || 'mic-failed'
       if (name === 'NotAllowedError' || name === 'SecurityError') code = 'not-allowed'
       else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') code = 'no-device'
       else if (name === 'NotReadableError' || name === 'TrackStartError') code = 'device-busy'
@@ -199,9 +237,23 @@ export function useCloudVoiceCapture({ lang = 'ur' } = {}) {
       setError(code)
       stopMediaTracks()
     }
-  }, [supported, reset, cleanupTimer, stopMediaTracks, uploadBlob])
+  }, [supported, native, reset, cleanupTimer, stopMediaTracks, uploadBlob])
 
   const stop = useCallback(() => {
+    if (native && nativeRecordingRef.current) {
+      nativeRecordingRef.current = false
+      setListening(false)
+      cleanupTimer()
+      stopMediaTracks()
+      NativeVoiceRecorder.stop()
+        .then(async (result) => {
+          const mimeType = result.mimeType || 'audio/mp4'
+          const blob = base64ToBlob(result.data, mimeType)
+          await uploadBlob(blob, mimeType)
+        })
+        .catch((err) => setError(err?.code || 'mic-failed'))
+      return
+    }
     const rec = recorderRef.current
     if (rec && rec.state !== 'inactive') {
       try { rec.stop() } catch { /* ignore */ }
@@ -210,7 +262,7 @@ export function useCloudVoiceCapture({ lang = 'ur' } = {}) {
       setListening(false)
       stopMediaTracks()
     }
-  }, [stopMediaTracks])
+  }, [native, cleanupTimer, stopMediaTracks, uploadBlob])
 
   // Safety net on unmount.
   useEffect(() => () => reset(), [reset])
