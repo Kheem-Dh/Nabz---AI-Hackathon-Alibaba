@@ -78,7 +78,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
       'no-speech': "I couldn't hear anything — please try again.",
       'mic-failed': 'The phone microphone could not start. Close other voice or call apps, then try once more.',
     }
-    const msg = map[speech.error] || 'Voice input could not start. Try again, or type your answer.'
+    const msg = map[speech.error] || `Voice input could not start (${speech.error}). Try again, or type your answer.`
     if (phase === 'listening') { setPhase('idle'); setError(msg) }
     else if (phase === 'answering-voice') { setPhase('question'); setError(msg) }
   }, [phase, speech.error])

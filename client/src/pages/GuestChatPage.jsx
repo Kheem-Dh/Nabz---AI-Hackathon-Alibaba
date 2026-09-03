@@ -136,7 +136,7 @@ function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
       'no-speech': "I couldn't hear anything — please try again.",
       'mic-failed': 'The phone microphone could not start. Close other voice or call apps, then try once more.',
     }
-    setLocalError(map[speech.error] || 'Voice input could not start. Try again, or type instead.')
+    setLocalError(map[speech.error] || `Voice input could not start (${speech.error}). Try again, or type instead.`)
   }, [speech.error])
 
   async function chooseAttachment(event) {
@@ -308,7 +308,7 @@ export default function GuestChatPage() {
       'no-speech': "I couldn't hear anything — please try again.",
       'mic-failed': 'The phone microphone could not start. Close other voice or call apps, then try once more.',
     }
-    setError(map[speech.error] || 'Voice input could not start. Try again, or type instead.')
+    setError(map[speech.error] || `Voice input could not start (${speech.error}). Try again, or type instead.`)
   }, [speech.error])
 
   // A voice turn is a complete interaction: once recognition ends (either

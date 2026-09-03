@@ -3,12 +3,14 @@
   "appName": "Nabz",
   "webDir": "dist",
   "server": {
+    "hostname": "app.nabz.local",
     "androidScheme": "https",
     "cleartext": false
   },
   "backgroundColor": "#f4f7f7",
   "android": {
     "allowMixedContent": false,
+    "resolveServiceWorkerRequests": false,
     "adjustMarginsForEdgeToEdge": "auto"
   }
 }
