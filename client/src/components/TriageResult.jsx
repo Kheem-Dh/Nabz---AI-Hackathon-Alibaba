@@ -2,11 +2,27 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { levelConfig } from '../levels'
 import NearbyCare from './NearbyCare'
+import {
+  DangerIcon, LevelPulse, MedicineIcon, PhoneIcon, PinIcon, SparkIcon,
+  SpeakerIcon, StepsIcon, StopIcon, UnderstandIcon, WarnIcon,
+} from './icons'
 
 const LIKELIHOOD_LABELS = {
   MORE_LIKELY: 'More likely',
   POSSIBLE: 'Possible',
   LESS_LIKELY: 'Less likely',
+}
+
+/** Bilingual label. Urdu leads; the English mirror sits beneath it.
+ *  PRODUCT.md locks this: density is solved with type scale, never by
+ *  dropping a language. */
+function Bi({ ur, en, tag: Tag = 'div', className = '' }) {
+  return (
+    <Tag className={`bi ${className}`}>
+      <span className="urdu" lang="ur" dir="rtl">{ur}</span>
+      <span className="bi-en">{en}</span>
+    </Tag>
+  )
 }
 
 function normalizeCause(cause) {
@@ -69,29 +85,55 @@ export default function TriageResult({
       <div className="guest-simple-result">
         {turn.response_source === 'ai_unavailable' && (
           <div className="notice notice-warn ai-unavailable-notice" role="alert">
-            <strong>طبی جائزہ اس وقت دستیاب نہیں</strong>
-            <span>یہ علامات کا مکمل تجزیہ نہیں ہے۔ براہِ کرم قریبی ڈاکٹر سے رابطہ کیجیے۔</span>
-            {onRetry && <button className="btn btn-primary" onClick={onRetry}>دوبارہ کوشش کریں</button>}
+            <Bi tag="strong" ur="طبی جائزہ اس وقت دستیاب نہیں" en="Assessment unavailable right now" />
+            <Bi tag="span" ur="یہ علامات کا مکمل تجزیہ نہیں ہے۔ براہِ کرم قریبی ڈاکٹر سے رابطہ کیجیے۔" en="This is not a full analysis of your symptoms. Please contact a nearby doctor." />
+            {onRetry && (
+              <button className="btn btn-primary" onClick={onRetry}>
+                <span className="urdu" lang="ur" dir="rtl">دوبارہ کوشش کریں</span>
+                <span className="bi-en">Try again</span>
+              </button>
+            )}
           </div>
         )}
         {turn.response_source === 'safety_protocol' && (
           <div className="notice notice-warn mental-safety-notice" role="alert">
-            <strong className="urdu" dir="rtl">آپ اکیلے نہیں ہیں — ابھی کسی قابلِ اعتماد شخص کو اپنے پاس بلائیے</strong>
-            <span className="urdu" dir="rtl">اگر خود کو محفوظ رکھنا مشکل لگ رہا ہو تو فوراً ریسکیو 1122 یا پولیس 15 سے رابطہ کیجیے، یا قریبی ایمرجنسی میں جائیے۔</span>
-            <div className="btn-row"><a className="btn btn-primary" href="tel:1122">1122 ملائیے</a><a className="btn btn-outline" href="tel:15">15 ملائیے</a></div>
+            <strong className="urdu" lang="ur" dir="rtl">آپ اکیلے نہیں ہیں — ابھی کسی قابلِ اعتماد شخص کو اپنے پاس بلائیے</strong>
+            <span className="urdu" lang="ur" dir="rtl">اگر خود کو محفوظ رکھنا مشکل لگ رہا ہو تو فوراً ریسکیو 1122 یا پولیس 15 سے رابطہ کیجیے، یا قریبی ایمرجنسی میں جائیے۔</span>
+            <div className="btn-row">
+              <a className="btn btn-primary" href="tel:1122">
+                <PhoneIcon />
+                <span className="urdu" lang="ur" dir="rtl">1122 ملائیے</span>
+                <span className="bi-en">Call 1122</span>
+              </a>
+              <a className="btn btn-outline" href="tel:15">
+                <PhoneIcon />
+                <span className="urdu" lang="ur" dir="rtl">15 ملائیے</span>
+                <span className="bi-en">Call 15</span>
+              </a>
+            </div>
           </div>
         )}
 
         <article className={`guest-answer-sheet ${cfg.className}`} role="status">
+          {/* The verdict is the one thing this product exists to deliver, so it
+              leads the card at full weight. The disclaimer follows it rather
+              than sitting above it — hedging before answering made the answer
+              the second thing on the screen. */}
           <header className="guest-answer-status">
-            <span className="guest-answer-status-icon" aria-hidden="true">{cfg.icon}</span>
+            <span className="guest-answer-status-icon" aria-hidden="true"><LevelPulse d={cfg.pulse} /></span>
             <div>
-              <small>نبض کا ابتدائی جائزہ · حتمی تشخیص نہیں</small>
-              <h2 className="urdu" dir="rtl">{cfg.urdu}</h2>
-              <span>{cfg.english}</span>
+              <h2 className="urdu" lang="ur" dir="rtl">{cfg.urdu}</h2>
+              <span className="guest-answer-status-en">{cfg.english}</span>
+              <small className="bi guest-answer-disclaimer">
+                <span className="urdu" lang="ur" dir="rtl">نبض کا ابتدائی جائزہ · حتمی تشخیص نہیں</span>
+                <span className="bi-en">A first assessment from Nabz — not a diagnosis</span>
+              </small>
             </div>
             {turn.analysis?.questions_asked >= 3 && (
-              <span className="guest-question-limit">3 سوال مکمل</span>
+              <span className="guest-question-limit">
+                <span className="urdu" lang="ur" dir="rtl">3 سوال مکمل</span>
+                <span className="bi-en">3 questions</span>
+              </span>
             )}
           </header>
 
@@ -102,14 +144,24 @@ export default function TriageResult({
 
           {(turn.patient_facing_impression_urdu || primaryCause) && (
             <section className="guest-understanding-block">
-              <span className="guest-visual-icon" aria-hidden="true">💡</span>
+              <span className="guest-visual-icon" aria-hidden="true"><UnderstandIcon /></span>
               <div>
-                <h3 className="urdu" dir="rtl">سادہ الفاظ میں</h3>
+                <Bi tag="h3" ur="سادہ الفاظ میں" en="In plain words" />
                 {turn.patient_facing_impression_urdu && (
-                  <p className="urdu" dir="rtl">{turn.patient_facing_impression_urdu}</p>
+                  <p className="urdu" lang="ur" dir="rtl">{turn.patient_facing_impression_urdu}</p>
+                )}
+                {turn.patient_facing_impression_english && (
+                  <p className="guest-block-en">{turn.patient_facing_impression_english}</p>
                 )}
                 {primaryCause && (
-                  <small>{primaryCause.name_urdu || primaryCause.name_english} — یہ صرف ممکنہ وجہ ہے، پکی تشخیص نہیں۔</small>
+                  <small className="bi">
+                    <span className="urdu" lang="ur" dir="rtl">
+                      {primaryCause.name_urdu || primaryCause.name_english} — یہ صرف ممکنہ وجہ ہے، پکی تشخیص نہیں۔
+                    </span>
+                    <span className="bi-en">
+                      {primaryCause.name_english} — a possible explanation only, not a confirmed diagnosis.
+                    </span>
+                  </small>
                 )}
               </div>
             </section>
@@ -118,8 +170,11 @@ export default function TriageResult({
           {stepCount > 0 && (
             <section className="guest-next-steps">
               <div className="guest-simple-heading">
-                <span aria-hidden="true">✓</span>
-                <div><h3 className="urdu" dir="rtl">ابھی کیا کیجیے</h3><small>آسان اور محفوظ اگلے قدم</small></div>
+                <span aria-hidden="true"><StepsIcon /></span>
+                <div>
+                  <Bi tag="h3" ur="ابھی کیا کیجیے" en="What to do now" />
+                  <Bi tag="small" ur="آسان اور محفوظ اگلے قدم" en="Simple, safe next steps" />
+                </div>
               </div>
               <div className="guest-step-grid">
                 {Array.from({ length: stepCount }, (_, index) => (
@@ -137,11 +192,21 @@ export default function TriageResult({
 
           {treatmentIdea && (
             <section className="guest-medicine-note">
-              <span className="guest-visual-icon" aria-hidden="true">💊</span>
+              <span className="guest-visual-icon" aria-hidden="true"><MedicineIcon /></span>
               <div>
-                <h3 className="urdu" dir="rtl">دوا کے بارے میں</h3>
-                <p className="urdu" dir="rtl">{treatmentIdea.purpose_urdu || treatmentIdea.class_name_urdu || 'دوا لینے سے پہلے فارماسسٹ یا ڈاکٹر سے ضرور پوچھیے۔'}</p>
-                <small>یہ نسخہ نہیں ہے۔ دوا، مقدار اور آپ کے لیے موزوں ہونے کی تصدیق ضروری ہے۔</small>
+                <Bi tag="h3" ur="دوا کے بارے میں" en="About medicine" />
+                <p className="urdu" lang="ur" dir="rtl">{treatmentIdea.purpose_urdu || treatmentIdea.class_name_urdu || 'دوا لینے سے پہلے فارماسسٹ یا ڈاکٹر سے ضرور پوچھیے۔'}</p>
+                {(treatmentIdea.purpose_english || treatmentIdea.class_name_english) && (
+                  <p className="guest-block-en">{treatmentIdea.purpose_english || treatmentIdea.class_name_english}</p>
+                )}
+                {/* Safety line. It previously rendered in a fallback Naskh face
+                    with clipped descenders and no English at all, so the user
+                    most likely to self-medicate was the one who could not read
+                    it. */}
+                <small className="bi">
+                  <span className="urdu" lang="ur" dir="rtl">یہ نسخہ نہیں ہے۔ دوا، مقدار اور آپ کے لیے موزوں ہونے کی تصدیق ضروری ہے۔</span>
+                  <span className="bi-en">This is not a prescription. A pharmacist or doctor must confirm the medicine, the dose, and whether it suits you.</span>
+                </small>
               </div>
             </section>
           )}
@@ -149,51 +214,89 @@ export default function TriageResult({
           {turn.escalation_signs?.length > 0 && (
             <section className="guest-danger-signs">
               <div className="guest-simple-heading">
-                <span aria-hidden="true">!</span>
-                <div><h3 className="urdu" dir="rtl">فوراً مدد کب لینی ہے؟</h3><small>ان علامات میں انتظار نہ کیجیے</small></div>
+                <span aria-hidden="true"><DangerIcon /></span>
+                <div>
+                  <Bi tag="h3" ur="فوراً مدد کب لینی ہے؟" en="When to get help immediately" />
+                  <Bi tag="small" ur="ان علامات میں انتظار نہ کیجیے" en="Do not wait if you see these" />
+                </div>
               </div>
-              <ul>{turn.escalation_signs.slice(0, 4).map((sign) => <li key={sign}>{sign}</li>)}</ul>
-              <a href="tel:1122">ایمرجنسی میں 1122 ملائیے</a>
+              {/* Urdu leads, English sits beneath it. These are the signs the
+                  patient watches for overnight — the highest-stakes text the
+                  product produces — so it cannot ship English-only. When the
+                  model omits the Urdu mirror we still render the English
+                  rather than dropping the warning entirely. */}
+              <ul>
+                {turn.escalation_signs.slice(0, 4).map((sign, i) => {
+                  const urdu = turn.escalation_signs_urdu?.[i]
+                  return (
+                    <li key={sign}>
+                      {urdu && <span className="urdu" lang="ur" dir="rtl">{urdu}</span>}
+                      <span className="guest-danger-en">{sign}</span>
+                    </li>
+                  )
+                })}
+              </ul>
+              <a href="tel:1122" className="guest-danger-call">
+                <PhoneIcon />
+                <span className="urdu" lang="ur" dir="rtl">ایمرجنسی میں 1122 ملائیے</span>
+                <span className="bi-en">Call 1122 in an emergency</span>
+              </a>
             </section>
           )}
 
+          {/* Listening is the primary action here, not a ghost afterthought:
+              the questions were spoken, so a user who cannot read has been led
+              this far by ear and must not lose the thread at the answer. */}
           <div className="guest-answer-actions no-print">
-            {onReplay && <button className="btn btn-ghost" onClick={onReplay}>{speaking ? '■ آواز روکیں' : '🔊 جواب سنیں'}</button>}
-            <button className="btn btn-outline" onClick={() => setShowWhy((value) => !value)}>یہ نتیجہ کیوں؟</button>
+            {onReplay && (
+              <button className="btn btn-primary guest-listen-btn" onClick={onReplay}>
+                {speaking ? <StopIcon /> : <SpeakerIcon />}
+                <span className="urdu" lang="ur" dir="rtl">{speaking ? 'آواز روکیں' : 'جواب سنیں'}</span>
+                <span className="bi-en">{speaking ? 'Stop' : 'Listen'}</span>
+              </button>
+            )}
+            <button className="btn btn-outline" onClick={() => setShowWhy((value) => !value)}>
+              <span className="urdu" lang="ur" dir="rtl">یہ نتیجہ کیوں؟</span>
+              <span className="bi-en">Why this result?</span>
+            </button>
           </div>
           {showWhy && <div className="guest-why-result"><p>{turn.reason_english}</p></div>}
         </article>
 
-        {isEmergency && <a className="rescue-banner" href="tel:1122">🚑 <span className="urdu">ریسکیو 1122 کو کال کیجیے</span></a>}
+        {isEmergency && (
+          <a className="rescue-banner" href="tel:1122">
+            <PhoneIcon />
+            <span className="urdu" lang="ur" dir="rtl">ریسکیو 1122 کو کال کیجیے</span>
+            <span className="bi-en">Call Rescue 1122</span>
+          </a>
+        )}
 
         {chatSlot}
 
-        <section className="guest-unlock-card">
-          <div className="guest-unlock-copy">
-            <span className="guest-unlock-kicker">مفت نجی والٹ</span>
-            <h2 className="urdu" dir="rtl">آپ کی صحت کی باتیں یاد رہیں، ہر بار دوبارہ نہ بتانی پڑیں</h2>
-            <p className="urdu" dir="rtl">والٹ بنانے سے رپورٹس، دوائیں، الرجی اور پچھلی گفتگو ایک محفوظ جگہ رہتی ہے۔ اگلی بار نبض بہتر رہنمائی دے سکتا ہے اور گھر کے افراد کا ریکارڈ الگ الگ محفوظ رہتا ہے۔</p>
-            <div className="guest-vault-benefits">
-              <span><b>📄</b><span className="urdu">رپورٹس محفوظ</span></span>
-              <span><b>💊</b><span className="urdu">دواؤں کی یادداشت</span></span>
-              <span><b>👨‍👩‍👧</b><span className="urdu">پورے گھر کا ریکارڈ</span></span>
-            </div>
+        {/* The Vault offer, demoted to a quiet closing line.
+            It previously closed every assessment as a full dark marketing card
+            whose brightest element was the loudest pixel in the product, and it
+            carried a deliberately blurred fake clinic map behind a padlock —
+            obscuring clinic locations from someone who had just been told to
+            see a doctor within 24 hours, with a blur that implied real data sat
+            behind the paywall. Both critique runs named it as a dark pattern.
+            The map is gone; if nearby clinics need an account, the line below
+            says so plainly and does not tease. */}
+        <section className="guest-vault-offer">
+          <div>
+            <Bi tag="strong" ur="اگلی بار دوبارہ بتانا نہ پڑے" en="So you don't have to explain it all again" />
+            <Bi
+              tag="p"
+              ur="مفت والٹ میں رپورٹس، دوائیں اور پچھلی گفتگو محفوظ رہتی ہیں، اور گھر کے ہر فرد کا ریکارڈ الگ رہتا ہے۔ قریبی کلینک دیکھنے کے لیے بھی اکاؤنٹ درکار ہے۔"
+              en="A free Vault keeps reports, medicines and past conversations in one place, with a separate record for each family member. An account is also needed to look up nearby clinics."
+            />
           </div>
-
-          <div className="guest-clinic-preview">
-            <div className="guest-clinic-map" aria-hidden="true">
-              <i>+</i><i>+</i><i>+</i>
-              <div><b className="urdu">قریبی کلینک</b><small>فاصلہ</small></div>
-              <div><b className="urdu">طبی مرکز</b><small>راستہ</small></div>
-            </div>
-            <div className="guest-clinic-lock">
-              <span aria-hidden="true">📍</span>
-              <strong className="urdu" dir="rtl">قریبی کلینک دیکھنے کے لیے</strong>
-              <small>اپنا علاقہ محفوظ طریقے سے استعمال کیجیے</small>
-            </div>
-          </div>
-
-          {onSave && <button className="guest-unlock-button" onClick={onSave}><span className="urdu">مفت والٹ بنائیے</span><small>صرف 20 سیکنڈ</small></button>}
+          {onSave && (
+            <button className="btn btn-outline guest-vault-offer-btn" onClick={onSave}>
+              <span className="urdu" lang="ur" dir="rtl">مفت والٹ بنائیے</span>
+              <span className="bi-en">Create a free Vault</span>
+            </button>
+          )}
         </section>
       </div>
     )
@@ -207,14 +310,14 @@ export default function TriageResult({
           <span>This safety response is not an AI interpretation of the transcript.</span>
           {onRetry && (
             <button className="btn btn-primary" onClick={onRetry}>
-              Retry AI assessment · دوبارہ کوشش کریں
+              <span className="urdu" lang="ur" dir="rtl">دوبارہ کوشش کریں</span><span className="bi-en">Retry AI assessment</span>
             </button>
           )}
         </div>
       )}
       {turn.response_source === 'safety_protocol' && (
         <div className="notice notice-warn mental-safety-notice" role="alert">
-          <strong>You deserve immediate human support · آپ اکیلے نہیں ہیں</strong>
+          <Bi tag="strong" ur="آپ اکیلے نہیں ہیں" en="You deserve immediate human support" />
           <span>Stay with a trusted person. If you may not remain safe, call Rescue 1122, Police 15, or go to the nearest emergency department now.</span>
           <div className="btn-row">
             <a className="btn btn-primary" href="tel:1122">Call 1122</a>
@@ -224,48 +327,59 @@ export default function TriageResult({
       )}
       <div className={`result-card ${cfg.className}`} role="status">
         {turn.response_source === 'live_ai' && (
-          <div className="ai-source-badge live_ai">✦ Live AI · transcript + patient Vault</div>
+          <div className="ai-source-badge live_ai"><SparkIcon /> Live AI · transcript + patient Vault</div>
         )}
         {turn.response_source === 'safety_protocol' && (
           <div className="ai-source-badge safety_protocol">Safety protocol · no AI dependency</div>
         )}
+        {/* The level mark is the Nabz pulse at this urgency's amplitude, not a
+            platform emoji — see levels.js. */}
         <div className="result-status-row">
-          <div className="result-icon" aria-hidden="true">{cfg.icon}</div>
+          <div className="result-icon" aria-hidden="true"><LevelPulse d={cfg.pulse} /></div>
           <div className="result-status-copy">
-            <div className="result-level-ur urdu">{cfg.urdu}</div>
+            <div className="result-level-ur urdu" lang="ur" dir="rtl">{cfg.urdu}</div>
             <div className="result-level-en">{cfg.english}</div>
-            <div className="result-level-sub">{cfg.sub}</div>
           </div>
         </div>
 
-        <p className="advice-ur urdu" dir="rtl">
+        <p className="advice-ur urdu" lang="ur" dir="rtl">
           {turn.advice_urdu}
         </p>
         <p className="advice-en">{turn.advice_english}</p>
 
+        {/* Listening is the primary action, as on the guest result: the
+            questions were spoken, so a user who cannot read arrives here by
+            ear and must not lose the thread at the answer. */}
         <div className="result-actions no-print">
-          {onReplay && <button className="btn btn-ghost" onClick={onReplay}>
-            {speaking ? '🔊 …' : '🔊 دوبارہ سنیں'}
-          </button>}
+          {onReplay && (
+            <button className="btn btn-primary result-listen-btn" onClick={onReplay}>
+              {speaking ? <StopIcon /> : <SpeakerIcon />}
+              <span className="urdu" lang="ur" dir="rtl">{speaking ? 'آواز روکیں' : 'دوبارہ سنیں'}</span>
+              <span className="bi-en">{speaking ? 'Stop' : 'Listen'}</span>
+            </button>
+          )}
           <button className="btn btn-outline" onClick={() => setShowWhy((s) => !s)}>
-            کیوں؟ · Why?
+            <span className="urdu" lang="ur" dir="rtl">یہ نتیجہ کیوں؟</span>
+            <span className="bi-en">Why this result?</span>
           </button>
           {chatSlot && (
-            <button className="btn btn-primary" onClick={continueConversation}>
-              Continue conversation ↓
+            <button className="btn btn-outline" onClick={continueConversation}>
+              <span className="urdu" lang="ur" dir="rtl">گفتگو جاری رکھیے</span>
+              <span className="bi-en">Continue conversation</span>
             </button>
           )}
         </div>
         {ttsSupported === false && onReplay && (
-          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-            🔇 Voice output isn’t available in this browser.
+          <p className="muted result-tts-note">
+            <span className="urdu" lang="ur" dir="rtl">اس براؤزر میں آواز دستیاب نہیں ہے۔</span>
+            <span className="bi-en">Voice output isn’t available in this browser.</span>
           </p>
         )}
 
         {showWhy && (
           <div className="why-box">
-            <strong>Why this level:</strong>
-            <p style={{ margin: '4px 0 0' }}>{turn.reason_english}</p>
+            <Bi tag="strong" ur="یہ درجہ کیوں؟" en="Why this level" />
+            <p className="why-box-body">{turn.reason_english}</p>
           </div>
         )}
 
@@ -289,14 +403,14 @@ export default function TriageResult({
       {(turn.patient_facing_impression_english || turn.possible_causes?.length > 0) && (
         <section className="impression-card">
           <div className="care-plan-head">
-            <span className="care-plan-icon">🧠</span>
+            <span className="care-plan-icon" aria-hidden="true"><UnderstandIcon /></span>
             <div>
-              <div className="urdu">ممکنہ وجوہات</div>
-              <small>Possible explanations — not a confirmed diagnosis</small>
+              <div className="urdu" lang="ur" dir="rtl">ممکنہ وجوہات</div>
+              <small className="bi-en">Possible explanations — not a confirmed diagnosis</small>
             </div>
           </div>
           {turn.patient_facing_impression_urdu && (
-            <p className="urdu impression-line" dir="rtl">
+            <p className="urdu impression-line" lang="ur" dir="rtl">
               {turn.patient_facing_impression_urdu}
             </p>
           )}
@@ -315,7 +429,7 @@ export default function TriageResult({
                   <article className="possible-cause" key={`${item.name_english}-${index}`}>
                     <div className="possible-cause-head">
                       <div>
-                        {item.name_urdu && <strong className="urdu" dir="rtl">{item.name_urdu}</strong>}
+                        {item.name_urdu && <strong className="urdu" lang="ur" dir="rtl">{item.name_urdu}</strong>}
                         <strong>{item.name_english}</strong>
                       </div>
                       <span className={`likelihood ${likelihood.toLowerCase()}`}>
@@ -355,8 +469,19 @@ export default function TriageResult({
           {turn.escalation_signs?.length > 0 && (
             <div className="escalation-block">
               <strong>Get urgent care if:</strong>
+              {/* Bilingual, as on the guest result. These are the signs the
+                  patient watches for overnight — the highest-stakes text the
+                  product produces — so it cannot ship English-only. */}
               <ul>
-                {turn.escalation_signs.map((s) => <li key={s}>{s}</li>)}
+                {turn.escalation_signs.map((s, i) => {
+                  const ur = turn.escalation_signs_urdu?.[i]
+                  return (
+                    <li key={s}>
+                      {ur && <span className="urdu" lang="ur" dir="rtl">{ur}</span>}
+                      <span className="guest-danger-en">{s}</span>
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           )}
@@ -366,7 +491,7 @@ export default function TriageResult({
       {(turn.medication_plan || medicationSteps.length > 0) && (
         <section className="medication-card">
           <div className="care-plan-head">
-            <span className="care-plan-icon">💊</span>
+            <span className="care-plan-icon" aria-hidden="true"><MedicineIcon /></span>
             <div>
               <div className="urdu">دوا سے متعلق عمومی رہنمائی</div>
               <small>Proposed medication discussion plan — not a prescription</small>
@@ -451,7 +576,7 @@ export default function TriageResult({
       {turn.treatment_class_suggestions?.length > 0 && (
         <section className="tx-class-card">
           <div className="tx-class-head">
-            <span className="tx-class-icon">💊</span>
+            <span className="tx-class-icon" aria-hidden="true"><MedicineIcon /></span>
             <div>
               <strong>Pharmacy-counter ideas — not a prescription</strong>
               <small>Ask a pharmacist about these classes; they will pick the right one for you.</small>
@@ -461,7 +586,7 @@ export default function TriageResult({
             <div className="tx-class-item" key={i}>
               <div className="tx-class-name">
                 <strong>{cls.class_name_english}</strong>
-                {cls.class_name_urdu && <span className="urdu" dir="rtl"> · {cls.class_name_urdu}</span>}
+                {cls.class_name_urdu && <span className="urdu tx-class-name-ur" lang="ur" dir="rtl">{cls.class_name_urdu}</span>}
               </div>
               {cls.example_generics?.length > 0 && (
                 <div className="tx-class-examples">
@@ -472,7 +597,7 @@ export default function TriageResult({
               {cls.purpose_urdu && (
                 <p className="tx-class-purpose urdu" dir="rtl">{cls.purpose_urdu}</p>
               )}
-              <small className="tx-class-verify">⚠ {cls.pharmacist_verify_note_english}</small>
+              <small className="tx-class-verify"><WarnIcon /> {cls.pharmacist_verify_note_english}</small>
             </div>
           ))}
         </section>
@@ -481,7 +606,7 @@ export default function TriageResult({
       {(turn.suggestions_urdu?.length > 0 || turn.suggestions_english?.length > 0) && (
         <section className="care-plan-card">
           <div className="care-plan-head">
-            <span className="care-plan-icon">✓</span>
+            <span className="care-plan-icon" aria-hidden="true"><StepsIcon /></span>
             <div>
               <div className="urdu">ابھی کیا کریں</div>
               <small>Personalized next steps</small>
@@ -530,7 +655,7 @@ export default function TriageResult({
 
       {isEmergency && (
         <a className="rescue-banner" href="tel:1122">
-          🚑 <span className="ur urdu">ریسکیو 1122 کو کال کریں</span>
+          <PhoneIcon /><span className="urdu" lang="ur" dir="rtl">ریسکیو 1122 کو کال کریں</span><span className="bi-en">Call Rescue 1122</span>
         </a>
       )}
 
@@ -543,13 +668,13 @@ export default function TriageResult({
 
       <div className="btn-row no-print">
         {showNearby && <button className="btn btn-outline" onClick={() => navigate('/clinics')}>
-          📍 قریبی کلینک
+          <PinIcon /><span className="urdu" lang="ur" dir="rtl">قریبی کلینک</span><span className="bi-en">Nearby clinics</span>
         </button>}
         {onSave && <button className="btn btn-primary" onClick={onSave}>
           Save future care in a private Vault
         </button>}
         <button className="btn btn-primary" onClick={onNew}>
-          نیا سوال · New
+          <span className="urdu" lang="ur" dir="rtl">نیا سوال</span><span className="bi-en">New question</span>
         </button>
       </div>
     </div>

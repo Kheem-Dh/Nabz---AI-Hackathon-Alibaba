@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { BellIcon } from './icons'
 import { useAuth } from '../context/AuthContext'
 
 // Soft-gate nudge: the app stays fully usable, but an unverified account sees a
@@ -35,7 +36,7 @@ export default function VerifyBanner() {
         borderBottom: '1px solid rgba(0,0,0,0.06)',
       }}
     >
-      <span aria-hidden="true">🔔</span>
+      <span aria-hidden="true"><BellIcon /></span>
       <span style={{ flex: 1 }}>
         <span className="urdu" lang="ur" dir="rtl">{whatUrdu} کی تصدیق کیجیے۔</span>
         <span className="verify-banner-en">Verify your {what} to secure this account</span>

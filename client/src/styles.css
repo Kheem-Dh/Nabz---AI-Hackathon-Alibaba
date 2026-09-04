@@ -4906,7 +4906,11 @@ textarea.input {
   --shadow-3: 0 12px 32px rgba(15, 31, 28, 0.10), 0 4px 12px rgba(15, 31, 28, 0.06);
   --shadow-scroll: 0 6px 20px rgba(15, 31, 28, 0.08);
   /* Focus ring — teal, high-contrast */
-  --focus-ring: 0 0 0 3px rgba(15, 157, 138, 0.35);
+  /* Two-layer ring: the white inner keeps it visible on the teal-filled
+     buttons (mic, header CTA, send), where the old translucent teal glow
+     resolved to 1.00:1 against the button's own fill and was invisible.
+     The dark outer keeps it visible on the cream page background. */
+  --focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px #0b3b35;
 }
 
 /* Sticky TopBar — polished on scroll, quiet on load */
@@ -6369,7 +6373,7 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
 .guest-replies { padding: 0 17px 18px 65px; display: flex; flex-wrap: wrap; gap: 8px; }
 .guest-replies button { min-height: 48px; padding: 6px 14px; display: grid; align-content: center; border: 1px solid #78cfc2; border-radius: 13px; background: #fff; color: #176f65; font-size: .72rem; font-weight: 700; }
 .guest-replies button:hover:not(:disabled) { background: #eaf8f5; border-color: #268f80; }
-.guest-replies .urdu { font-size: .83rem; line-height: 1.6; }
+.guest-replies .urdu { font-size: .83rem; line-height: 1.75; }
 .guest-replies small { color: #71827e; font-size: .6rem; font-weight: 550; }
 .guest-replies .guest-own-words { border-color: #d2ddd9; color: #526964; grid-template-columns: 25px auto; align-items: center; align-content: center; gap: 8px; text-align: left; }
 .guest-replies .guest-own-words.recording { border-color: #268f80; background: #eaf8f5; color: #176f65; }
@@ -6416,10 +6420,53 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
 .guest-composer-fineprint { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 14px; color: #71857f; font-size: .6rem; line-height: 1.4; }
 .guest-composer-fineprint span::after { content: '·'; margin-inline-start: 14px; color: #c3d3ce; }
 .guest-composer-fineprint span:last-child::after { content: none; }
-.guest-emergency-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border: 1px solid #f4b8b3; border-radius: 999px; background: #fff5f4; color: #b02a1f; font-family: var(--font-en); font-size: .72rem; font-weight: 700; text-decoration: none; white-space: nowrap; box-shadow: 0 1px 3px rgba(176,42,31,.08); transition: background .15s, transform .15s; }
-.guest-emergency-pill:hover, .guest-emergency-pill:focus-visible { background: #b02a1f; color: #fff; border-color: #b02a1f; transform: translateY(-1px); }
-.guest-emergency-pill strong { font-weight: 800; letter-spacing: .04em; }
-.guest-emergency-pill .urdu { font-family: var(--font-ur); font-weight: 700; font-size: .8rem; }
+/* ── Emergency call ───────────────────────────────────────────────────────
+   Persistent across every conversation state, including the result screen.
+   Sits above the composer in the thumb arc, 52px tall, and is the only
+   element on the page allowed to use the alarm red. */
+.guest-emergency-call {
+  position: fixed;
+  right: 12px;
+  bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 16px 8px 12px;
+  border: 1.5px solid #d1443a;
+  border-radius: 999px;
+  background: #fff;
+  color: #a32116;
+  text-decoration: none;
+  box-shadow: 0 6px 20px rgba(163, 33, 22, .18), 0 1px 2px rgba(0, 0, 0, .06);
+  transition: background .16s ease, color .16s ease, transform .16s ease;
+}
+.guest-emergency-call:hover,
+.guest-emergency-call:focus-visible { background: #a32116; color: #fff; border-color: #a32116; transform: translateY(-1px); }
+.guest-emergency-call:hover .guest-emergency-call-icon,
+.guest-emergency-call:focus-visible .guest-emergency-call-icon { background: rgba(255, 255, 255, .18); color: #fff; }
+.guest-emergency-call:active { transform: translateY(0); }
+
+.guest-emergency-call-icon {
+  display: grid;
+  place-items: center;
+  width: 32px; height: 32px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #fdecea;
+  color: #a32116;
+  transition: background .16s ease, color .16s ease;
+}
+.guest-emergency-call-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+.guest-emergency-call-text { display: flex; flex-direction: column; line-height: 1.15; }
+.guest-emergency-call-text .urdu { font-family: var(--font-ur); font-size: .95rem; font-weight: 700; line-height: 1.75; }
+.guest-emergency-call-text > span { font-family: var(--font-en); font-size: .68rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; opacity: .78; }
+.guest-emergency-call-number { font-family: var(--font-en); font-size: 1.2rem; font-weight: 800; letter-spacing: .02em; }
+
+/* On the result screen the composer is gone, so the call sits lower. */
+.guest-chat-main:has(.guest-result-wrap) .guest-emergency-call { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
 .guest-welcome-sub { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 6px auto 14px; color: #4d6a64; }
 .guest-welcome-sub .urdu { font-size: 1.05rem; line-height: 1.9; color: #1e756b; font-weight: 500; }
 .guest-welcome-sub .guest-welcome-en { font-size: .78rem; color: #6a8480; letter-spacing: .01em; font-style: italic; }
@@ -6466,10 +6513,9 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
   .guest-composer { min-height: 55px; padding: 5px 6px 5px 10px; border-radius: 17px; }
   .guest-composer > button { width: 42px; height: 42px; }
   .guest-composer-note { margin-top: 6px; flex-direction: row; justify-content: space-between; gap: 8px; font-size: .5rem; }
-  .guest-composer-fineprint { flex: 1; min-width: 0; font-size: .55rem; gap: 2px 8px; }
-  .guest-composer-fineprint span:first-child { display: none; }
-  .guest-emergency-pill { padding: 4px 9px; font-size: .65rem; }
-  .guest-emergency-pill .urdu { font-size: .72rem; }
+  .guest-composer-fineprint { flex: 1; min-width: 0; font-size: .72rem; gap: 2px 8px; }
+  .guest-emergency-call { right: 10px; bottom: calc(104px + env(safe-area-inset-bottom, 0px)); padding: 8px 14px 8px 10px; }
+  .guest-emergency-call-text > span { display: none; }
   .guest-welcome h1.urdu-hero { font-size: clamp(1.5rem, 7vw, 2.1rem); line-height: 1.6; margin-bottom: 4px; }
   .guest-welcome-sub .urdu { font-size: .95rem; line-height: 1.8; }
   .guest-welcome-sub .guest-welcome-en { font-size: .7rem; }
@@ -6805,7 +6851,7 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
 .tx-class-verify { display: block; margin-top: 8px; padding: 8px 10px; background: #fff3d6; border-left: 3px solid #c9962b; color: #6b4a00; font-size: 12px; border-radius: 4px; }
 
 /* Urdu-primary hero + feature strip + tightened chrome (2026-08-27 UI overhaul) */
-.urdu-hero { font-size: clamp(28px, 5vw, 44px) !important; line-height: 1.4; margin: 0 0 6px !important; color: var(--nabz-primary, #0F9D8A); }
+.urdu-hero { font-size: clamp(28px, 5vw, 44px) !important; line-height: 1.75; margin: 0 0 6px !important; color: var(--nabz-primary, #0F9D8A); }
 .guest-welcome-sub { font-size: 14px; color: #6b7c79; margin: 0 0 18px; }
 .urdu-cta { font-size: 18px; margin-top: 8px; display: block; }
 .guest-consent-tight { padding: 10px 14px; }
@@ -7532,10 +7578,11 @@ textarea.form-input { min-height: 96px; line-height: 1.5; resize: vertical; }
   color: #0C2925 !important;
   font-weight: 500 !important;
 }
+/* Was `.65rem !important` / #7a9490 — 10.4px at 2.7:1, below WCAG AA on the
+   cream ground. The size and colour now come from the thumb-zone pass at the
+   end of this file; only the weight is still pinned here. */
 .guest-starters small {
-  font-size: .65rem !important;
-  color: #7a9490 !important;
-  font-weight: 400 !important;
+  font-weight: 400;
 }
 .guest-starter-label {
   font-size: .62rem !important;
@@ -7910,10 +7957,9 @@ h1, h2, h3 { letter-spacing: -.01em; }
   font-weight: 600 !important;
   font-size: .9rem !important;
 }
-.guest-starters small {
-  color: #8a9997 !important;
-  font-size: .67rem !important;
-}
+/* Was `#8a9997 !important` at .67rem — 10.7px at 2.96:1. Superseded by the
+   thumb-zone pass; kept as an empty anchor so the override block's structure
+   stays readable rather than leaving a dangling selector. */
 
 /* --- Starter label divider --- */
 .guest-starter-label {
@@ -10337,3 +10383,557 @@ h1, h2, h3 { letter-spacing: -.01em; }
     animation: none !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GUEST WELCOME — THUMB-ZONE PASS  ·  2026-09-04
+
+   Addresses three P0s from /impeccable critique:
+
+   1. Speech is this product's primary input, but the mic rendered at y=199 on
+      an 812px viewport — the top quarter — while the keyboard composer owned
+      the thumb zone. Reach order is inverted: headline, then typed
+      alternatives, then the mic. Reading order is unchanged.
+   2. Every interactive target has a >=44px hit area (48px where it was ours
+      to set).
+   3. Secondary text was failing WCAG AA at 2.10-3.68:1 and rendering as small
+      as 8.8px. Floors: no Urdu below 14px, no English below 12.5px, 4.5:1
+      minimum, 1.75 line-height on Nastaliq.
+
+   Secondary text is tinted from the surface hue (#4a6a64, 5.44:1 on the cream
+   ground) rather than neutral gray, per the craft floor.
+
+   NOTE ON STRUCTURE: this is ONE block, deliberately. An earlier version of
+   this pass left five separate `@media (max-width: 820px)` rules each setting
+   `.guest-chat-scroll { padding-bottom }` to a different value, with the last
+   winning by source order rather than by decision. Keep every mobile rule for
+   this surface inside the single media block below.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Shared (all widths) ────────────────────────────────────────────────── */
+
+.guest-welcome-head { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.guest-welcome-sub { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 0; }
+.guest-welcome-sub .guest-welcome-en { font-size: .82rem; font-style: normal; color: #4a6a64; letter-spacing: .01em; }
+
+.guest-starters button { text-align: right; }
+.guest-starters .urdu { line-height: 1.75; color: #17423c; }
+.guest-starters small { color: #4a6a64; }
+
+.guest-voice-hint { display: flex; flex-direction: column; align-items: center; gap: 1px; text-align: center; }
+.guest-voice-hint .urdu { font-size: .95rem; line-height: 1.75; color: #1c6b62; font-weight: 600; }
+.guest-voice-hint > span:last-child { font-size: .78rem; color: #4a6a64; }
+
+/* The in-button Nastaliq label clipped past the circle edge; the label lives
+   below the button now, on the cream ground where contrast is controllable. */
+.guest-voice-first .mic-button .mic-label { display: none; }
+
+/* 44px minimum hit areas. */
+.guest-compose-icon,
+.guest-composer-mic,
+.guest-composer-send { min-width: 48px; min-height: 48px; }
+.guest-composer > button { width: 48px; height: 48px; }
+.guest-header-actions button,
+.guest-header-new { min-height: 44px; }
+
+/* Was 8.8px / 3.59:1 — the app's entire privacy disclosure. */
+.guest-composer-fineprint { color: #4a6a64; font-size: .72rem; line-height: 1.6; }
+.guest-composer-fineprint .urdu { font-size: .8rem; line-height: 1.75; }
+
+/* Header CTA was #fff on #0f9d8a = 3.38:1. #0b7d6e takes the same white to
+   5.09:1 and is already the brand's dark teal. */
+.guest-chat-header .guest-header-actions button.primary.urdu-btn {
+  background: #0b7d6e !important;
+  border-color: #0b7d6e !important;
+}
+
+/* ── Emergency call ─────────────────────────────────────────────────────── */
+/* Inline in the composer note by default, so it participates in layout and
+   occludes nothing. Only the result screen — where the composer dock unmounts
+   — gets the floating variant, because that is the moment the user has just
+   been told their situation may be serious. */
+.guest-emergency-call {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 16px 8px 12px;
+  border: 1.5px solid #d1443a;
+  border-radius: 999px;
+  background: #fff;
+  color: #a32116;
+  text-decoration: none;
+  box-shadow: 0 6px 20px rgba(163, 33, 22, .18), 0 1px 2px rgba(0, 0, 0, .06);
+  transition: background .16s ease, color .16s ease, transform .16s ease;
+}
+.guest-emergency-call:hover { background: #a32116; color: #fff; border-color: #a32116; transform: translateY(-1px); }
+.guest-emergency-call:hover .guest-emergency-call-icon { background: rgba(255, 255, 255, .18); color: #fff; }
+/* Keep the focus ring — sharing the style with :hover left the control with no
+   visible focus indicator at all. */
+.guest-emergency-call:focus-visible { background: #a32116; color: #fff; border-color: #a32116; box-shadow: var(--focus-ring); }
+.guest-emergency-call:active { transform: translateY(0); }
+
+.guest-emergency-call-icon {
+  display: grid; place-items: center;
+  width: 32px; height: 32px; flex: 0 0 auto;
+  border-radius: 50%;
+  background: #fdecea; color: #a32116;
+  transition: background .16s ease, color .16s ease;
+}
+.guest-emergency-call-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+.guest-emergency-call-text { display: flex; flex-direction: column; line-height: 1.15; }
+.guest-emergency-call-text .urdu { font-family: var(--font-ur); font-size: .95rem; font-weight: 700; line-height: 1.75; }
+.guest-emergency-call-text > span { font-family: var(--font-en); font-size: .62rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; opacity: .8; }
+.guest-emergency-call-number { font-family: var(--font-en); font-size: 1.2rem; font-weight: 800; letter-spacing: .02em; }
+
+.guest-emergency-call.is-floating {
+  position: fixed;
+  left: 12px; right: 12px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  justify-content: center;
+  z-index: 60;
+}
+
+/* ── Mobile: the design target ──────────────────────────────────────────── */
+/* Single block. Do not add a sibling — extend this one. */
+@media (max-width: 820px) {
+  .guest-welcome {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 12px;
+    padding-bottom: 0;
+  }
+  .guest-welcome h1.urdu-hero { margin: 0; font-size: clamp(1.45rem, 6.2vw, 2rem); line-height: 1.75; letter-spacing: 0; }
+  .guest-welcome-sub .guest-welcome-en { font-size: .78rem; }
+
+  .guest-starters { width: 100%; display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .guest-starters button { min-height: 52px; padding: 6px 14px; display: grid; align-content: center; gap: 2px; border: 1px solid #cfe0dc; border-radius: 14px; background: #fff; }
+  .guest-starters .urdu { font-size: .95rem; }
+  .guest-starters small { font-size: .78rem; }
+
+  .guest-voice-first { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 0; }
+  .guest-voice-first .mic-button { width: 84px; height: 84px; }
+  .guest-voice-first .mic-button .mic-icon svg { width: 34px; height: 34px; }
+
+  /* Measured: composer + emergency + fineprint dock is 164px tall. 208px
+     reserves it with 44px of headroom. One value, one place. */
+  .guest-chat-scroll { padding-bottom: 208px; }
+
+  .guest-composer-note { flex-direction: column; align-items: stretch; gap: 8px; }
+  .guest-composer-fineprint { justify-content: center; text-align: center; font-size: .72rem; gap: 2px 8px; }
+  .guest-emergency-call { justify-content: center; padding: 8px 14px 8px 10px; }
+  /* The English label stays. An earlier revision hid it here to recover width,
+     which made the highest-stakes control in the product Urdu-only on the
+     design-target device — the locked bilingual constraint broken on the one
+     control where it matters most. Width comes from the gap instead. */
+  .guest-emergency-call-text > span { display: block; }
+}
+
+/* ── Desktop ────────────────────────────────────────────────────────────── */
+/* Scoped explicitly. The mobile column rules above must not leak here: an
+   earlier revision applied a `min-height: calc(100dvh - …)` at all widths,
+   which pushed `.guest-chat-main` to `top: -178px` at 1440x900 and rendered
+   the hero behind the sticky header. */
+@media (min-width: 821px) {
+  .guest-welcome {
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 22px;
+  }
+  .guest-welcome .guest-starters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .guest-voice-first { margin-top: 0; }
+}
+
+/* Bilingual escalation signs. Urdu leads at a readable size with Nastaliq
+   leading; English sits beneath it. This is the text the patient holds onto
+   overnight, so both languages have to be legible. */
+.guest-danger-signs ul { margin: 0; padding-inline-start: 20px; padding-left: 0; display: grid; gap: 10px; }
+.guest-danger-signs li { display: flex; flex-direction: column; gap: 1px; }
+.guest-danger-signs li .urdu { font-family: var(--font-ur); font-size: 1rem; line-height: 1.75; color: #7a1d14; font-weight: 600; }
+.guest-danger-signs li .guest-danger-en { font-size: .82rem; line-height: 1.5; color: #93453c; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GUEST RESULT — BILINGUAL + DRAWN ICONS  ·  2026-09-04
+
+   Fixes two P0s from the second /impeccable critique:
+
+   1. Urdu strings without the `.urdu` class fell through to var(--font-en)
+      and a system Naskh fallback, so two Urdu typefaces rendered side by side
+      inside one card, with clipped descenders. Every Urdu node now carries
+      `.urdu` + lang + dir, and Nastaliq keeps a 1.75 leading floor.
+   2. The result dropped English on most of its labels — the medicine safety
+      line, the danger-signs heading, the actions, the whole Vault card. The
+      `.bi` pattern below pairs every label: Urdu leads, English beneath.
+      PRODUCT.md locks this; density is solved with type scale, never by
+      dropping a language.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Bilingual label pair. */
+.bi { display: flex; flex-direction: column; gap: 1px; }
+.bi > .urdu { font-family: var(--font-ur); line-height: 1.75; }
+.bi-en { font-family: var(--font-en); font-size: .74rem; line-height: 1.45; color: #4a6a64; letter-spacing: .01em; }
+h2.bi > .urdu, h3.bi > .urdu { font-weight: 700; }
+h3.bi .bi-en { font-size: .76rem; font-weight: 600; }
+
+/* Every Urdu run in the result keeps Nastaliq leading — this is the floor the
+   two-typeface bug was hiding under. */
+.guest-simple-result .urdu { font-family: var(--font-ur); line-height: 1.75; }
+.guest-block-en { font-family: var(--font-en); font-size: .8rem; line-height: 1.55; color: #4a6a64; margin: 2px 0 0; }
+
+/* Drawn section icons, one stroke weight throughout. */
+.guest-visual-icon svg,
+.guest-simple-heading > span svg { width: 20px; height: 20px; display: block; }
+.guest-simple-heading > span { display: grid; place-items: center; }
+
+/* The verdict leads the card. The level mark is the Nabz pulse at this
+   urgency's amplitude — legible as a rank without reading. */
+.guest-answer-status-icon svg { width: 34px; height: 34px; display: block; }
+.guest-answer-status h2 { font-size: clamp(1.35rem, 5.2vw, 1.9rem); line-height: 1.75; margin: 0; }
+.guest-answer-status-en { display: block; font-family: var(--font-en); font-size: .92rem; font-weight: 600; color: #2c4a45; letter-spacing: .01em; }
+.guest-answer-disclaimer { margin-top: 6px; }
+.guest-answer-disclaimer .urdu { font-size: .78rem; color: #4a6a64; }
+.guest-answer-disclaimer .bi-en { font-size: .68rem; }
+.guest-question-limit { display: flex; flex-direction: column; align-items: flex-end; gap: 0; font-size: .72rem; }
+.guest-question-limit .bi-en { font-size: .62rem; }
+
+/* Listening is the primary action on this card, not a ghost. */
+.guest-listen-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; }
+.guest-listen-btn svg { width: 20px; height: 20px; flex: 0 0 auto; }
+.guest-listen-btn .urdu { font-family: var(--font-ur); font-size: 1rem; line-height: 1.75; }
+.guest-listen-btn .bi-en { color: inherit; opacity: .82; font-size: .72rem; }
+.guest-answer-actions .btn { min-height: 48px; }
+.guest-answer-actions .btn .urdu { font-family: var(--font-ur); line-height: 1.75; }
+.guest-answer-actions .btn .bi-en { display: block; font-size: .68rem; opacity: .78; color: inherit; }
+
+.guest-danger-call { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; flex-wrap: wrap; }
+.guest-danger-call svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.guest-danger-call .urdu { font-family: var(--font-ur); line-height: 1.75; }
+.guest-danger-call .bi-en { color: inherit; opacity: .8; }
+
+.rescue-banner { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; min-height: 52px; }
+.rescue-banner svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.rescue-banner .urdu { font-family: var(--font-ur); line-height: 1.75; }
+.rescue-banner .bi-en { color: inherit; opacity: .85; }
+
+.ai-unavailable-notice .btn,
+.mental-safety-notice .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; }
+.mental-safety-notice .btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.ai-unavailable-notice .bi-en,
+.mental-safety-notice .bi-en { color: inherit; opacity: .8; }
+
+/* Vault offer: a closing line, not a marketing card. It used to be the
+   loudest element in a health app. */
+.guest-vault-offer {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 14px;
+  margin-top: 14px; padding: 16px 18px;
+  border: 1px solid #d8e5e2; border-radius: 16px;
+  background: #f7fbfa;
+}
+.guest-vault-offer strong.bi .urdu { font-size: 1rem; color: #17423c; }
+.guest-vault-offer p.bi { margin: 6px 0 0; }
+.guest-vault-offer p.bi .urdu { font-size: .9rem; color: #35544e; }
+.guest-vault-offer .bi-en { color: #4a6a64; }
+.guest-vault-offer-btn { min-height: 48px; flex: 0 0 auto; }
+.guest-vault-offer-btn .urdu { font-family: var(--font-ur); line-height: 1.75; }
+.guest-vault-offer-btn .bi-en { display: block; font-size: .68rem; opacity: .78; color: inherit; }
+
+@media (max-width: 820px) {
+  .guest-vault-offer { flex-direction: column; align-items: stretch; }
+  .guest-vault-offer-btn { width: 100%; }
+}
+
+/* `.guest-understanding-block p` / `.guest-medicine-note p` are compound
+   selectors (0,1,1) and were beating `.guest-block-en` (0,1,0), so the English
+   mirror inherited the 1.9 leading meant for Nastaliq and rendered larger and
+   airier than the Urdu it sits under. Match their weight. */
+.guest-understanding-block p.guest-block-en,
+.guest-medicine-note p.guest-block-en {
+  font-family: var(--font-en);
+  font-size: .8rem;
+  line-height: 1.55;
+  color: #4a6a64;
+  margin: 2px 0 0;
+}
+/* Same problem for the bilingual `small` inside those blocks. */
+.guest-understanding-block small.bi .urdu,
+.guest-medicine-note small.bi .urdu { font-size: .82rem; line-height: 1.75; }
+.guest-understanding-block small.bi .bi-en,
+.guest-medicine-note small.bi .bi-en { font-size: .72rem; line-height: 1.45; }
+
+/* Follow-up block bilingual labels. */
+.guest-followup-count { display: inline-flex; flex-direction: column; align-items: center; gap: 0; line-height: 1.3; }
+.guest-followup-count .urdu { font-family: var(--font-ur); font-size: .76rem; line-height: 1.75; }
+.guest-followup-count .bi-en { font-size: .62rem; }
+.guest-followup-send { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; }
+.guest-followup-send .urdu { font-family: var(--font-ur); font-size: .95rem; line-height: 1.75; }
+.guest-followup-send .bi-en { color: inherit; opacity: .8; font-size: .72rem; }
+
+/* ── Result-screen contrast floor ───────────────────────────────────────────
+   Measured on the rendered result at 375x812. Every value below was under
+   WCAG AA. Secondary text is tinted from the surface hue rather than gray,
+   and sizes come up to the 12.5px floor the rest of the surface now uses. */
+
+/* White on #0f9d8a is 3.38:1 at any size under 24px. The brand's dark teal
+   takes the same white to 5.09:1. */
+.guest-simple-result .btn-primary,
+.guest-listen-btn { background: #0b7d6e; border-color: #0b7d6e; }
+
+/* The level's English mirror was rendering at 10.6px / 4.18:1. */
+.guest-answer-status .guest-answer-status-en { font-size: .92rem !important; color: #22423d; }
+
+/* Advice body — 11.5px / 3.83:1. */
+.guest-answer-main .guest-answer-english { font-size: .85rem; line-height: 1.6; color: #3d5b55; }
+
+/* The two safety lines: the cause hedge and the not-a-prescription note.
+   Both were ~3.7:1 — the lines most likely to be skipped were the least
+   legible on the screen. */
+.guest-understanding-block small.bi .urdu,
+.guest-understanding-block small.bi .bi-en,
+.guest-medicine-note small.bi .urdu,
+.guest-medicine-note small.bi .bi-en { color: #3d5b55; }
+.guest-medicine-note small.bi .urdu,
+.guest-medicine-note small.bi .bi-en { color: #6b4a1f; }
+
+/* Danger sub-heading was 9.6px / 3.55:1. */
+.guest-danger-signs .guest-simple-heading small.bi .urdu { font-size: .88rem; color: #7a1d14; }
+.guest-danger-signs .guest-simple-heading small.bi .bi-en { font-size: .74rem; color: #8a3329; }
+
+/* Section timestamp rule and the follow-up intro. */
+.guest-date-rule span { font-size: .72rem; color: #4a6a64; }
+.guest-followup-head small,
+.guest-followup > div > div > small { font-size: .74rem; color: #4a6a64; }
+
+/* The header "new conversation" control measured 1.00:1 — its label colour
+   resolved to its own fill. */
+.guest-header-new,
+.guest-chat-header .guest-header-new { color: #eafbf7; }
+.guest-header-new .urdu { color: inherit; }
+
+/* `.btn-primary` sets its teal with !important upstream, so matching weight is
+   required. #0b7d6e is the same brand teal, one shade down, and takes white
+   from 3.38:1 to 5.09:1 — the Listen button is the primary action on the
+   result for a user who cannot read it. */
+.guest-simple-result .btn-primary,
+.guest-listen-btn {
+  background: #0b7d6e !important;
+  background-color: #0b7d6e !important;
+  border-color: #0b7d6e !important;
+}
+
+/* Remaining sub-44px targets in the follow-up row. */
+.guest-input-tool,
+.guest-followup-send { min-width: 48px; min-height: 48px; }
+
+/* Follow-up send had a 40px min-height set at higher specificity upstream. */
+.guest-followup-form .guest-followup-send,
+.guest-followup .guest-followup-send { min-height: 48px; height: auto; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AUTHED TRIAGE — TYPEFACE SAFETY NET + DRAWN ICONS  ·  2026-09-05
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── The root fix ──────────────────────────────────────────────────────────
+   `.urdu` was losing its font-family to more specific rules — most often
+   `button, input, select, textarea { font-family: inherit }` and
+   `.claude-composer textarea { font-family: inherit }`. The result was Urdu
+   rendering in Inter in the quick replies, the composer, and the "start over"
+   button, sitting beside Nastaliq in the same card.
+
+   This is the one rule that makes that class of bug impossible. It is
+   deliberately !important: `.urdu` is a semantic declaration that the content
+   is Urdu, and no layout rule has standing to override which script a
+   language renders in. Nastaliq also needs its leading, so that comes with
+   it wherever nothing more specific has set one. */
+.urdu,
+[lang="ur"] {
+  font-family: var(--font-ur) !important;
+}
+.urdu { line-height: 1.75; }
+
+/* ── Quick-reply chips ─────────────────────────────────────────────────────
+   The Urdu was a bare text node with no box of its own, so its descenders
+   overstruck the English span. It is a real element now; this stacks the two
+   languages with room for the Nastaliq to breathe. */
+.chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 60px;
+  padding: 10px 14px;
+  text-align: center;
+}
+.chip > .urdu { font-size: 1rem; line-height: 1.75; }
+.chip .chip-en { font-family: var(--font-en); font-size: .78rem; line-height: 1.4; color: #4a6a64; }
+.chip-voice-answer { flex-direction: column; }
+.chip-voice-icon { display: grid; place-items: center; }
+.chip-voice-icon svg { width: 18px; height: 18px; }
+
+/* ── Replay control ────────────────────────────────────────────────────── */
+.q-speak {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 14px;
+}
+.q-speak svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.q-speak .urdu { font-size: .95rem; }
+.q-speak .chip-en { font-family: var(--font-en); font-size: .74rem; color: inherit; opacity: .8; }
+
+/* ── Drawn icons across the authed conversation ───────────────────────── */
+.q-bot svg { width: 22px; height: 22px; }
+.mini-mic svg,
+.image-request-icon svg { width: 20px; height: 20px; }
+.mini-mic { display: grid; place-items: center; min-width: 44px; min-height: 44px; }
+.conv-error-icon { display: grid; place-items: center; }
+.conv-error-icon svg { width: 40px; height: 40px; color: #b45309; }
+
+/* ── The composer must render the patient's own Urdu in Nastaliq ────────── */
+.claude-composer textarea,
+.claude-composer textarea.urdu { font-family: var(--font-ur); line-height: 1.75; }
+
+/* Authed greeting: name, question, English — three lines, no collision. */
+.hero-greet-name { font-family: var(--font-en); font-size: 1rem; font-weight: 700; color: #2c4a45; letter-spacing: .01em; }
+.hero-greet-ur { font-size: clamp(1.4rem, 5.6vw, 2rem); line-height: 1.75; margin-top: 2px; }
+.hero-greet-en { font-family: var(--font-en); font-size: .84rem; line-height: 1.5; color: #4a6a64; margin-top: 2px; }
+.loc-chip svg, .verify-banner svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.loc-chip > span:first-child, .verify-banner > span:first-child { display: grid; place-items: center; }
+
+/* The question heading wraps to two or three lines of Nastaliq; at
+   `margin-top: 0` on the English the descenders of the last Urdu line
+   overstrike it. Give the pair real separation rather than relying on the
+   line box. */
+.q-card .q-urdu { line-height: 1.85; margin-bottom: 6px; }
+.q-card .q-en { margin-top: 6px; font-size: .88rem; line-height: 1.5; color: #4a6a64; }
+
+/* ── Authed result card ────────────────────────────────────────────────────
+   Icon sizing: an inline SVG with no width fills its container, so the badge
+   mark rendered ~350px tall. Every drawn icon needs an explicit box. */
+.ai-source-badge { display: inline-flex; align-items: center; gap: 7px; }
+.ai-source-badge svg { width: 15px; height: 15px; flex: 0 0 auto; }
+
+.result-icon { display: grid; place-items: center; width: 56px; height: 56px; flex: 0 0 auto; border-radius: 50%; }
+.result-icon svg { width: 30px; height: 30px; }
+.result-card.level-emergency .result-icon { background: #fdecea; color: #a32116; }
+.result-card.level-doctor    .result-icon { background: #fff5e6; color: #b45309; }
+.result-card.level-home      .result-icon { background: #eafbf7; color: #0b7d6e; }
+
+.result-level-ur { line-height: 1.75; }
+.result-level-en { font-family: var(--font-en); font-weight: 700; letter-spacing: .01em; }
+.result-level-sub { font-family: var(--font-en); font-size: .78rem; line-height: 1.5; color: #4a6a64; margin-top: 2px; }
+
+/* Bilingual action buttons stack their two languages rather than sitting them
+   side by side, which crowded the Nastaliq against the Latin. */
+.result-actions .btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 48px;
+  padding: 8px 16px;
+}
+.result-actions .btn .urdu { font-family: var(--font-ur); font-size: .95rem; line-height: 1.75; }
+.result-actions .btn .bi-en { font-family: var(--font-en); font-size: .7rem; color: inherit; opacity: .8; }
+.result-listen-btn { flex-direction: row !important; gap: 8px !important; }
+.result-listen-btn svg { width: 20px; height: 20px; flex: 0 0 auto; }
+.result-listen-btn > span:not(.urdu) { align-self: center; }
+
+.result-tts-note { display: flex; flex-direction: column; gap: 1px; margin-top: 8px; font-size: .78rem; }
+.why-box-body { margin: 4px 0 0; font-size: .85rem; line-height: 1.55; color: #3d5b55; }
+
+.care-plan-icon, .tx-class-icon { display: grid; place-items: center; }
+.care-plan-icon svg, .tx-class-icon svg { width: 20px; height: 20px; }
+.tx-class-verify { display: inline-flex; align-items: flex-start; gap: 6px; }
+.tx-class-verify svg { width: 15px; height: 15px; flex: 0 0 auto; margin-top: 2px; }
+.rescue-banner svg, .nearby-cta svg { width: 20px; height: 20px; flex: 0 0 auto; }
+
+/* Medicine class name: Urdu leads on its own line rather than being joined to
+   the English with a middle dot, which put a Nastaliq run and a Latin run on
+   one baseline and made them collide. */
+.tx-class-name { display: flex; flex-direction: column-reverse; gap: 1px; }
+.tx-class-name-ur { font-family: var(--font-ur); font-size: 1rem; line-height: 1.75; color: #6b4a1f; }
+.tx-class-name strong { font-family: var(--font-en); font-size: .86rem; color: #7a5a26; }
+
+/* Authed danger list, same bilingual treatment as the guest result. */
+.result-card + * .guest-danger-en,
+.escalation-box .guest-danger-en { font-family: var(--font-en); font-size: .82rem; line-height: 1.5; color: #93453c; }
+.escalation-box li { display: flex; flex-direction: column; gap: 1px; }
+.escalation-box li .urdu { font-family: var(--font-ur); font-size: 1rem; line-height: 1.75; color: #7a1d14; font-weight: 600; }
+
+/* Authed result contrast floor. The amber `level-doctor` card is a light
+   surface, so the muted greys carried over from the white cards fell under AA
+   on it. These are tinted from each card's own hue. */
+.result-card.level-doctor { --result-muted: #6b4a1f; }
+.result-card.level-emergency { --result-muted: #7a1d14; }
+.result-card.level-home { --result-muted: #24504a; }
+.result-card .result-level-en { color: #2c2113; }
+.result-card .advice-en { color: #3d3020; font-size: .88rem; line-height: 1.6; }
+
+.care-plan-summary, .care-plan-meta, .likelihood-note,
+.possible-cause-note, .care-plan-sub, .escalation-box > strong + *,
+.tx-class-lead { color: #43584f; }
+.likelihood-note { font-size: .78rem; line-height: 1.5; color: #43584f; }
+.care-plan-meta { color: #43584f; font-size: .78rem; }
+.escalation-box > strong { color: #7a1d14; }
+
+/* The Listen button is the primary action; `.btn-primary` pins #0f9d8a with
+   !important upstream, which is 3.38:1 against white. */
+.result-actions .result-listen-btn {
+  background: #0b7d6e !important;
+  background-color: #0b7d6e !important;
+  border-color: #0b7d6e !important;
+}
+
+/* Last contrast pass on the authed result, measured at 375x812. */
+
+/* The level heading was the brand amber #e08a00 on cream — 2.45:1, and it is
+   the single most important line on the card. Each level takes its own darker
+   shade of the same hue. */
+.result-card.level-doctor    .result-level-ur { color: #96590a; }
+.result-card.level-emergency .result-level-ur { color: #a32116; }
+.result-card.level-home      .result-level-ur { color: #0b6a5e; }
+
+/* Muted greys carried over from a white surface. */
+.care-plan-meta,
+.care-plan-head small,
+.care-plan-summary { color: #43584f !important; font-size: .76rem; }
+.bi-en { color: #40564f; }
+.escalation-block > strong,
+.escalation-block > *:first-child { color: #a32116; }
+
+/* `.bi-en` inside a filled primary button must inherit the button's white,
+   not the page's muted green — it was rendering at 1.76:1 on teal. */
+.btn-primary .bi-en,
+.btn-primary .urdu { color: #fff; }
+.btn-primary .bi-en { opacity: .88; }
+.nearby-cta.btn-primary,
+.btn-primary.nearby-cta { background: #0b7d6e !important; border-color: #0b7d6e !important; }
+
+.clinical-report-summary small { color: #43584f; }
+/* Every filled primary button in the result tree carries white text, so its
+   teal must be the darker shade. `.btn-primary` pins #0f9d8a upstream with
+   !important, hence the matching weight. */
+.guest-simple-result .btn-primary,
+.stack .btn-primary,
+.clinical-report-details .btn-primary {
+  background: #0b7d6e !important;
+  background-color: #0b7d6e !important;
+  border-color: #0b7d6e !important;
+}
+
+/* Guest result: the step captions and the sub-heading were carried over from a
+   white surface and fall under AA on the mint step cards. */
+.guest-step small,
+.guest-step-grid small { color: #3d5b55; font-size: .8rem; line-height: 1.5; }
+.guest-next-steps .guest-simple-heading small.bi .urdu,
+.guest-next-steps .guest-simple-heading small.bi .bi-en { color: #3d5b55; }

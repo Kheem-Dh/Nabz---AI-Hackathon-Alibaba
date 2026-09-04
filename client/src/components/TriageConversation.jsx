@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import MicButton from './MicButton'
+import { AttachIcon, CameraIcon, MicIcon, SpeakerIcon, SparkIcon, StopIcon, WarnIcon } from './icons'
 import AnalysisPanel from './AnalysisPanel'
 import TriageResult from './TriageResult'
 import EncounterChat from './EncounterChat'
@@ -388,10 +389,14 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
         {error && <div className="notice notice-warn">{error}</div>}
         <div className="triage-start-head">
           <div>
-            <div className="hero-greet-ur urdu" lang="ur" dir="rtl">
-              <bdi dir="auto">{profile.display_name}</bdi>، آج آپ کی طبیعت کیسی ہے؟ مجھے بتائیے کہ میں آپ کی کیا مدد کر سکتا ہوں۔
-            </div>
-            <div className="hero-greet-en">Tell me how you're feeling, {profile.display_name} — I'm here to help.</div>
+            {/* One question, not a paragraph. The long Urdu run wrapped onto
+                three lines and its descenders overstruck the English beneath
+                it, and the Latin name inside the Nastaliq run rendered in a
+                fallback face at Nastaliq's leading. The name now leads on its
+                own line, in its own script. */}
+            <div className="hero-greet-name"><bdi dir="auto">{profile.display_name}</bdi></div>
+            <div className="hero-greet-ur urdu" lang="ur" dir="rtl">آج آپ کی طبیعت کیسی ہے؟</div>
+            <div className="hero-greet-en">Tell me how you're feeling — I'm here to help.</div>
           </div>
         </div>
 
@@ -450,7 +455,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           />
           {initialAttachment && (
             <div className="care-attachment-preview">
-              <span aria-hidden="true">📎</span>
+              <span aria-hidden="true"><AttachIcon /></span>
               <span><strong>{initialAttachment.name}</strong><small>Included as supporting context</small></span>
               <button type="button" onClick={() => setInitialAttachment(null)} aria-label="Remove attachment">×</button>
             </div>
@@ -528,7 +533,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
   if (phase === 'error') {
     return (
       <div className="center-state">
-        <div style={{ fontSize: 40 }}>⚠️</div>
+        <div className="conv-error-icon" aria-hidden="true"><WarnIcon /></div>
         <p className="cs-ur urdu">معذرت، مسئلہ پیش آیا۔</p>
         <p className="cs-en">{error}</p>
         <div className="btn-row" style={{ width: '100%' }}>
@@ -575,7 +580,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
         <div className="q-card-meta">
           <div className={`ai-source-badge ${turn.response_source || 'live_ai'}`}>
             {turn.response_source === 'live_ai'
-              ? '✦ Live AI · transcript + patient Vault'
+              ? 'Live AI · transcript + patient Vault'
               : turn.response_source === 'safety_protocol'
                 ? 'Safety protocol · immediate human support'
               : turn.response_source === 'ai_unavailable'
@@ -585,7 +590,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           <span className="assessment-step">Step {Math.min(turn.analysis?.questions_asked || 1, 5)} of about 5</span>
         </div>
         <div className="q-bot" aria-hidden="true">
-          ✦
+          <SparkIcon />
         </div>
         <div className="q-urdu urdu" dir="rtl">
           {turn.question_urdu}
@@ -598,7 +603,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
         {turn.image_request && (
           <div className="clinical-image-request">
             <div className="image-request-copy">
-              <span className="image-request-icon" aria-hidden="true">📷</span>
+              <span className="image-request-icon" aria-hidden="true"><CameraIcon /></span>
               <div>
                 <strong className="urdu" dir="rtl">{turn.image_request.prompt_urdu}</strong>
                 <p>{turn.image_request.prompt_english}</p>
@@ -624,7 +629,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
             <div className="image-request-actions">
               {!clinicalImage ? (
                 <button className="btn btn-primary" onClick={() => imageInputRef.current?.click()}>
-                  📷 Take or choose photo
+                  <CameraIcon /> Take or choose photo
                 </button>
               ) : (
                 <>
@@ -646,13 +651,19 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
           </div>
         )}
         <button className="q-speak" onClick={() => tts.speak(turn.question_urdu)}>
-          🔊 دوبارہ سنیں · Replay
+          <SpeakerIcon />
+          <span className="urdu" lang="ur" dir="rtl">دوبارہ سنیں</span>
+          <span className="chip-en">Replay</span>
         </button>
 
         {!turn.image_request && <div className="chips">
           {(turn.quick_replies || []).map((qr, i) => (
+            // The Urdu must be its own element. As a bare text node it
+            // inherited the button's Latin font — the same two-typeface bug
+            // the result screen had — and, with no box of its own, its
+            // Nastaliq descenders overstruck the English span below it.
             <button type="button" key={i} className="chip" disabled={answeringByVoice} onClick={() => doAnswer(qr.urdu)}>
-              {qr.urdu}
+              <span className="urdu" lang="ur" dir="rtl">{qr.urdu}</span>
               <span className="chip-en">{qr.english}</span>
             </button>
           ))}
@@ -662,8 +673,8 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
               className={`chip chip-voice-answer ${answeringByVoice ? 'recording' : ''}`}
               onClick={() => (answeringByVoice ? speech.stop() : answerVoice())}
             >
-              <span className="chip-voice-icon" aria-hidden="true">{answeringByVoice ? '■' : '🎤'}</span>
-              <span className="urdu">{answeringByVoice ? 'مکمل کرکے بھیجیں' : 'اپنے الفاظ میں بتائیے'}</span>
+              <span className="chip-voice-icon" aria-hidden="true">{answeringByVoice ? <StopIcon /> : <MicIcon />}</span>
+              <span className="urdu" lang="ur" dir="rtl">{answeringByVoice ? 'مکمل کرکے بھیجیں' : 'اپنے الفاظ میں بتائیے'}</span>
               <span className="chip-en">{answeringByVoice ? 'Finish and send' : 'Answer by voice'}</span>
             </button>
           )}
@@ -701,7 +712,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
             onClick={() => (answeringByVoice ? speech.stop() : answerVoice())}
             aria-label="Answer by voice"
           >
-            {answeringByVoice && speech.listening ? '⏹' : '🎤'}
+            {answeringByVoice && speech.listening ? <StopIcon /> : <MicIcon />}
           </button>
         )}
           <label
@@ -709,7 +720,7 @@ export default function TriageConversation({ profile, onSessionChanged, initialT
             title="Attach a photo (rash, injury, report)"
             aria-label="Attach a photo"
           >
-            {attaching ? '⋯' : '📎'}
+            {attaching ? '⋯' : <AttachIcon />}
             <input
               type="file"
               accept="image/*,application/pdf"

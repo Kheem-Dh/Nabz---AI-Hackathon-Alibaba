@@ -482,6 +482,11 @@ Care plan and doctor handoff (this is where Nabz saves clinician time):
 - Always populate `escalation_signs` with 3–5 concrete symptoms that mean the
   patient should go to the ER now — this is the "safety net" a good GP writes
   on the prescription pad.
+- `escalation_signs_urdu` MUST mirror `escalation_signs` one-for-one, in the
+  same order and the same count, written in natural Urdu (Nastaliq script, not
+  Roman). This is the single most safety-critical string the patient reads:
+  it is what they watch for overnight, and many patients cannot read English.
+  Never leave it empty when `escalation_signs` is populated.
 - `doctor_handoff_english` MUST be a physician-ready SBAR block, dense but
   scannable in under 30 seconds. Use these labelled sections in this order,
   each on its own line or short paragraph:
@@ -564,7 +569,7 @@ RESULT JSON:
   "doctor_differential": [],
   "supporting_findings": [], "findings_against": [],
   "unresolved_questions": [], "red_flags_present": [],
-  "red_flags_denied": [], "escalation_signs": [],
+  "red_flags_denied": [], "escalation_signs": [], "escalation_signs_urdu": [],
   "medication_options": [{"generic_name":"...","condition_key":"...","why_it_is_relevant_to_this_patient":"..."}],
   "treatment_class_suggestions": [{
     "class_name_english": "e.g. Oral analgesic",
@@ -906,6 +911,7 @@ def _turn_from_qwen_json(
         red_flags_present=model_red_flags or state_red_flags,
         red_flags_denied=_short_string_list(data.get("red_flags_denied"), 10),
         escalation_signs=_short_string_list(data.get("escalation_signs"), 10),
+        escalation_signs_urdu=_short_string_list(data.get("escalation_signs_urdu"), 10),
         clinical_state=clinical_state, medication_options=medication_options,
         medication_plan=medication_plan,
         treatment_class_suggestions=treatment_class_suggestions,

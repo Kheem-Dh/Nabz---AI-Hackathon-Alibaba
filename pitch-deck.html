@@ -1,0 +1,364 @@
+<title>Nabz Pitch Deck</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&family=Noto+Nastaliq+Urdu:wght@600;700&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --teal: #0f9d8a; --teal-dark: #0b7d6e; --teal-ink: #0b6d60; --teal-050: #e7f6f3; --teal-100: #cfeee7;
+    --bg: #f6f4ef; --surface: #ffffff; --surface-2: #f1eee7;
+    --ink: #17231f; --ink-soft: #55645f; --ink-mute: #8a9793; --line: #e4dfd5; --line-2: #d6d0c4;
+    --red: #cf3b3b; --red-050: #fbe9e9; --amber: #c47a00; --amber-050: #f8f0df; --green: #12874a; --green-050: #e6f4ec;
+    --night: #0d1613; --night-2: #12211d; --ink-invert: #eef4f1;
+    --stage: #0c1512;
+  }
+  :root[data-theme="dark"] { --stage: #05100d; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --stage: #05100d; } }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--stage); color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+    display: grid; place-items: center; overflow: hidden;
+  }
+  .urdu { font-family: "Noto Nastaliq Urdu", serif; line-height: 2.1; }
+
+  /* ---- Stage: a 16:9 area that scales to the viewport ---- */
+  .stage {
+    position: relative;
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+    container-type: size;
+    background: var(--bg);
+    overflow: hidden;
+    box-shadow: 0 10px 60px rgba(0,0,0,.5);
+  }
+  .slide {
+    position: absolute; inset: 0;
+    padding: 6.2cqh 7cqw;
+    display: flex; flex-direction: column;
+    opacity: 0; visibility: hidden; transition: opacity .35s ease;
+    background: var(--bg);
+  }
+  .slide.is-active { opacity: 1; visibility: visible; }
+  @media (prefers-reduced-motion: reduce) { .slide { transition: none; } }
+
+  /* ---- Type scale (container units → scales with slide) ---- */
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 1.9cqh; letter-spacing: .28em; text-transform: uppercase; color: var(--teal-ink); margin: 0 0 2.4cqh; }
+  h1 { font-family: "Sora", sans-serif; font-weight: 800; font-size: 7.6cqh; line-height: 1.04; letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+  h2 { font-family: "Sora", sans-serif; font-weight: 700; font-size: 5.4cqh; line-height: 1.06; letter-spacing: -.02em; margin: 0 0 3.4cqh; text-wrap: balance; }
+  p  { font-size: 2.7cqh; line-height: 1.5; color: var(--ink-soft); margin: 0; }
+  .lead { font-size: 3.1cqh; color: var(--ink); }
+  b, strong { color: var(--ink); font-weight: 600; }
+  .accent { color: var(--teal-ink); }
+
+  .slide-head { display: flex; align-items: baseline; gap: 2.4cqw; margin-bottom: 3cqh; }
+  .slide-head .num { font-family: "IBM Plex Mono", monospace; color: var(--teal); font-weight: 600; font-size: 2.2cqh; }
+  .slide-head h2 { margin: 0; }
+  .fill { flex: 1; }
+
+  /* ---- Reusable pieces ---- */
+  .grid { display: grid; gap: 2.4cqh 2.4cqw; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 2.2cqh; padding: 3cqh 3cqw; box-shadow: 0 1px 2px rgba(20,40,36,.04); }
+  .card h3 { font-family: "Sora", sans-serif; font-size: 2.7cqh; margin: 0 0 1cqh; color: var(--ink); font-weight: 600; }
+  .card p { font-size: 2.25cqh; }
+  .card .ico { font-size: 4.2cqh; line-height: 1; margin-bottom: 1.4cqh; display: block; }
+
+  .stat { display: flex; flex-direction: column; gap: .4cqh; }
+  .stat .big { font-family: "Sora", sans-serif; font-weight: 800; font-size: 7cqh; color: var(--teal-ink); line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .stat .lbl { font-size: 2.2cqh; color: var(--ink-soft); }
+
+  .pill { display: inline-flex; align-items: center; gap: .8cqw; font-family: "IBM Plex Mono", monospace; font-size: 1.85cqh; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line); border-radius: 99px; padding: 1cqh 1.6cqw; }
+  .pill b { color: var(--teal-ink); font-weight: 600; }
+  .row { display: flex; flex-wrap: wrap; gap: 1.4cqh 1.4cqw; }
+
+  .quote { font-family: "Noto Nastaliq Urdu", serif; font-size: 3.4cqh; color: var(--ink); direction: rtl; line-height: 2; }
+
+  ul.ticks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1.5cqh; }
+  ul.ticks li { position: relative; padding-left: 3.4cqw; font-size: 2.45cqh; color: var(--ink-soft); }
+  ul.ticks li::before { content: "✓"; position: absolute; left: 0; color: var(--teal); font-weight: 700; }
+  ul.ticks.next li::before { content: "→"; color: var(--amber); }
+
+  .step { display: flex; gap: 2cqw; align-items: flex-start; }
+  .step .n { flex: 0 0 auto; width: 5cqh; height: 5cqh; border-radius: 50%; background: var(--teal-050); color: var(--teal-ink); font-family: "Sora", sans-serif; font-weight: 700; font-size: 2.4cqh; display: grid; place-items: center; }
+  .step h3 { font-family: "Sora", sans-serif; font-size: 2.5cqh; margin: .4cqh 0 .5cqh; color: var(--ink); }
+  .step p { font-size: 2.2cqh; }
+
+  .disclaimer { margin-top: auto; padding-top: 2.4cqh; font-size: 1.9cqh; color: var(--ink-mute); }
+  .disclaimer .urdu { color: var(--ink-soft); }
+
+  /* result chips (status colors used only for triage meaning) */
+  .lvl { display: inline-flex; align-items: center; gap: .8cqw; border-radius: 99px; padding: .9cqh 1.6cqw; font-weight: 600; font-size: 2.1cqh; }
+  .lvl.red { background: var(--red-050); color: var(--red); }
+  .lvl.amber { background: var(--amber-050); color: var(--amber); }
+  .lvl.green { background: var(--green-050); color: var(--green); }
+
+  /* flow diagram */
+  .flow { display: flex; align-items: stretch; gap: 1.2cqw; }
+  .flow .node { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: 1.6cqh; padding: 2cqh 1.4cqw; text-align: center; display: flex; flex-direction: column; justify-content: center; gap: .6cqh; }
+  .flow .node .t { font-family: "Sora", sans-serif; font-weight: 600; font-size: 2.1cqh; color: var(--ink); }
+  .flow .node .s { font-family: "IBM Plex Mono", monospace; font-size: 1.55cqh; color: var(--ink-mute); }
+  .flow .node.key { border-color: var(--teal); background: var(--teal-050); }
+  .flow .arrow { align-self: center; color: var(--teal); font-weight: 700; font-size: 2.6cqh; }
+
+  /* ---- Dark slides (title + close) — committed look, painted explicitly ---- */
+  .slide.night { background: radial-gradient(120% 120% at 15% 0%, var(--night-2), var(--night)); color: var(--ink-invert); justify-content: center; }
+  .slide.night h1, .slide.night h2 { color: #fff; }
+  .slide.night p { color: #b9c8c2; }
+  .slide.night .eyebrow { color: #5fd6c2; }
+  .brandmark { display: flex; align-items: baseline; gap: 2.2cqw; }
+  .brandmark .ur { font-family: "Noto Nastaliq Urdu", serif; font-weight: 700; font-size: 12cqh; color: #34c9b4; line-height: 1; }
+  .brandmark .en { font-family: "Sora", sans-serif; font-weight: 800; font-size: 9cqh; letter-spacing: -.03em; color: #fff; }
+  .tag-ur { font-family: "Noto Nastaliq Urdu", serif; font-size: 3.6cqh; color: #dfeae6; margin-top: 2cqh; }
+  .night .foot { position: absolute; left: 7cqw; right: 7cqw; bottom: 5cqh; display: flex; justify-content: space-between; align-items: center; font-family: "IBM Plex Mono", monospace; font-size: 1.9cqh; color: #7fa79c; }
+  .night .foot b { color: #34c9b4; }
+
+  /* ---- HUD ---- */
+  .hud { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; z-index: 40; background: rgba(0,0,0,.42); backdrop-filter: blur(6px); padding: 7px 12px; border-radius: 99px; }
+  .hud button { border: none; background: rgba(255,255,255,.12); color: #fff; width: 30px; height: 30px; border-radius: 50%; font-size: 15px; cursor: pointer; display: grid; place-items: center; }
+  .hud button:hover { background: rgba(255,255,255,.24); }
+  .hud .count { color: #d9e4e0; font-family: "IBM Plex Mono", monospace; font-size: 13px; min-width: 44px; text-align: center; }
+  .dots { display: flex; gap: 6px; }
+  .dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.28); cursor: pointer; transition: background .2s, transform .2s; }
+  .dots i.on { background: #34c9b4; transform: scale(1.3); }
+  .hint { position: fixed; top: 12px; right: 16px; z-index: 40; color: rgba(255,255,255,.5); font-family: "IBM Plex Mono", monospace; font-size: 11px; }
+
+  /* ---- Print → clean PDF, one slide per landscape page ---- */
+  @media print {
+    @page { size: 1280px 720px; margin: 0; }
+    body { display: block; background: #fff; overflow: visible; }
+    .hud, .hint { display: none !important; }
+    .stage { width: 1280px; height: 720px; box-shadow: none; container-type: size; }
+    .slide { position: relative; inset: auto; opacity: 1 !important; visibility: visible !important; page-break-after: always; break-after: page; height: 720px; width: 1280px; }
+  }
+</style>
+
+<div class="stage" id="stage">
+
+  <!-- 1 · TITLE -->
+  <section class="slide night is-active">
+    <p class="eyebrow">Alibaba Cloud AI Hackathon · Pakistan 2026</p>
+    <div class="brandmark"><span class="ur">نبض</span><span class="en">Nabz</span></div>
+    <div class="tag-ur">آپ کی آواز، آپ کی صحت</div>
+    <p class="lead" style="color:#eaf3ef; margin-top:1.4cqh; font-size:3.4cqh;">Your voice, your health.</p>
+    <p style="margin-top:3cqh; max-width:64cqw; font-size:2.8cqh;">Urdu-first, voice-first AI health triage for Pakistan — accessible, family-aware, and doctor-ready.</p>
+    <div class="foot"><span>Live demo · <b>nabz-web.onrender.com</b></span><span>github.com/Kheem-Dh/Nabz</span></div>
+  </section>
+
+  <!-- 2 · PROBLEM -->
+  <section class="slide">
+    <div class="slide-head"><span class="num">01</span><h2>Healthcare that most Pakistanis can't reach</h2></div>
+    <div class="grid cols-3" style="margin-bottom:3.6cqh;">
+      <div class="stat"><span class="big">1 : 1,300</span><span class="lbl">doctors per person (WHO) — vs 1:830 globally</span></div>
+      <div class="stat"><span class="big">₨500–2,000</span><span class="lbl">per visit · 40+ km travel · 6+ hour queues</span></div>
+      <div class="stat"><span class="big">~90</span><span class="lbl">mental-health professionals for 240M people</span></div>
+    </div>
+    <div class="grid cols-2" style="align-items:center;">
+      <p class="lead">Every consumer health app is <b>English-only and keyboard-first</b> — locking out the voice-native, Urdu-speaking majority. So red flags get ignored, or ERs flood with minor cases. <b class="accent">No safe first step exists.</b></p>
+      <div class="card" style="background:var(--teal-050); border-color:var(--teal-100);">
+        <p class="quote">”کیا ہو اگر یہ سنگین ہو اور میں نظر انداز کر دوں؟“</p>
+        <p style="margin-top:1.4cqh; font-size:2.1cqh;">“What if it's serious and I miss it?” — <b>Amna, 35</b>, mother of three, rural Punjab.</p>
+      </div>
+    </div>
+    <div class="disclaimer"><span class="urdu">یہ ڈاکٹر کا متبادل نہیں ہے</span> · This is not a substitute for a doctor.</div>
+  </section>
+
+  <!-- 3 · WHO IT AFFECTS -->
+  <section class="slide">
+    <div class="slide-head"><span class="num">02</span><h2>Three people, one locked door</h2></div>
+    <div class="grid cols-3" style="flex:1; align-content:center;">
+      <div class="card"><span class="ico">👷</span><h3>The earner</h3><p>Feels unwell but won't lose a day's wage sitting in a clinic queue. Waits, and hopes it passes.</p></div>
+      <div class="card"><span class="ico">👩‍👧</span><h3>The caregiver</h3><p>A mother triaging a child's fever at 11 pm, 40 km from the nearest doctor. Usually alone with the decision.</p></div>
+      <div class="card"><span class="ico">🎓</span><h3>The student</h3><p>In a mental-health crisis at 3 am with no one to call and nowhere in Urdu to turn.</p></div>
+    </div>
+    <p class="lead" style="margin-top:3cqh;">All three are <b>voice-native</b>. Most have limited English literacy. <b class="accent">All three own a phone.</b> That's the audience Nabz is built for.</p>
+  </section>
+
+  <!-- 4 · SOLUTION -->
+  <section class="slide">
+    <div class="slide-head"><span class="num">03</span><h2>Talk to it in Urdu. It tells you how urgently to seek care.</h2></div>
+    <div class="grid cols-3" style="margin-bottom:3cqh;">
+      <div class="step"><span class="n">1</span><div><h3>Speak</h3><p>Voice or text — Urdu, Roman-Urdu, English, or a mix. No reading, typing, or English required.</p></div></div>
+      <div class="step"><span class="n">2</span><div><h3>Interview</h3><p>A GP-depth AI asks one high-value question at a time, with live analysis you can watch.</p></div></div>
+      <div class="step"><span class="n">3</span><div><h3>Act</h3><p>A clear, spoken recommendation — and a doctor-ready handoff.</p></div></div>
+    </div>
+    <div class="row" style="margin-bottom:3cqh;">
+      <span class="lvl red">🔴 Emergency</span><span class="lvl amber">🟠 Doctor within 24h</span><span class="lvl green">🟢 Home care</span>
+    </div>
+    <div class="grid cols-3">
+      <div class="card"><h3>Patients &amp; caregivers</h3><p>Accessible care navigation with zero literacy barrier.</p></div>
+      <div class="card"><h3>Doctors</h3><p>A QR / one-time-link SBAR summary that makes a 5-minute visit count.</p></div>
+      <div class="card"><h3>The health system</h3><p>Red flags to real emergencies faster; minor cases out of the ER.</p></div>
+    </div>
+  </section>
+
+  <!-- 5 · JOURNEY / IMPACT -->
+  <section class="slide">
+    <div class="slide-head"><span class="num">04</span><h2>Amna's night — and the impact</h2></div>
+    <div class="grid cols-2" style="flex:1; align-content:center;">
+      <div style="display:flex; flex-direction:column; gap:2.4cqh;">
+        <div class="step"><span class="n">A</span><div><h3>Discovery</h3><p>A neighbor shares Nabz on WhatsApp. No signup — guest mode. She says: <span class="urdu">”میرے بیٹے کو بخار ہے“</span></p></div></div>
+        <div class="step"><span class="n">B</span><div><h3>Triage</h3><p>Four smart questions by voice — fever, cough, rash, breathing. Confidence builds in real time.</p></div></div>
+        <div class="step"><span class="n">C</span><div><h3>Recommendation</h3><p><span class="lvl amber">🟠 See a doctor within 24h</span>, spoken in plain Urdu, with nearby clinics on a map.</p></div></div>
+      </div>
+      <div class="card" style="background:var(--teal-050); border-color:var(--teal-100); align-self:center;">
+        <p class="eyebrow" style="margin-bottom:1.6cqh;">The outcome</p>
+        <div class="stat" style="margin-bottom:2cqh;"><span class="big">₨500+</span><span class="lbl">saved on an unnecessary visit</span></div>
+        <ul class="ticks">
+          <li>Hours saved; an avoidable ER trip avoided</li>
+          <li>Right care, at the right time</li>
+          <li>Danger caught early — 1122 escalation if needed</li>
+          <li>She signs up to add her whole family</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · INNOVATION -->
+  <section class="slide">
+    <div class="slide-head"><span class="num">05</span><h2>Not another symptom chatbot — a safety-engineered clinical layer</h2></div>
+    <div class="grid cols-2 cols-4" style="grid-template-columns:1fr 1fr; flex:1; align-content:center;">
+      <div class="card"><span class="ico">🛡️</span><h3>Safety runs before the model</h3><p>Emergency &amp; mental-health cues are caught in code — guardrails <b>can't be prompt-injected away</b>. Negation-aware, so “میں خودکشی نہیں کروں گا” isn't flagged.</p></div>
+      <div class="card"><span class="ico">🗣️</span><h3>Native Urdu, no translation</h3><p>Qwen carries mixed Urdu/English directly — <b>no MT step, no meaning loss</b> on code-switched speech.</p></div>
+      <div class="card"><span class="ico">💊</span><h3>Evidence-gated medicine</h3><p>The model may only <em>propose</em>; a server resolver validates against a <b>WHO/FDA catalog + live DailyMed</b>, with allergy/pregnancy/duplicate filters. It never invents a drug or dose.</p></div>
+      <div class="card"><span class="ico">🔀</span><h3>Redundancy + cost cap</h3><p><b>Qwen</b> primary → <b>OpenAI</b> failover, with a per-user budget ledger. A quota blip never takes triage — or the demo — down.</p></div>
+    </div>
+  </section>
+
+  <!-- 7 · TECHNOLOGY -->
+  <section class="slide">
+    <div class="slide-head"><span class="num">06</span><h2>The technology behind it</h2></div>
+    <div class="flow" style="margin-bottom:3.4cqh;">
+      <div class="node"><span class="t">User</span><span class="s">voice · photo · text</span></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="t">React PWA + APK</span><span class="s">Vite · Capacitor · RTL</span></div>
+      <span class="arrow">→</span>
+      <div class="node key"><span class="t">FastAPI</span><span class="s">JWT · guardrails · SSE</span></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="t">Qwen + Qwen-VL</span><span class="s">Alibaba Model Studio</span></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="t">SQLite → Postgres</span><span class="s">SQLAlchemy · Alembic · S3/R2</span></div>
+    </div>
+    <p class="lead" style="margin-bottom:2.6cqh;">All AI keys and safety logic stay server-side. The browser never touches a model directly.</p>
+    <div class="row">
+      <span class="pill"><b>AI</b> Qwen · Qwen-VL · OpenAI failover</span>
+      <span class="pill"><b>Voice</b> cloud STT · Urdu TTS</span>
+      <span class="pill"><b>Docs</b> Qwen-VL OCR · PyMuPDF</span>
+      <span class="pill"><b>Auth</b> bcrypt · JWT · WhatsApp/email OTP</span>
+      <span class="pill"><b>Ops</b> Render · Docker · GitHub CI</span>
+      <span class="pill"><b>Safety</b> live eval dashboard</span>
+    </div>
+  </section>
+
+  <!-- 8 · FEASIBILITY -->
+  <section class="slide">
+    <div class="slide-head"><span class="num">07</span><h2>Working software today — not a concept</h2></div>
+    <div class="grid cols-2" style="flex:1; align-content:start;">
+      <div class="card">
+        <p class="eyebrow" style="margin-bottom:1.8cqh;">✅ Built &amp; live now</p>
+        <ul class="ticks">
+          <li>Live demo deployed (Render) + installable PWA &amp; Android APK</li>
+          <li>End-to-end voice triage with live analysis + emergency short-circuit</li>
+          <li>Guest mode · family vault (multi-profile, server-isolated)</li>
+          <li>Qwen-VL OCR for prescriptions &amp; lab reports, read back in Urdu</li>
+          <li>Doctor QR/SBAR handoff · nearby-care map · medication safety</li>
+          <li>100+ automated tests · GitHub Actions CI · live safety-eval</li>
+        </ul>
+      </div>
+      <div class="card" style="background:var(--surface-2);">
+        <p class="eyebrow" style="margin-bottom:1.8cqh;">→ Next (post-hackathon)</p>
+        <ul class="ticks next">
+          <li>Production SMS/email OTP at scale (WhatsApp Cloud API)</li>
+          <li>Postgres cutover + managed object storage</li>
+          <li>Clinic partnerships &amp; clinician-reviewed prompts</li>
+          <li>Pashto &amp; Sindhi voice support</li>
+          <li>Offline / low-connectivity triage</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 · BUSINESS MODEL -->
+  <section class="slide">
+    <div class="slide-head"><span class="num">08</span><h2>A model built for households, not just users</h2></div>
+    <div class="grid cols-3" style="flex:1; align-content:center;">
+      <div class="card"><span class="ico">🆓</span><h3>Free</h3><p>Single patient profile · unlimited triage · basic home-care advice in Urdu. The accessible on-ramp.</p></div>
+      <div class="card" style="border-color:var(--teal); box-shadow:0 0 0 1px var(--teal) inset;"><span class="ico">💳</span><h3>Family — ₨299/mo</h3><p>2+ family profiles · priority doctor handoff · prescription history · medicine reminders.</p></div>
+      <div class="card"><span class="ico">🏥</span><h3>Clinic &amp; NGO</h3><p>Bulk family plans and triage-to-referral pipelines for health programs and rural clinics.</p></div>
+    </div>
+    <p class="lead" style="margin-top:3cqh;">Family plans scale from <b>2–5</b> to <b>5–10</b> profiles — one subscription covers an extended household.</p>
+  </section>
+
+  <!-- 10 · ROADMAP -->
+  <section class="slide">
+    <div class="slide-head"><span class="num">09</span><h2>Four months to national readiness</h2></div>
+    <div class="grid cols-4" style="flex:1; align-content:center;">
+      <div class="card"><p class="eyebrow" style="margin-bottom:1cqh;">Month 1</p><h3>Beta</h3><p>100 users in Lahore · voice-UX &amp; Urdu-accuracy feedback · triage-logic validation.</p></div>
+      <div class="card"><p class="eyebrow" style="margin-bottom:1cqh;">Month 2</p><h3>Scale</h3><p>Full Qwen integration · 500 users across 3 cities · family profiles live.</p></div>
+      <div class="card"><p class="eyebrow" style="margin-bottom:1cqh;">Month 3</p><h3>Documents</h3><p>Qwen-VL labs &amp; prescriptions · 5 clinic partnerships · 2,000 users.</p></div>
+      <div class="card"><p class="eyebrow" style="margin-bottom:1cqh;">Month 4</p><h3>Launch</h3><p>Compliance · paid membership · 5,000+ users · national-scale prep.</p></div>
+    </div>
+  </section>
+
+  <!-- 11 · TEAM -->
+  <section class="slide">
+    <div class="slide-head"><span class="num">10</span><h2>The team behind Nabz</h2></div>
+    <div class="grid cols-3" style="flex:1; align-content:center;">
+      <div class="card"><h3>Kheem Darmani</h3><p><b class="accent">Senior ML Engineer</b></p><p style="margin-top:1cqh;">Core triage logic, Qwen integration, and the safety guardrails.</p></div>
+      <div class="card"><h3>Faiza Ali</h3><p><b class="accent">AI Instructor</b></p><p style="margin-top:1cqh;">Clinical domain knowledge, prompt engineering, Urdu NLP, and safety compliance.</p></div>
+      <div class="card"><h3>Muhammad Hassan</h3><p><b class="accent">Data Scientist</b></p><p style="margin-top:1cqh;">Backend architecture (FastAPI, SQLAlchemy), data pipelines, analytics, deployment.</p></div>
+    </div>
+  </section>
+
+  <!-- 12 · CLOSE -->
+  <section class="slide night">
+    <div class="brandmark" style="margin-bottom:2cqh;"><span class="ur">نبض</span></div>
+    <h1 style="font-size:6.2cqh;">A bridge to a doctor —<br/>never a replacement for one.</h1>
+    <p class="tag-ur">آپ کی آواز، آپ کی صحت</p>
+    <p style="margin-top:2.4cqh; max-width:70cqw; font-size:2.9cqh;">Bringing a safe first step to the <b style="color:#fff;">majority of 240M Pakistanis</b> who speak, but don't type in English.</p>
+    <div class="foot"><span>Try it · <b>nabz-web.onrender.com</b></span><span><span class="urdu" style="color:#9ec7bb;">یہ ڈاکٹر کا متبادل نہیں ہے</span></span></div>
+  </section>
+
+</div>
+
+<div class="hint">← → to navigate</div>
+<div class="hud">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <span class="count" id="count">1 / 12</span>
+  <button id="next" aria-label="Next slide">›</button>
+  <div class="dots" id="dots"></div>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsWrap = document.getElementById('dots');
+  const count = document.getElementById('count');
+  let idx = 0;
+  slides.forEach((_, i) => {
+    const d = document.createElement('i');
+    d.addEventListener('click', () => go(i));
+    dotsWrap.appendChild(d);
+  });
+  const dots = Array.from(dotsWrap.children);
+  function go(n) {
+    idx = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, i) => s.classList.toggle('is-active', i === idx));
+    dots.forEach((d, i) => d.classList.toggle('on', i === idx));
+    count.textContent = (idx + 1) + ' / ' + slides.length;
+  }
+  document.getElementById('next').addEventListener('click', () => go(idx + 1));
+  document.getElementById('prev').addEventListener('click', () => go(idx - 1));
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(idx + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(idx - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+  });
+  go(0);
+</script>

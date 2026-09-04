@@ -43,6 +43,13 @@ AGENTS.md
 GEMINI.md
 COPILOT.md
 
+# Impeccable (design skill) — tool artefacts and generated design records.
+# .impeccable/ holds critique snapshots and local config; PRODUCT.md and
+# DESIGN.md are generated design documentation, not shipping source.
+.impeccable/
+PRODUCT.md
+DESIGN.md
+
 # Build artefacts we don't want in the public repo
 *.apk
 Nabz-Technical-Document.docx

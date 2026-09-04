@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { PinIcon } from './icons'
 import { useLocationPref } from '../context/LocationContext'
 
 // Persistent header chip showing the user's confirmed care location.
@@ -15,7 +16,7 @@ export default function LocationChip({ compact = false }) {
         onClick={() => navigate('/location')}
         title="Set location"
       >
-        <span aria-hidden="true">📍</span>
+        <span aria-hidden="true"><PinIcon /></span>
         <span>{compact ? 'Set location' : 'Set your location'}</span>
       </button>
     )
@@ -29,7 +30,7 @@ export default function LocationChip({ compact = false }) {
       onClick={() => navigate('/location')}
       title={preference.label}
     >
-      <span aria-hidden="true">📍</span>
+      <span aria-hidden="true"><PinIcon /></span>
       <span className="loc-chip-text">{label}</span>
       {!fresh && <span className="loc-chip-dot" aria-label="Not fresh" />}
     </button>

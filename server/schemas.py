@@ -634,6 +634,10 @@ class TriageTurn(BaseModel):
     red_flags_present: list[str] = Field(default_factory=list)
     red_flags_denied: list[str] = Field(default_factory=list)
     escalation_signs: list[str] = Field(default_factory=list)
+    # Mirrors escalation_signs one-for-one in Urdu. This is what the patient
+    # watches for overnight; delivering it in English only locks out the
+    # majority of the people the product exists to serve.
+    escalation_signs_urdu: list[str] = Field(default_factory=list)
 
     # Structured clinical state carried across turns.
     clinical_state: Optional[ClinicalState] = None

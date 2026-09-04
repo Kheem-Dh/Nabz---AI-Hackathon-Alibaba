@@ -113,6 +113,41 @@ function SmallMicIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 10.5v.7a6.5 6.5 0 0 0 13 0v-.7M12 17.7V21M8.5 21h7" /></svg>
 }
 
+// Drawn, not an emoji. The emergency affordance is the highest-stakes control
+// in the product; a platform emoji renders as a different cartoon on every
+// Android skin and carries none of the brand's stroke weight.
+function EmergencyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 2.6 3.2 18.2a1.6 1.6 0 0 0 1.4 2.4h14.8a1.6 1.6 0 0 0 1.4-2.4Z" />
+      <path d="M12 9.2v4.4" />
+      <circle cx="12" cy="17" r=".9" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+/**
+ * The emergency escape hatch. Rendered in EVERY conversation state.
+ *
+ * This used to live inside `.guest-composer-dock`, which unmounts once a result
+ * arrives — so a DOCTOR_24H assessment with no escalation_signs left the user
+ * with no 1122 anywhere on screen, at exactly the moment they had just been told
+ * their situation might be serious. Availability of the emergency number must
+ * never be contingent on model output.
+ */
+function EmergencyCall({ floating = false }) {
+  return (
+    <a href="tel:1122" className={`guest-emergency-call ${floating ? 'is-floating' : ''}`} aria-label="ایمرجنسی — 1122 پر کال کیجیے · Call emergency services 1122">
+      <span className="guest-emergency-call-icon" aria-hidden="true"><EmergencyIcon /></span>
+      <span className="guest-emergency-call-text">
+        <strong className="urdu" lang="ur" dir="rtl">ایمرجنسی؟</strong>
+        <span>Emergency</span>
+      </span>
+      <span className="guest-emergency-call-number">1122</span>
+    </a>
+  )
+}
+
 function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
   const lastEntry = entries[entries.length - 1]
   const limitReached = Boolean(lastEntry?.registration_required)
@@ -165,8 +200,20 @@ function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
     <section className="guest-followup" id="continue-care-chat">
       <div className="guest-followup-head">
         <span className="guest-ai-avatar"><PulseIcon /></span>
-        <div><strong className="urdu" dir="rtl">اس جواب کے بارے میں پوچھیے</strong><small>Your question stays connected to the answer above.</small></div>
-        <span className="guest-followup-count">{Math.min(entries.length, 3)}/3 مفت سوال</span>
+        <div>
+          <strong className="urdu" lang="ur" dir="rtl">اس جواب کے بارے میں پوچھیے</strong>
+          <small>Ask about this answer — your question stays connected to it.</small>
+        </div>
+        {/* Shown only once a question has actually been asked. Rendering
+            "0/3 free questions" before the user has said anything framed the
+            conversation as a metered resource and told a worried caregiver
+            what she would run out of, before she had used any of it. */}
+        {entries.length > 0 && (
+          <span className="guest-followup-count">
+            <span className="urdu" lang="ur" dir="rtl">{Math.min(entries.length, 3)}/3 مفت سوال</span>
+            <span className="bi-en">{Math.min(entries.length, 3)} of 3 free</span>
+          </span>
+        )}
       </div>
       {entries.map((entry, index) => (
         <div className="guest-followup-pair" key={`${entry.question}-${index}`}>
@@ -212,7 +259,14 @@ function FollowupChat({ entries, busy, value, onChange, onSubmit, onAttach }) {
           {speech.listening ? '■' : <SmallMicIcon />}
         </button>
         <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={limitReached ? 'مزید پوچھنے کے لیے والٹ بنائیے…' : (speech.listening ? 'سن رہا ہوں…' : 'اس جواب کے بارے میں سوال پوچھیے…')} disabled={limitReached} />
-        <button className="guest-followup-send" disabled={busy || limitReached || (!value.trim() && !attachment)}>{busy ? '…' : 'پوچھیے →'}</button>
+        <button className="guest-followup-send" disabled={busy || limitReached || (!value.trim() && !attachment)}>
+          {busy ? '…' : (
+            <>
+              <span className="urdu" lang="ur" dir="rtl">پوچھیے</span>
+              <span className="bi-en">Ask</span>
+            </>
+          )}
+        </button>
       </form>
     </section>
   )
@@ -251,15 +305,22 @@ export default function GuestChatPage() {
   const resultTurn = currentTurn?.type === 'result' ? currentTurn : null
   const started = Boolean(stateToken || messages.length || pendingStart)
 
-  // Every newly returned assessment question is read once. The previous user
-  // click primes the shared audio element, so this also works on mobile Safari
-  // after the network request has completed.
+  // Every newly returned turn is read once — questions AND the final
+  // assessment. Previously this guarded on `type === 'question'`, so Nabz
+  // asked by voice and then answered in silence: a user who cannot read was
+  // led through the whole flow by ear and abandoned at the one screen that
+  // mattered. The previous user click primes the shared audio element, so this
+  // also works on mobile Safari after the network request has completed.
   useEffect(() => {
-    if (!currentTurn || currentTurn.type !== 'question' || !currentTurn.question_urdu) return
-    const key = `${stateToken}:${assistantItems.length}:${currentTurn.question_urdu}`
+    if (!currentTurn) return
+    const spoken = currentTurn.type === 'question'
+      ? currentTurn.question_urdu
+      : currentTurn.advice_urdu
+    if (!spoken) return
+    const key = `${stateToken}:${assistantItems.length}:${spoken}`
     if (spokenTurnRef.current === key) return
     spokenTurnRef.current = key
-    tts.speak(currentTurn.question_urdu, { lang: 'ur' })
+    tts.speak(spoken, { lang: 'ur' })
   }, [assistantItems.length, currentTurn, stateToken, tts.speak])
 
   useEffect(() => {
@@ -592,26 +653,46 @@ export default function GuestChatPage() {
         </header>
 
         <div className={`guest-chat-scroll ${started ? 'has-conversation' : ''}`}>
+          {/* Order is deliberate and inverted from the usual chat template.
+              Speech is this product's primary input, and the user is holding
+              the phone one-handed, often at night. So the mic anchors the
+              BOTTOM of the screen — inside the thumb arc — and the headline
+              and typed alternatives sit above it. Reading order still runs
+              top-down; only reach order changed. */}
           {!started && (
             <section className="guest-welcome">
-              <h1 className="urdu urdu-hero" lang="ur" dir="rtl">آج آپ کی طبیعت کیسی ہے؟</h1>
-              <p className="guest-welcome-sub"><span className="urdu" lang="ur" dir="rtl">مجھے بتائیے، میں آپ کی مدد کروں گا۔</span><span className="guest-welcome-en">Tell me how you're feeling — I'm here to help.</span></p>
-              <div className="guest-voice-first">
-                <div className="guest-voice-rings"><i /><i /></div>
-                <MicButton listening={speech.listening} disabled={busy || !speech.supported || !consent} onClick={toggleVoice} />
-                <small className="guest-voice-hint">
-                  {consent
-                    ? (speech.listening ? 'مکمل کرکے بھیجنے کے لیے مائیک دوبارہ دبائیے' : 'مائیک دبائیے اور بولیے')
-                    : 'آواز استعمال کرنے کے لیے رازداری کی اجازت دیجیے'}
-                </small>
+              <div className="guest-welcome-head">
+                <h1 className="urdu urdu-hero" lang="ur" dir="rtl">آج آپ کی طبیعت کیسی ہے؟</h1>
+                {/* One bilingual pair, not two Urdu lines plus an English one.
+                    The dropped "مجھے بتائیے، میں آپ کی مدد کروں گا۔" said the same
+                    thing as the English line, and the vertical space it cost
+                    was pushing the mic behind the composer dock. */}
+                <p className="guest-welcome-sub">
+                  <span className="guest-welcome-en">Tell me how you're feeling — I'm here to help.</span>
+                </p>
               </div>
-              <div className="guest-starter-label"><span className="urdu" lang="ur" dir="rtl">یا کوئی عام علامت منتخب کیجیے</span></div>
+
               <div className="guest-starters">
                 {STARTERS.map(([urdu, english]) => (
                   <button key={english} onClick={() => start(english, { urdu, english })} disabled={busy || speech.listening}>
                     <span className="urdu" dir="rtl">{urdu}</span><small>{english}</small>
                   </button>
                 ))}
+              </div>
+
+              {/* Hint sits above the mic: it is read before the tap, and it
+                  keeps the mic as the last element in the column so nothing
+                  renders underneath the persistent emergency call. */}
+              <div className="guest-voice-first">
+                <small className="guest-voice-hint">
+                  {consent
+                    ? (speech.listening
+                        ? <><span className="urdu" lang="ur" dir="rtl">مکمل کرکے مائیک دوبارہ دبائیے</span><span>Tap again when you finish</span></>
+                        : <><span className="urdu" lang="ur" dir="rtl">مائیک دبائیے اور بولیے</span><span>Tap and speak</span></>)
+                    : <><span className="urdu" lang="ur" dir="rtl">آواز کے لیے رازداری کی اجازت دیجیے</span><span>Allow privacy consent to use voice</span></>}
+                </small>
+                <div className="guest-voice-rings" aria-hidden="true"><i /><i /></div>
+                <MicButton listening={speech.listening} disabled={busy || !speech.supported || !consent} onClick={toggleVoice} />
               </div>
             </section>
           )}
@@ -727,15 +808,16 @@ export default function GuestChatPage() {
               </div>
             )}
             <div className="guest-composer-note">
-              <a href="tel:1122" className="guest-emergency-pill" aria-label="Call emergency services 1122">
-                <span aria-hidden="true">🚨</span>
-                <span className="urdu" lang="ur" dir="rtl">ایمرجنسی؟</span>
-                <strong>1122</strong>
-              </a>
+              <EmergencyCall />
               <span className="guest-composer-fineprint"><span className="urdu" lang="ur" dir="rtl">عمومی AI رہنمائی · تشخیص نہیں</span><span className="urdu" lang="ur" dir="rtl">عارضی گفتگو · اکاؤنٹ ضروری نہیں</span></span>
             </div>
           </div>
         )}
+
+        {/* The composer dock unmounts once a result arrives, which is exactly
+            when the user has been told their situation may be serious. The
+            floating variant takes over so 1122 is reachable in every state. */}
+        {resultTurn && <EmergencyCall floating />}
       </main>
     </div>
   )
