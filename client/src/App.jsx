@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, useEffect, useRef, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import { useLocationPref } from './context/LocationContext'
@@ -6,31 +6,37 @@ import BottomNav from './components/BottomNav'
 import Disclaimer from './components/Disclaimer'
 import LocationChip from './components/LocationChip'
 import AuthPage from './pages/AuthPage'
-import HomePage from './pages/HomePage'
-import LocationSetupPage from './pages/LocationSetupPage'
-import VaultPage from './pages/VaultPage'
-import ProfilePage from './pages/ProfilePage'
-import ProfileEditPage from './pages/ProfileEditPage'
-import ClinicsPage from './pages/ClinicsPage'
-import LabReportPage from './pages/LabReportPage'
-import PrescriptionPage from './pages/PrescriptionPage'
-import SummaryPage from './pages/SummaryPage'
-import PrivacyPage from './pages/PrivacyPage'
-import VerifyPage from './pages/VerifyPage'
 import VerifyBanner from './components/VerifyBanner'
 import TrustBar from './components/TrustBar'
-import DocumentsPage from './pages/DocumentsPage'
 import OnboardingPage, { hasOnboarded } from './pages/OnboardingPage'
-import LandingPage from './pages/LandingPage'
-import ForgotPasswordPage from './pages/ForgotPasswordPage'
-import AdminDashboardPage from './pages/AdminDashboardPage'
-import HandoffPage from './pages/HandoffPage'
 import GuestChatPage from './pages/GuestChatPage'
 import { stopAllSpeech } from './hooks/useTextToSpeech'
 import { getConsentStatus } from './api'
 import { useProfiles } from './context/ProfileContext'
 
-function Loading() {
+// Route-level code splitting. A visitor's first paint is GuestChatPage, and a
+// returning user's is the auth screen; neither needs the Vault, the document
+// and upload screens, or the admin dashboard in the same download. Only
+// OnboardingPage stays eager, because App calls its hasOnboarded() export
+// synchronously to decide whether to render at all.
+const HomePage = lazy(() => import('./pages/HomePage'))
+const LocationSetupPage = lazy(() => import('./pages/LocationSetupPage'))
+const VaultPage = lazy(() => import('./pages/VaultPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const ProfileEditPage = lazy(() => import('./pages/ProfileEditPage'))
+const ClinicsPage = lazy(() => import('./pages/ClinicsPage'))
+const LabReportPage = lazy(() => import('./pages/LabReportPage'))
+const PrescriptionPage = lazy(() => import('./pages/PrescriptionPage'))
+const SummaryPage = lazy(() => import('./pages/SummaryPage'))
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
+const VerifyPage = lazy(() => import('./pages/VerifyPage'))
+const DocumentsPage = lazy(() => import('./pages/DocumentsPage'))
+const LandingPage = lazy(() => import('./pages/LandingPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'))
+const HandoffPage = lazy(() => import('./pages/HandoffPage'))
+
+export function Loading() {
   return (
     <div className="boot-screen">
       <div className="boot-brand">

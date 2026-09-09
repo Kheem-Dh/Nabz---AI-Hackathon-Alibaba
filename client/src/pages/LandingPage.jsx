@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
@@ -84,6 +84,36 @@ export default function LandingPage() {
   const { account } = useAuth()
   const openChat = () => navigate(account ? '/' : '/chat')
   const openAuth = () => navigate('/auth?mode=login')
+
+  // The demo clip is 9 MB — more than the whole application bundle. autoPlay
+  // starts fetching it at page load even with preload="none", so the source is
+  // attached only once the section is actually scrolled into view. The poster
+  // stands in until then, and autoplay still fires on arrival.
+  const demoRef = useRef(null)
+  useEffect(() => {
+    const video = demoRef.current
+    if (!video) return undefined
+    const attach = () => {
+      if (video.querySelector('source')) return
+      const source = document.createElement('source')
+      source.src = '/nabz-demo.mp4'
+      source.type = 'video/mp4'
+      video.append(source)
+      video.load()
+    }
+    if (typeof IntersectionObserver !== 'function') {
+      attach()
+      return undefined
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        attach()
+        observer.disconnect()
+      }
+    }, { rootMargin: '300px' })
+    observer.observe(video)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     const nodes = document.querySelectorAll('[data-reveal]')
@@ -180,9 +210,7 @@ export default function LandingPage() {
             <div className="landing-demo-signal" aria-hidden="true">{Array.from({ length: 9 }, (_, index) => <i key={index} />)}</div>
           </div>
           <div className="landing-demo-frame">
-            <video autoPlay muted loop controls playsInline preload="metadata" poster="/nabz-demo-poster.jpg">
-              <source src="/nabz-demo.mp4" type="video/mp4" />
-            </video>
+            <video ref={demoRef} autoPlay muted loop controls playsInline preload="none" poster="/nabz-demo-poster.jpg" />
           </div>
         </section>
 

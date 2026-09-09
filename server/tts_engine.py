@@ -46,7 +46,17 @@ def _load_mms():
     global _mms_model, _mms_tokenizer
     if _mms_model is not None:
         return _mms_model, _mms_tokenizer
-    from transformers import AutoTokenizer, VitsModel  # heavy import, lazy on purpose
+    try:
+        # Heavy, and lazy on purpose: torch + transformers are not installed by
+        # default, so the ~865 MB they add never lands in the deployed image.
+        from transformers import AutoTokenizer, VitsModel
+    except ImportError as exc:  # pragma: no cover - depends on optional extras
+        raise RuntimeError(
+            "mms_voice_not_installed: NABZ_TTS_ENGINE=mms needs the optional "
+            "extras. Install them with "
+            "`pip install -r requirements.txt -r requirements-mms.txt`, or "
+            "unset NABZ_TTS_ENGINE to use the default Qwen -> gTTS chain."
+        ) from exc
 
     logger.info("Loading MMS-TTS Urdu model (%s) — first call only", _MMS_MODEL_ID)
     tokenizer = AutoTokenizer.from_pretrained(_MMS_MODEL_ID)

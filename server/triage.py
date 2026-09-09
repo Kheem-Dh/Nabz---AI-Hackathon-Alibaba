@@ -1167,13 +1167,42 @@ def _provider_call(
     return _ModelCallResult(text=text, provider=provider, model=model)
 
 
+# A provider that answers 403 quota_exhausted will answer 403 to the next
+# request too, but the failover chain was re-learning that on every turn — one
+# doomed round-trip in front of every reply a patient sits waiting for. Park it
+# briefly instead, the way the TTS chain already parks Qwen.
+#
+# Only hard configuration faults latch. rate_limit and timeout are transient
+# and must keep being retried, and budget_exhausted is our own per-user ledger,
+# never a statement about the provider's health.
+_PROVIDER_COOLDOWN_SECONDS = 300.0
+_PROVIDER_COOLDOWN_REASONS = frozenset({"quota_exhausted", "authentication"})
+_provider_cooldown: dict[str, float] = {}
+
+
+def _park_provider(provider: str, reason: str) -> None:
+    """Skip a hard-down provider for a few minutes, then let it prove itself."""
+    if reason not in _PROVIDER_COOLDOWN_REASONS:
+        return
+    _provider_cooldown[provider] = time.monotonic() + _PROVIDER_COOLDOWN_SECONDS
+    logger.warning(
+        "Text provider %s parked for %.0fs (reason=%s) — skipping it on the way "
+        "to the fallback until it expires",
+        provider, _PROVIDER_COOLDOWN_SECONDS, reason,
+    )
+
+
 def _available_text_providers() -> list[str]:
     providers: list[str] = []
     if has_qwen_credentials():
         providers.append("qwen")
     if has_openai_credentials():
         providers.append("openai")
-    return providers
+    now = time.monotonic()
+    healthy = [p for p in providers if _provider_cooldown.get(p, 0.0) <= now]
+    # A cooldown must never be the reason there is no provider at all. If every
+    # provider is parked, try them regardless rather than refuse to ask.
+    return healthy or providers
 
 
 def qwen_followup_chat(
@@ -1239,6 +1268,7 @@ def qwen_followup_chat(
             )
         except Exception as exc:  # noqa: BLE001
             last_error = exc
+            _park_provider(provider, _provider_error_category(exc))
             fallback_from = provider
             fallback_reason = _provider_error_category(exc)
             logger.warning(
@@ -1331,6 +1361,7 @@ def qwen_next_turn(
                 )
                 if not repairable:
                     break
+        _park_provider(provider, provider_reason)
         fallback_from = provider
         fallback_reason = provider_reason
 

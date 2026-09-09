@@ -1,0 +1,11 @@
+# Optional — the legacy offline Meta MMS Urdu voice (NABZ_TTS_ENGINE=mms).
+#
+# Not part of the default deployment. The default engine chain is
+# Qwen3.5-Omni -> gTTS, neither of which imports torch, so these ~865 MB of
+# wheels would otherwise sit in the image purely to slow down cold starts.
+#
+# Install alongside the base set:
+#   pip install -r requirements.txt -r requirements-mms.txt
+--constraint requirements.txt
+torch>=2.2,<3           # CPU-only build recommended (see README)
+transformers>=4.40,<5   # loads facebook/mms-tts-urd-script_arabic

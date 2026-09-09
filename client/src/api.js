@@ -9,6 +9,21 @@ const API_BASE = import.meta.env.VITE_API_BASE || (Capacitor.isNativePlatform() 
 const TOKEN_KEY = 'nabz_token'
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 
+// The API runs on an instance that spins down when idle, and a cold boot costs
+// far more than any request on the wire — measured at 152 s against 0.4 s warm.
+// Nothing on the landing screen needs the backend, so the boot is kicked off at
+// first paint and proceeds while the visitor reads, rather than starting when
+// they finally press a button. Render holds the request open across the spin-up,
+// so this single call is the wait, absorbed somewhere the user is not watching.
+let warmRequested = false
+export function warmBackend() {
+  if (warmRequested) return
+  warmRequested = true
+  try {
+    fetch(`${API_BASE}/api/health/live`, { cache: 'no-store' }).catch(() => {})
+  } catch { /* never let warming surface to the user */ }
+}
+
 export function getToken() {
   // Purge the persistent token format used by older releases.
   try { localStorage.removeItem(TOKEN_KEY) } catch { /* ignore */ }

@@ -1,12 +1,13 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import { Capacitor } from '@capacitor/core'
 import { BrowserRouter } from 'react-router-dom'
-import App from './App.jsx'
+import App, { Loading } from './App.jsx'
 import { AuthProvider } from './context/AuthContext'
 import { LocationProvider } from './context/LocationContext'
 import { ProfileProvider } from './context/ProfileContext'
 import AnalyticsTracker from './components/AnalyticsTracker'
+import { warmBackend } from './api'
 import './styles.css'
 
 const nativeApp = Capacitor.isNativePlatform()
@@ -31,6 +32,10 @@ if (nativeApp && 'serviceWorker' in navigator) {
       .catch((err) => console.warn('SW registration failed', err))
   })
 }
+
+// Start the backend spinning up now, in parallel with fetching the bundle and
+// painting the landing page, so its cold start is over before it is needed.
+warmBackend()
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
@@ -66,7 +71,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <AnalyticsTracker />
           <LocationProvider>
             <ProfileProvider>
-              <App />
+              <Suspense fallback={<Loading />}>
+                <App />
+              </Suspense>
             </ProfileProvider>
           </LocationProvider>
         </AuthProvider>

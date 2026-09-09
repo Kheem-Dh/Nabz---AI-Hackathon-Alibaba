@@ -54,6 +54,22 @@ from triage import set_turn_provider_for_tests  # noqa: E402
 set_turn_provider_for_tests(fake_ai_turn)
 
 
+@pytest.fixture(autouse=True)
+def _reset_provider_cooldown():
+    """Clear the failover cooldown between tests.
+
+    The cooldown is deliberately process-global in production — an exhausted
+    DashScope quota is exhausted for every user, so parking it saves one doomed
+    round-trip per request. In a test session that same global would let one
+    test's simulated 403 silently reroute a later test's provider chain.
+    """
+    import triage
+
+    triage._provider_cooldown.clear()
+    yield
+    triage._provider_cooldown.clear()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _create_schema():
     init_db()

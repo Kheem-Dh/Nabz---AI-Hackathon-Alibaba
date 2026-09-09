@@ -10,8 +10,12 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.0.1  # passlib 1.7.4 is incompatible with bcrypt>=4.1 / 5.x
 PyJWT==2.10.1
 gTTS>=2.5,<3       # fallback voice + non-Urdu languages
-torch>=2.2,<3       # CPU-only build recommended in production (see README)
-transformers>=4.40,<5   # loads facebook/mms-tts-urd for the neural Urdu voice
+# torch + transformers are NOT installed by default. They are only needed for
+# the legacy offline MMS voice (NABZ_TTS_ENGINE=mms), which is opt-in and is
+# never reached by the default engine chain (Qwen3.5-Omni -> gTTS). Installing
+# them added ~865 MB to the image, and on a spun-down free instance that pull
+# was the difference between a ~35 s and a ~152 s cold start. To use the MMS
+# voice: pip install -r requirements-mms.txt
 pymupdf>=1.24,<2   # PDF → PNG for lab/prescription uploads (pip-only, no system deps)
 boto3>=1.35,<2     # optional private S3 / Cloudflare R2 medical-document storage
 pytest==8.3.4
