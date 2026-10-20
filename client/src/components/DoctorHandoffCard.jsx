@@ -65,7 +65,11 @@ export default function DoctorHandoffCard({ profileId }) {
     }
   }
 
-  const expiresIn = handoff?.ttl_hours ? `${handoff.ttl_hours} hour${handoff.ttl_hours === 1 ? '' : 's'}` : 'shortly'
+  // Full phrase, not a bare duration: before a link is generated ttl_hours
+  // is unknown, and the old fallback rendered "expires after shortly".
+  const expiresIn = handoff?.ttl_hours
+    ? `after ${handoff.ttl_hours} hour${handoff.ttl_hours === 1 ? '' : 's'}`
+    : 'a short time after it is generated'
 
   return (
     <section className="doctor-handoff-card" aria-label="Doctor handoff QR">
@@ -75,7 +79,7 @@ export default function DoctorHandoffCard({ profileId }) {
           <h2>Show this QR at the clinic</h2>
           <p>
             One-tap read-only snapshot: assessment, supporting findings, Vault documents,
-            confirmed medicines and recent labs. The link expires after {expiresIn} — no login for the doctor.
+            confirmed medicines and recent labs. The link expires {expiresIn} — no login for the doctor.
           </p>
         </div>
         {!handoff && (

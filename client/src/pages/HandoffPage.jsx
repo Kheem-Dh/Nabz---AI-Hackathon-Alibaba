@@ -115,7 +115,7 @@ export default function HandoffPage() {
                   {latest_triage.possible_causes.map((cause, i) => (
                     <li key={`${cause.name_english || cause.name || 'cause'}-${i}`}>
                       <strong>{cause.name_english || cause.name || 'Possible explanation'}</strong>
-                      {cause.likelihood && ` · ${String(cause.likelihood).replaceAll('_', ' ').toLowerCase()}`}
+                      {cause.likelihood && ` · ${String(cause.likelihood).split('_').join(' ').toLowerCase()}`}
                       {cause.why_it_may_fit && <div className="handoff-note">Why it may fit: {cause.why_it_may_fit}</div>}
                       {cause.what_would_help_confirm && <div className="handoff-note">To distinguish: {cause.what_would_help_confirm}</div>}
                     </li>

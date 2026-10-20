@@ -28,7 +28,10 @@ function Bi({ ur, en, tag: Tag = 'div', className = '' }) {
 function normalizeCause(cause) {
   if (typeof cause === 'string') return { name_english: cause, likelihood: 'POSSIBLE' }
   const rawLikelihood = String(cause.likelihood || cause.probability_estimate || 'POSSIBLE')
-    .trim().toUpperCase().replaceAll(' ', '_')
+    // split/join, not replaceAll: replaceAll is Chrome 85+, and an older
+    // Android WebView throws here — blanking the result screen after the
+    // patient has already answered every question.
+    .trim().toUpperCase().split(' ').join('_')
   const likelihoodAliases = {
     HIGH: 'MORE_LIKELY', LIKELY: 'MORE_LIKELY', MOST_LIKELY: 'MORE_LIKELY',
     MODERATE: 'POSSIBLE', MEDIUM: 'POSSIBLE', LOW: 'LESS_LIKELY', UNLIKELY: 'LESS_LIKELY',
@@ -497,7 +500,7 @@ export default function TriageResult({
               <small>Proposed medication discussion plan — not a prescription</small>
             </div>
             {turn.medication_plan?.status && (
-              <span className="plan-status">{turn.medication_plan.status.replaceAll('_', ' ')}</span>
+              <span className="plan-status">{turn.medication_plan.status.split('_').join(' ')}</span>
             )}
           </div>
           {turn.medication_plan?.basis_urdu && (

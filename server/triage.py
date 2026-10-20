@@ -30,7 +30,7 @@ from ai_billing import (
     fail_usage,
     reserve_usage,
 )
-from medicine_evidence import resolve_medication_candidates
+from medicine_evidence import _has_allergy_conflict, resolve_medication_candidates
 from schemas import (
     ClinicalState,
     CollectedFact,
@@ -866,6 +866,15 @@ def _turn_from_qwen_json(
                 if not class_name_english or not purpose_english:
                     continue
                 example_generics = _short_string_list(raw.get("example_generics"), 4, 60)
+                # The class card is a second path to a drug name and bypassed the
+                # evidence gate: resolve_medication_candidates suppressed ibuprofen
+                # for an ibuprofen-allergic patient while "Examples: paracetamol,
+                # ibuprofen" still printed underneath it.  Same matcher, same answer.
+                allergies = profile.get("allergies") or []
+                example_generics = [
+                    g for g in example_generics
+                    if not _has_allergy_conflict(g, allergies)
+                ]
                 treatment_class_suggestions.append({
                     "class_name_english": class_name_english,
                     "class_name_urdu": _bounded_text(raw.get("class_name_urdu"), 100),
@@ -1390,6 +1399,7 @@ _IMMEDIATE_MENTAL_HEALTH_PATTERNS = (
     "not worth living", "no reason to live", "better off dead",
     "better off without me", "tired of living", "end it all",
     "ending my life", "take my own life", "take my life",
+    "taking my own life", "taking my life",
     "jeena nahi", "jina nahi", "zindagi khatam", "khud ko khatam",
     "tang aa gaya hun zindagi se", "tang aa gayi hun zindagi se",
 )

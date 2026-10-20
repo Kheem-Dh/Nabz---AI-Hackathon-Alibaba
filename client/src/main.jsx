@@ -1,3 +1,6 @@
+// First import on purpose: ES modules evaluate in import order, so the shims
+// are in place before any module below can call the APIs they provide.
+import './legacy-polyfills'
 import React, { Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import { Capacitor } from '@capacitor/core'

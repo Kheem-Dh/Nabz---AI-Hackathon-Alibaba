@@ -275,7 +275,7 @@ export default function AdminDashboardPage() {
       <article className="admin-panel admin-privacy-panel">
         <div className="admin-panel-head"><div><span>PRIVACY CONTROLS</span><h2>Audit activity</h2></div><small>Aggregate event types only · no clinical content</small></div>
         <div className="admin-audit-types">
-          {privacy.event_counts_7d.map((item) => <div key={item.type}><span>{item.type.replaceAll('.', ' ')}</span><strong>{item.events}</strong></div>)}
+          {privacy.event_counts_7d.map((item) => <div key={item.type}><span>{item.type.split('.').join(' ')}</span><strong>{item.events}</strong></div>)}
           {!privacy.event_counts_7d.length && <p className="admin-empty">Consent and clinical activity events will appear here.</p>}
         </div>
       </article>

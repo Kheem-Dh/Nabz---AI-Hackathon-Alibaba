@@ -78,10 +78,17 @@ def get_dashboard(
         f"اس میں {len(documents)} دستاویزات، {medicine_count} تصدیق شدہ ادویات، "
         f"{condition_count} درج دائمی کیفیات اور {allergy_count} الرجیز ہیں۔"
     )
+    # Urdu has no singular/plural agreement issue here; English does, and
+    # "1 allergies" was printing on the profile panel.
+    def _plural(count: int, singular: str, plural: str) -> str:
+        return f"{count} {singular if count == 1 else plural}"
+
     summary_english = (
-        f"This is {profile.display_name}'s private health record: {len(documents)} "
-        f"documents, {medicine_count} confirmed medicines, {condition_count} recorded "
-        f"chronic conditions, and {allergy_count} allergies."
+        f"This is {profile.display_name}'s private health record: "
+        f"{_plural(len(documents), 'document', 'documents')}, "
+        f"{_plural(medicine_count, 'confirmed medicine', 'confirmed medicines')}, "
+        f"{_plural(condition_count, 'recorded chronic condition', 'recorded chronic conditions')}, "
+        f"and {_plural(allergy_count, 'allergy', 'allergies')}."
     )
 
     return DashboardOut(

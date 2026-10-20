@@ -111,3 +111,46 @@ def test_production_forces_api_docs_off_even_if_requested(monkeypatch):
     monkeypatch.setenv("NABZ_ENABLE_API_DOCS", "true")
     settings = RuntimeSettings.from_env()
     assert settings.api_docs_enabled is False
+
+
+def test_native_app_origin_survives_a_narrow_cors_env(monkeypatch):
+    """Production once set CORS_ORIGINS to the website alone, which rejected
+    every APK request at preflight. The app's origin must not depend on that
+    dashboard value."""
+    from runtime import NATIVE_APP_ORIGINS
+
+    monkeypatch.setenv("CORS_ORIGINS", "https://nabz-web.onrender.com")
+    origins = RuntimeSettings.from_env().cors_origins
+    assert "https://nabz-web.onrender.com" in origins
+    for origin in NATIVE_APP_ORIGINS:
+        assert origin in origins
+    assert len(origins) == len(set(origins))
+
+
+def test_native_app_origin_matches_capacitor_config():
+    """The allowlisted origin has to be the one the WebView actually sends."""
+    import json
+    from pathlib import Path
+
+    from runtime import NATIVE_APP_ORIGINS
+
+    config_path = Path(__file__).resolve().parents[2] / "client" / "capacitor.config.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    scheme = config.get("server", {}).get("androidScheme", "https")
+    host = config.get("server", {}).get("hostname", "localhost")
+    assert f"{scheme}://{host}" in NATIVE_APP_ORIGINS
+
+
+def test_apk_preflight_is_accepted_end_to_end(monkeypatch):
+    monkeypatch.setenv("CORS_ORIGINS", "https://nabz-web.onrender.com")
+    client = TestClient(create_app())
+    response = client.options(
+        "/api/health/live",
+        headers={
+            "Origin": "https://app.nabz.local",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://app.nabz.local"

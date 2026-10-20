@@ -41,6 +41,15 @@ def _boolean(name: str, default: bool) -> bool:
     )
 
 
+# The Android APK's WebView origin, fixed by client/capacitor.config.json
+# (androidScheme "https" + server.hostname "app.nabz.local"). Safe to allow
+# unconditionally: .local is reserved for multicast DNS and no public CA will
+# certify it, so no website can be served from this origin over HTTPS — only
+# the app's own WebView presents it. Change it here if capacitor.config.json
+# ever changes its hostname or scheme.
+NATIVE_APP_ORIGINS: tuple[str, ...] = ("https://app.nabz.local",)
+
+
 @dataclass(frozen=True)
 class RuntimeSettings:
     app_env: str
@@ -80,13 +89,17 @@ class RuntimeSettings:
             "NABZ_ENABLE_DEMO", mock_mode and not is_production
         )
         requested_docs = _boolean("NABZ_ENABLE_API_DOCS", not is_production)
-        origins = tuple(
+        configured = [
             value.strip()
             for value in os.getenv(
                 "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
             ).split(",")
             if value.strip()
-        )
+        ]
+        # The APK is always allowed, whatever CORS_ORIGINS says: it lived
+        # only in the Render dashboard, and when it was missing every request
+        # from the app failed preflight as "Failed to fetch".
+        origins = tuple(dict.fromkeys([*configured, *NATIVE_APP_ORIGINS]))
         return cls(
             app_env=app_env,
             mock_mode=mock_mode,

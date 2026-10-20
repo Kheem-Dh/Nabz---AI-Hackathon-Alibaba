@@ -115,7 +115,13 @@ export default function SummaryPage() {
               </article>
               <article>
                 <span>Chief complaint</span>
-                <strong>{data.chief_complaint}</strong>
+                {/* The patient's own words: Urdu, Roman Urdu or English. Tag
+                    the Arabic-script case so it gets the Nastaliq face —
+                    untagged, it fell back to the Latin font and rendered as
+                    unjoined letters on the one page a doctor reads. */}
+                <strong {...(/[\u0600-\u06ff]/.test(data.chief_complaint || '')
+                  ? { lang: 'ur', dir: 'rtl', className: 'urdu' }
+                  : {})}>{data.chief_complaint}</strong>
               </article>
             </div>
 
@@ -141,7 +147,10 @@ export default function SummaryPage() {
               <div className="summary-section">
                 <h3>03 · Assessment and clinical uncertainty</h3>
                 <p>
-                  <strong>{data.recent_triage.level}</strong>
+                  {/* Same treatment as the urgency box above — the raw
+                      enum (DOCTOR_24H) was printing straight onto the page
+                      a doctor reads. */}
+                  <strong>{data.recent_triage.level?.replace('_', ' ')}</strong>
                   {data.recent_triage.reason ? ` — ${data.recent_triage.reason}` : ''}
                 </p>
                 {data.recent_triage.patient_facing_impression_english && (
