@@ -5233,7 +5233,10 @@ textarea.input {
   display: flex; align-items: center; justify-content: center;
 }
 .doctor-handoff-qr svg { width: 220px; height: 220px; display: block; }
-.doctor-handoff-actions { display: flex; flex-direction: column; gap: 10px; }
+/* min-width: 0 — a grid item defaults to its content's width, and the
+   no-wrap link box below asks for 680px. On a phone that widened this column
+   past the screen and clipped the QR code a doctor is meant to scan. */
+.doctor-handoff-actions { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .doctor-handoff-url {
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 12px;
