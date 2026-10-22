@@ -13,6 +13,17 @@ const LIKELIHOOD_LABELS = {
   LESS_LIKELY: 'Less likely',
 }
 
+// Which deterministic protocol produced this result. The self-harm protocol
+// gets the "you are not alone" support banner; a physical red flag (chest
+// pain, stroke, seizure, bleeding…) gets a plain emergency banner. Both
+// arrive as response_source "safety_protocol"; the backend's red-flag label
+// is what tells them apart.
+const MENTAL_HEALTH_FLAG = 'Mental-health safety concern'
+function protocolKind(turn) {
+  if (turn?.response_source !== 'safety_protocol') return null
+  return (turn.red_flags_present || []).includes(MENTAL_HEALTH_FLAG) ? 'mental' : 'physical'
+}
+
 /** Bilingual label. Urdu leads; the English mirror sits beneath it.
  *  PRODUCT.md locks this: density is solved with type scale, never by
  *  dropping a language. */
@@ -98,7 +109,20 @@ export default function TriageResult({
             )}
           </div>
         )}
-        {turn.response_source === 'safety_protocol' && (
+        {protocolKind(turn) === 'physical' && (
+          <div className="notice notice-warn" role="alert">
+            <strong className="urdu" lang="ur" dir="rtl">یہ طبی ایمرجنسی ہو سکتی ہے — ابھی مدد بلائیے</strong>
+            <span className="urdu" lang="ur" dir="rtl">ریسکیو 1122 پر کال کیجیے یا فوراً قریبی ایمرجنسی میں جائیے۔</span>
+            <div className="btn-row">
+              <a className="btn btn-primary" href="tel:1122">
+                <PhoneIcon />
+                <span className="urdu" lang="ur" dir="rtl">1122 ملائیے</span>
+                <span className="bi-en">Call 1122</span>
+              </a>
+            </div>
+          </div>
+        )}
+        {protocolKind(turn) === 'mental' && (
           <div className="notice notice-warn mental-safety-notice" role="alert">
             <strong className="urdu" lang="ur" dir="rtl">آپ اکیلے نہیں ہیں — ابھی کسی قابلِ اعتماد شخص کو اپنے پاس بلائیے</strong>
             <span className="urdu" lang="ur" dir="rtl">اگر خود کو محفوظ رکھنا مشکل لگ رہا ہو تو فوراً ریسکیو 1122 یا پولیس 15 سے رابطہ کیجیے، یا قریبی ایمرجنسی میں جائیے۔</span>
@@ -318,7 +342,16 @@ export default function TriageResult({
           )}
         </div>
       )}
-      {turn.response_source === 'safety_protocol' && (
+      {protocolKind(turn) === 'physical' && (
+        <div className="notice notice-warn" role="alert">
+          <Bi tag="strong" ur="یہ طبی ایمرجنسی ہو سکتی ہے" en="This may be a medical emergency" />
+          <span>Call Rescue 1122 now or go to the nearest emergency department. Do not wait to see if it improves.</span>
+          <div className="btn-row">
+            <a className="btn btn-primary" href="tel:1122">Call 1122</a>
+          </div>
+        </div>
+      )}
+      {protocolKind(turn) === 'mental' && (
         <div className="notice notice-warn mental-safety-notice" role="alert">
           <Bi tag="strong" ur="آپ اکیلے نہیں ہیں" en="You deserve immediate human support" />
           <span>Stay with a trusted person. If you may not remain safe, call Rescue 1122, Police 15, or go to the nearest emergency department now.</span>

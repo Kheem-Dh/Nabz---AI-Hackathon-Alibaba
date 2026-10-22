@@ -1394,7 +1394,8 @@ _IMMEDIATE_MENTAL_HEALTH_PATTERNS = (
     "suicid", "kill myself", "end my life", "hurt myself", "self harm",
     "self-harm", "overdose", "خودکشی", "خود کو مار",
     "جان دینا", "جان دے دوں", "khudkushi", "khud ko mar", "jaan dena",
-    "marna chahta", "marna chahti", "apne aap ko nuksan",
+    # "marna chahta/chahti" moved to the negation-aware list below.
+    "apne aap ko nuksan",
     # Indirect expressions that are unambiguously suicidal in context:
     "not worth living", "no reason to live", "better off dead",
     "better off without me", "tired of living", "end it all",
@@ -1410,6 +1411,13 @@ _NEGATION_AWARE_IMMEDIATE_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("want to die", ("don't", "dont", "do not", "doesn't", "doesn't", "does not",
                      "never", "not", "nahi", "nahin", "نہیں")),
     ("wanting to die", ("don't", "dont", "do not", "not", "nahi", "nahin", "نہیں")),
+    # Roman-Urdu "wants to die". As a bare substring it escalated the plea
+    # "main nahi marna chahta, mujhe help chahiye" (I do NOT want to die, I
+    # need help) to EMERGENCY. Unnegated it still escalates, exactly as
+    # "want to die" does; the 35-character window only cancels a negation
+    # that precedes it. Reviewed and approved by the team, 22 Oct 2026.
+    ("marna chahta", ("nahi", "nahin", "mat", "نہیں", "not", "don't", "dont")),
+    ("marna chahti", ("nahi", "nahin", "mat", "نہیں", "not", "don't", "dont")),
 )
 
 _MENTAL_DISTRESS_PATTERNS = (
@@ -1428,6 +1436,12 @@ _MENTAL_DISTRESS_PATTERNS = (
 _AFFIRMATIVE_SAFETY_ANSWERS = (
     "yes", "ہاں", "haan", "han", "plan", "means", "weapon", "pills",
     "not sure", "پتہ نہیں", "نہیں معلوم", "maybe", "shayad",
+    # Roman-Urdu "I don't know". These contain "nahi", which also sits on the
+    # denial list, so without them "nahi pata" was read as "No, I am safe" and
+    # given a routine result — while the same answer in Urdu script or
+    # English escalated. Uncertainty about a plan or means is not a denial.
+    "pata nahi", "nahi pata", "pata nahin", "nahin pata",
+    "maloom nahi", "nahi maloom", "malum nahi", "don't know", "dont know",
 )
 _NEGATIVE_SAFETY_ANSWERS = ("no", "نہیں", "nahi", "nahin", "safe", "محفوظ")
 
@@ -1606,6 +1620,279 @@ def _mental_health_turn(
     )
 
 
+# ---- Physical red-flag gate -------------------------------------------------
+# Deterministic, like the mental-health gate, and checked right after it in
+# next_turn — so it runs before any model call for guest, signed-in and
+# streamed triage alike. It exists because physical emergencies used to rely
+# on the model returning an EMERGENCY band, and in a dry run the fallback
+# model answered "severe chest pain and difficulty breathing" with an
+# ordinary first question.
+#
+# Built for precision as well as recall:
+#  - Phrases describe a symptom happening now ("dil ka daura pad raha"),
+#    never a bare diagnosis word, so family history ("abbu ko dil ka daura
+#    hua tha") does not fire.
+#  - Words that are ambiguous alone only count in combination: chest pain
+#    needs a companion sign; throat or lip swelling needs breathing trouble.
+#  - Known false friends are avoided: food poisoning, a swollen throat from
+#    tonsillitis, "bohat khoon ki kami" (anaemia).
+#  - Negation is matched tightly — "no chest pain", "seene mein dard nahi
+#    hai" — so "dard nahi ruk raha" (the pain is NOT stopping) still fires.
+
+_RF_CHEST = (
+    "chest pain", "pain in my chest", "pain in the chest", "chest tightness",
+    "tight chest", "chest pressure", "crushing chest",
+    "seene mein dard", "seene me dard", "sene mein dard", "sene me dard",
+    "seenay mein dard", "chhati mein dard", "chhati me dard", "seene par dabao",
+    "سینے میں درد", "سینے میں شدید درد", "سینے پر دباؤ", "چھاتی میں درد",
+)
+_RF_BREATHING_COMPANION = (
+    "short of breath", "shortness of breath", "breathless", "difficulty breathing",
+    "trouble breathing", "hard to breathe", "can't breathe", "cannot breathe",
+    "saans phool", "saans lene mein", "saans lene me", "saans nahi",
+    "سانس پھول", "سانس لینے میں", "سانس نہیں",
+)
+_RF_CARDIAC_COMPANION = _RF_BREATHING_COMPANION + (
+    "sweating", "sweaty", "paseena", "پسینہ", "left arm", "pain in my arm",
+    "baazu mein dard", "bazu mein dard", "بازو میں درد", "jaw", "jabray",
+    "faint", "passed out", "behosh", "بے ہوش",
+)
+_RF_SWELLING = (
+    "throat swelling", "throat is swelling", "swollen throat", "tongue swelling",
+    "tongue is swelling", "lips swelling", "lips are swelling", "face swelling",
+    "gala sooj", "zaban sooj", "honth sooj", "chehra sooj",
+    "گلا سوج", "زبان سوج", "ہونٹ سوج", "چہرہ سوج",
+)
+
+# (category, strong single phrases that fire on their own)
+_RF_SINGLE: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("cardiac", (
+        "having a heart attack", "heart attack ho", "cardiac arrest",
+        "dil ka daura pad", "dil ka daura par", "dil ka dora pad",
+        "دل کا دورہ پڑ", "دل کا دورہ پڑا",
+    )),
+    ("breathing", (
+        "can't breathe", "cannot breathe", "cant breathe", "unable to breathe",
+        "not breathing", "stopped breathing", "struggling to breathe", "gasping for",
+        "saans nahi aa rahi", "saans nahi aa raha", "saans nahi aa rhi",
+        "saans nahi le pa", "saans ruk", "saans band ho",
+        "سانس نہیں آ رہی", "سانس نہیں آرہی", "سانس رک", "سانس بند ہو",
+        "lips turning blue", "lips are blue", "honth neele", "ہونٹ نیلے",
+        "choking", "gala ghut",
+    )),
+    ("stroke", (
+        "face drooping", "face is drooping", "face has dropped", "slurred speech",
+        "speech is slurred", "can't move one side", "cannot move one side",
+        "weakness on one side", "one side of my body", "one side of his body",
+        "one side of her body", "having a stroke",
+        "chehra terha", "chehra tedha", "munh terha", "munh tedha",
+        "zaban larkhara", "zuban larkhara", "aik taraf kamzori", "ek taraf kamzori",
+        "falij ho gaya", "falij ho gayi", "falij ka hamla", "lakwa ho gaya",
+        "lakwa ho gayi", "stroke ho raha", "stroke ho gaya",
+        "منہ ٹیڑھا", "چہرہ ٹیڑھا", "زبان لڑکھڑا", "ایک طرف کمزوری",
+        "فالج ہو گیا", "فالج ہوگیا", "فالج کا حملہ", "لقوہ ہو گیا",
+    )),
+    ("unconscious", (
+        "unconscious", "unresponsive", "not waking up", "won't wake up",
+        "wont wake up", "not responding to", "behosh hai", "behosh ho gaya",
+        "behosh ho gayi", "behosh ho gye", "hosh mein nahi", "hosh me nahi",
+        "بے ہوش ہے", "بے ہوش ہو گیا", "بے ہوش ہو گئی", "بےہوش", "ہوش میں نہیں",
+    )),
+    ("seizure", (
+        "seizure", "having a fit", "convulsion", "convulsing",
+        "jhatke lag", "jhatkay lag", "jhatke aa", "mirgi ka daura",
+        "daura pad raha", "daura par raha", "جھٹکے لگ", "جھٹکے آ", "مرگی کا دورہ",
+    )),
+    ("bleeding", (
+        "bleeding heavily", "heavy bleeding", "bleeding won't stop",
+        "bleeding wont stop", "won't stop bleeding", "wont stop bleeding",
+        "can't stop the bleeding", "bleeding a lot", "vomiting blood",
+        "throwing up blood", "blood in vomit",
+        "khoon nahi ruk", "khoon band nahi", "bohat khoon beh", "bahut khoon beh",
+        "khoon ki ulti", "khoon ki ultee",
+        "خون نہیں رک", "خون بند نہیں", "بہت خون بہہ", "خون کی الٹی",
+    )),
+    ("anaphylaxis", (
+        "anaphylaxis", "anaphylactic", "throat is closing", "throat closing",
+        "gala band ho raha", "gala band ho rha", "گلا بند ہو",
+    )),
+    ("poisoning", (
+        "swallowed poison", "drank poison", "ate poison", "took poison",
+        "swallowed bleach", "drank bleach", "drank kerosene", "drank pesticide",
+        "swallowed pesticide", "zehar kha", "zehar pi", "zeher kha", "zeher pi",
+        "zehr kha", "zehr pi", "keera maar dawa", "keeray maar", "keere maar",
+        "زہر کھا", "زہر پی", "کیڑے مار",
+    )),
+    ("snakebite", (
+        "snake bite", "snakebite", "bitten by a snake", "snake bit",
+        "saanp ne kaat", "sanp ne kaat", "saanp ne das", "sanp ne das",
+        "سانپ نے کاٹ", "سانپ نے ڈس",
+    )),
+)
+
+_RF_FILLER = r"(?:(?:any|a|an|have|having|had|got|feel|feeling|experience|experiencing|my|the|is|was|felt)\s+){0,2}"
+_RF_NEG_BEFORE = re.compile(
+    r"\b(?:no|not|never|without|denies|deny|don't|dont|didn't|didnt|do not|did not|isn't|isnt|no longer|history of)\s+"
+    + _RF_FILLER + r"$"
+)
+_RF_NEG_AFTER = re.compile(
+    r"^\s*(?:(?:to|tu|bilkul|koi|بالکل|تو)\s+)?(?:nahi|nahin|nhi|نہیں)"
+    r"\s*(?:hai|he|ha|hy|tha|thi|thay|ho|hua|hui|ہے|تھا|تھی|ہوا|ہوئی|[.,!?۔،]|$)"
+)
+
+_RF_FIRST_AID: dict[str, tuple[str, str, str]] = {
+    # category: (label, English first aid, Urdu first aid)
+    "cardiac": (
+        "Possible heart emergency",
+        "Stop all activity and sit down. Do not drive yourself.",
+        "ہر کام فوراً روک دیں اور بیٹھ جائیں۔ خود گاڑی نہ چلائیں۔",
+    ),
+    "breathing": (
+        "Severe breathing difficulty",
+        "Sit upright and loosen tight clothing. If the lips turn blue or the person stops responding, tell 1122 at once.",
+        "سیدھے ہو کر بیٹھیں اور تنگ کپڑے ڈھیلے کر دیں۔ اگر ہونٹ نیلے ہوں یا مریض جواب نہ دے تو فوراً 1122 کو بتائیں۔",
+    ),
+    "stroke": (
+        "Possible stroke",
+        "Note the exact time the symptoms started — doctors need it to choose treatment. Do not give food, drink or medicine.",
+        "علامات شروع ہونے کا صحیح وقت نوٹ کریں — ڈاکٹروں کو علاج کے لیے یہ وقت چاہیے۔ کھانا، پانی یا دوا نہ دیں۔",
+    ),
+    "unconscious": (
+        "Unconscious or unresponsive",
+        "If they are breathing, turn them gently onto their side. Give nothing by mouth and stay with them until help arrives.",
+        "اگر سانس چل رہی ہو تو آہستہ سے کروٹ پر لٹا دیں۔ منہ سے کچھ نہ دیں اور مدد پہنچنے تک ساتھ رہیں۔",
+    ),
+    "seizure": (
+        "Seizure",
+        "Move hard or sharp objects away and protect the head. Do not hold them down or put anything in their mouth. When the jerking stops, turn them onto their side.",
+        "سخت یا نوکیلی چیزیں دور کر دیں اور سر کو بچائیں۔ زبردستی نہ پکڑیں اور منہ میں کچھ نہ ڈالیں۔ جھٹکے رکنے پر کروٹ پر لٹا دیں۔",
+    ),
+    "bleeding": (
+        "Severe bleeding",
+        "If blood is coming from a wound, press firmly on it with a clean cloth and keep pressing. If they are vomiting blood, keep them on their side and give nothing by mouth.",
+        "اگر خون زخم سے بہہ رہا ہو تو صاف کپڑے سے زور سے دبائیں اور دباتے رہیں۔ اگر خون کی الٹی ہو رہی ہو تو کروٹ پر رکھیں اور منہ سے کچھ نہ دیں۔",
+    ),
+    "anaphylaxis": (
+        "Possible severe allergic reaction",
+        "If they have an adrenaline auto-injector, use it now. Keep them sitting up if breathing is hard.",
+        "اگر ایڈرینالین انجیکٹر موجود ہو تو ابھی استعمال کریں۔ سانس میں دشواری ہو تو بٹھا کر رکھیں۔",
+    ),
+    "poisoning": (
+        "Possible poisoning",
+        "Do not make them vomit. Keep the bottle or packet to show the doctors.",
+        "الٹی کروانے کی کوشش نہ کریں۔ زہر کی بوتل یا پیکٹ ساتھ رکھیں تاکہ ڈاکٹروں کو دکھا سکیں۔",
+    ),
+    "snakebite": (
+        "Snakebite",
+        "Keep the person still and the bitten limb below heart level. Do not cut, suck or tightly tie the wound.",
+        "مریض کو ساکن رکھیں اور کاٹا ہوا حصہ دل سے نیچے رکھیں۔ زخم کو نہ کاٹیں، نہ چوسیں اور نہ کس کر باندھیں۔",
+    ),
+}
+
+
+# Context that turns a match into something routine. "Can't breathe through
+# my nose" / "naak se saans nahi aa rahi" is a blocked nose, not an airway
+# emergency, and it is one of the commonest cold complaints there is.
+_RF_EXCLUDE_NEAR: dict[str, tuple[str, ...]] = {
+    "breathing": ("nose", "nostril", "naak", "nak se", "ناک"),
+}
+
+
+def _rf_present(text: str, phrases: tuple[str, ...], exclude_near: tuple[str, ...] = ()) -> bool:
+    """True if any phrase occurs at least once without a tight negation."""
+    for phrase in phrases:
+        start = 0
+        while True:
+            idx = text.find(phrase, start)
+            if idx == -1:
+                break
+            before = text[max(0, idx - 40):idx]
+            after = text[idx + len(phrase): idx + len(phrase) + 24]
+            near = text[max(0, idx - 25): idx + len(phrase) + 25]
+            excluded = any(word in near for word in exclude_near)
+            if not (excluded or _RF_NEG_BEFORE.search(before) or _RF_NEG_AFTER.search(after)):
+                return True
+            start = idx + 1
+    return False
+
+
+def detect_physical_red_flag(text: str) -> str | None:
+    """Return the red-flag category for this patient text, or None."""
+    t = " ".join(str(text or "").lower().split())
+    if not t:
+        return None
+    for category, phrases in _RF_SINGLE:
+        if _rf_present(t, phrases, _RF_EXCLUDE_NEAR.get(category, ())):
+            return category
+    if _rf_present(t, _RF_CHEST) and _rf_present(t, _RF_CARDIAC_COMPANION):
+        return "cardiac"
+    if _rf_present(t, _RF_SWELLING) and _rf_present(t, _RF_BREATHING_COMPANION):
+        return "anaphylaxis"
+    return None
+
+
+def _physical_emergency_turn(
+    profile: dict[str, Any], session_id: int, turns: list[dict],
+) -> TriageTurn | None:
+    category = detect_physical_red_flag(_user_text(turns))
+    if category is None:
+        return None
+    label, aid_en, aid_ur = _RF_FIRST_AID[category]
+    raw_name = _bounded_text(profile.get("display_name") or "", 80)
+    has_real_name = bool(raw_name) and raw_name != "آپ"
+    urdu_prefix = f"{raw_name}، " if has_real_name else ""
+    en_prefix = f"{raw_name}, " if has_real_name else ""
+    first_user = next((str(t.get("text") or "") for t in turns if t.get("role") == "user"), "")
+    escalation = ["Any worsening while waiting for help — call 1122 again and say it is worse"]
+    return TriageTurn(
+        type="result", session_id=session_id, patient_name=raw_name or "آپ",
+        encounter_title=label,
+        level=TriageLevel.EMERGENCY,
+        advice_urdu=(
+            f"{urdu_prefix}یہ طبی ایمرجنسی ہو سکتی ہے۔ ابھی ریسکیو 1122 کو کال کریں یا فوراً قریبی "
+            f"ایمرجنسی جائیں — بہتر ہونے کا انتظار نہ کریں۔ {aid_ur}"
+        ),
+        advice_english=(
+            f"{en_prefix}This may be a medical emergency. Call Rescue 1122 now or go to the nearest "
+            f"emergency department — do not wait to see if it improves. {aid_en}"
+        ),
+        reason_english=f"Deterministic red-flag protocol: {label.lower()}.",
+        suggestions_urdu=[
+            "ابھی ریسکیو 1122 کو کال کریں۔",
+            aid_ur,
+            "مریض کو اکیلا نہ چھوڑیں۔",
+        ],
+        suggestions_english=[
+            "Call Rescue 1122 now.",
+            aid_en,
+            "Do not leave the person alone.",
+        ],
+        doctor_handoff_english=(
+            f"Deterministic red-flag protocol activated: {label}. Presenting words: "
+            f"\"{_bounded_text(first_user, 200)}\". Immediate in-person assessment required."
+        ),
+        red_flags_present=[label],
+        escalation_signs=escalation,
+        medication_options=[],
+        medication_plan=MedicationPlan(
+            status="EMERGENCY_NO_MEDICATION",
+            basis_english="Medication is not proposed for an emergency.",
+            medication_steps=[],
+            non_drug_steps_english=["Call Rescue 1122", aid_en],
+            non_drug_steps_urdu=["ریسکیو 1122 کو کال کریں", aid_ur],
+            monitoring_and_escalation=escalation,
+            follow_up="Emergency department now.",
+            disclaimer="Nabz cannot assess an emergency remotely. Get in-person help now.",
+        ),
+        analysis=TriageAnalysis(
+            still_checking_urdu="فوری طبی مدد",
+            still_checking_english="Immediate medical help",
+            confidence=1.0, questions_asked=_count_questions(turns),
+        ),
+        response_source="safety_protocol", mock=False,
+    )
+
+
 def _attach_facility_intent(turn: TriageTurn) -> TriageTurn:
     if turn.type == "result" and turn.level and not turn.facility_intent:
         turn.facility_intent = _FACILITY_INTENT_BY_LEVEL.get(turn.level, "optional")
@@ -1618,6 +1905,8 @@ def next_turn(
 ) -> TriageTurn:
     """Use the injected model double in tests; otherwise always use live AI."""
     safety_turn = _mental_health_turn(profile, session_id, turns)
+    if safety_turn is None:
+        safety_turn = _physical_emergency_turn(profile, session_id, turns)
     if safety_turn is not None:
         turn = safety_turn
     elif _turn_provider_override is not None:

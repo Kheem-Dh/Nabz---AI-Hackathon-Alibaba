@@ -7,6 +7,8 @@ absent so CI never depends on network / credentials.
 """
 from __future__ import annotations
 
+import pytest
+
 
 # --- Right-arm skin transcript is the winning-plan headline case -----------
 
@@ -453,3 +455,39 @@ def test_injected_test_model_is_explicitly_labelled(client, auth):
     ).json()
     assert resp["mock"] is True
     assert resp["response_source"] == "test_model"
+
+
+def _answer_safety_question(answer: str):
+    """Distress opens the deterministic plan/means question; return the turn
+    the gate produces for the patient's answer to it."""
+    from triage import _mental_health_turn
+
+    profile = {"display_name": "Test"}
+    turns = [{"role": "user", "text": "مجھے بہت گھبراہٹ ہو رہی ہے"}]
+    question = _mental_health_turn(profile, 1, turns)
+    assert question is not None and question.type == "question"
+    turns += [
+        {"role": "assistant", "text": question.question_english,
+         "question_goal": question.question_goal},
+        {"role": "user", "text": answer},
+    ]
+    return _mental_health_turn(profile, 1, turns)
+
+
+@pytest.mark.parametrize("answer", [
+    "I am not sure", "پتہ نہیں", "haan", "maybe",
+    # Roman-Urdu "I don't know" — these contain "nahi", which is also on the
+    # denial list, and were once misread as "No, I am safe".
+    "nahi pata", "pata nahi", "maloom nahi", "I don't know",
+])
+def test_uncertain_safety_answer_escalates(answer):
+    turn = _answer_safety_question(answer)
+    assert turn.level.value == "EMERGENCY"
+    assert not turn.medication_options
+
+
+@pytest.mark.parametrize("answer", ["No, I am safe right now", "نہیں، ابھی محفوظ ہوں", "nahi"])
+def test_clear_denial_gets_support_not_emergency(answer):
+    turn = _answer_safety_question(answer)
+    assert turn.level.value != "EMERGENCY"
+    assert "0311-7786264" in (turn.advice_english or "")
