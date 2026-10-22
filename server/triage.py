@@ -18,6 +18,7 @@ import logging
 import os
 import re
 import secrets
+import unicodedata
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -405,6 +406,11 @@ Clinical synthesis:
   things". Hedging goes into `possible_causes`, not the impression line.
 - If any emergency red flag is present, return EMERGENCY immediately with no
   medication candidates and direct the patient to emergency services.
+- Any expression of suicidal intent, self-harm, wanting to die, or a request
+  for a method, means or dose to die — in Urdu script, Roman Urdu, Hindi
+  (Devanagari) or English, however indirect or paraphrased — is an emergency
+  red flag: return EMERGENCY, list it in `red_flags_present`, and never
+  describe any method, means or dose.
 - When uncertain between urgency levels, choose the safer higher level.
 - Return at most three useful possible causes. For each, use only qualitative
   likelihood (MORE_LIKELY, POSSIBLE, or LESS_LIKELY), explain in simple Urdu
@@ -1390,6 +1396,36 @@ _FACILITY_INTENT_BY_LEVEL = {
 # Bare-substring patterns — every entry here triggers EMERGENCY immediately.
 # "want to die" is NOT included here because "I don't want to die" contains it;
 # instead it is caught by _NEGATION_AWARE_IMMEDIATE_PATTERNS below.
+# ---- Text normalisation for the deterministic safety gates ------------------
+# Patients reach these gates by typing, by phone voice-typing and by our own
+# speech-to-text, and the same spoken Urdu can arrive in Urdu script, Roman
+# Urdu or Hindi (Devanagari) script — Android voice typing set to Hindi writes
+# spoken Urdu in Devanagari. Before any pattern is matched, both the text and
+# the patterns are folded to one canonical form:
+#   - Unicode NFC, lower case, whitespace collapsed
+#   - Arabic-script diacritics, tatweel and zero-width joiners removed
+#   - Arabic-keyboard letters folded to their Urdu forms (ي→ی, ك→ک, ه→ہ)
+#   - Devanagari nukta removed (ख़→ख, ज़→ज) and chandrabindu folded (हूँ→हूं)
+# A gap in this table was a silent miss: "मुझे खुदकुशी करनी है" and
+# "میں مرنا چاہتا ہوں" both used to reach the model as a routine interview.
+_SAFETY_STRIP = re.compile("[\u064B-\u065F\u0670\u0640\u200B-\u200F\u093C]")
+_SAFETY_FOLD = str.maketrans({
+    "\u064A": "\u06CC", "\u0649": "\u06CC", "\u0643": "\u06A9",
+    "\u0647": "\u06C1", "\u06C0": "\u06C1", "\u0629": "\u06C1",
+    "\u0901": "\u0902", "\u2019": "'", "\u2018": "'",
+})
+
+
+def _safety_normalize(text: str) -> str:
+    t = unicodedata.normalize("NFC", str(text or "")).lower()
+    # NFC re-composes some nukta letters (U+0958–U+095F are composition
+    # exclusions, so they stay decomposed) — strip after normalising.
+    t = unicodedata.normalize("NFD", t)
+    t = _SAFETY_STRIP.sub("", t)
+    t = unicodedata.normalize("NFC", t).translate(_SAFETY_FOLD)
+    return " ".join(t.split())
+
+
 _IMMEDIATE_MENTAL_HEALTH_PATTERNS = (
     "suicid", "kill myself", "end my life", "hurt myself", "self harm",
     "self-harm", "overdose", "خودکشی", "خود کو مار",
@@ -1403,6 +1439,25 @@ _IMMEDIATE_MENTAL_HEALTH_PATTERNS = (
     "taking my own life", "taking my life",
     "jeena nahi", "jina nahi", "zindagi khatam", "khud ko khatam",
     "tang aa gaya hun zindagi se", "tang aa gayi hun zindagi se",
+    # Roman-Urdu spellings of khudkushi that voice-typing and people produce.
+    "khud kushi", "khudkhushi", "khud khushi", "khudkashi", "khud kashi",
+    "khudkushee", "khudkushy", "apni jaan le", "apni jan le",
+    # Urdu script: spaced compound, ending a life, not wanting to live.
+    "خود کشی", "اپنی جان لے", "خود کو ختم", "زندگی ختم کر", "جینا نہیں",
+    # Hindi / Devanagari script (spoken Urdu, voice-typed in Hindi).
+    "आत्महत्या", "खुदकुशी", "खुद कुशी", "खुदखुशी", "खुदकशी", "अपनी जान ले",
+    "जान दे दूं", "जान दे दूंगा", "जान दे दूंगी", "खुद को मार", "खुद को खत्म",
+    "जिंदगी खत्म कर", "जिन्दगी खत्म कर", "जीना नहीं",
+    # Asking for a METHOD is the highest-risk signal there is.
+    "marne ka tarika", "marne ka tareeka", "marne ka tareeqa", "marne ka tariqa",
+    "marne ke tarike", "marne ka tariqah", "kaise marun", "kaise maroon",
+    "kaise mar jaun", "kaise mar jaon", "kaise mar sakta", "kaise mar sakti",
+    "مرنے کا طریقہ", "مرنے کے طریقے", "کیسے مروں", "کیسے مر جاؤں",
+    "मरने का तरीका", "मरने के तरीके", "कैसे मरूं", "कैसे मरुं", "कैसे मर जाऊं",
+    "best way to die", "easiest way to die", "painless way to die",
+    "quickest way to die", "best way to end it", "easiest way to end it",
+    "painless way to end", "how to end my life", "how do i kill myself",
+    "how can i kill myself", "how to kill myself", "lethal dose",
 )
 
 # Patterns that need negation-awareness before triggering EMERGENCY.
@@ -1418,6 +1473,16 @@ _NEGATION_AWARE_IMMEDIATE_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
     # that precedes it. Reviewed and approved by the team, 22 Oct 2026.
     ("marna chahta", ("nahi", "nahin", "mat", "نہیں", "not", "don't", "dont")),
     ("marna chahti", ("nahi", "nahin", "mat", "نہیں", "not", "don't", "dont")),
+    # The same intent in other forms and scripts. Roman "marna" is also used
+    # for maarna (to hit), so "usay marna hai" can over-escalate — on a
+    # self-harm gate that is the safe direction to be wrong in.
+    ("marna hai", _NEG := ("nahi", "nahin", "nhi", "mat", "not", "don't", "dont", "never",
+                           "نہیں", "مت", "नहीं", "मत")),
+    ("mar jana chahta", _NEG), ("mar jana chahti", _NEG), ("mar jana hai", _NEG),
+    ("مرنا چاہتا", _NEG), ("مرنا چاہتی", _NEG), ("مرنا ہے", _NEG),
+    ("مر جانا چاہتا", _NEG), ("مر جانا چاہتی", _NEG), ("مر جانا ہے", _NEG), ("مرنا چاہوں", _NEG),
+    ("मरना चाहता", _NEG), ("मरना चाहती", _NEG), ("मरना है", _NEG),
+    ("मर जाना चाहता", _NEG), ("मर जाना चाहती", _NEG), ("मर जाना है", _NEG),
 )
 
 _MENTAL_DISTRESS_PATTERNS = (
@@ -1432,6 +1497,8 @@ _MENTAL_DISTRESS_PATTERNS = (
     "wish i were dead", "life is not worth", "zindagi se tang",
     "zindagi bekar", "zindagi nahi chahiye", "mujhe jeena nahi",
     "jina nahi chahta", "jina nahi chahti",
+    "زندگی سے تنگ", "बहुत परेशान", "निराश", "घबराहट", "डिप्रेशन", "जिंदगी से तंग",
+    "how many sleeping pills", "how many pills",
 )
 _AFFIRMATIVE_SAFETY_ANSWERS = (
     "yes", "ہاں", "haan", "han", "plan", "means", "weapon", "pills",
@@ -1442,15 +1509,26 @@ _AFFIRMATIVE_SAFETY_ANSWERS = (
     # English escalated. Uncertainty about a plan or means is not a denial.
     "pata nahi", "nahi pata", "pata nahin", "nahin pata",
     "maloom nahi", "nahi maloom", "malum nahi", "don't know", "dont know",
+    "हां", "पता नहीं", "मालूम नहीं", "शायद",
 )
-_NEGATIVE_SAFETY_ANSWERS = ("no", "نہیں", "nahi", "nahin", "safe", "محفوظ")
+_NEGATIVE_SAFETY_ANSWERS = ("no", "نہیں", "nahi", "nahin", "safe", "محفوظ", "नहीं", "सुरक्षित")
+
+# Patterns are written in natural spelling; fold them exactly like the text.
+_IMMEDIATE_MENTAL_HEALTH_PATTERNS = tuple(_safety_normalize(p) for p in _IMMEDIATE_MENTAL_HEALTH_PATTERNS)
+_NEGATION_AWARE_IMMEDIATE_PATTERNS = tuple(
+    (_safety_normalize(p), tuple(_safety_normalize(n) for n in negs))
+    for p, negs in _NEGATION_AWARE_IMMEDIATE_PATTERNS
+)
+_MENTAL_DISTRESS_PATTERNS = tuple(_safety_normalize(p) for p in _MENTAL_DISTRESS_PATTERNS)
+_AFFIRMATIVE_SAFETY_ANSWERS = tuple(_safety_normalize(p) for p in _AFFIRMATIVE_SAFETY_ANSWERS)
+_NEGATIVE_SAFETY_ANSWERS = tuple(_safety_normalize(p) for p in _NEGATIVE_SAFETY_ANSWERS)
 
 
 def _user_text(turns: list[dict]) -> str:
-    return " ".join(
-        str(turn.get("text") or "").lower()
+    return _safety_normalize(" ".join(
+        str(turn.get("text") or "")
         for turn in turns if turn.get("role") == "user"
-    )
+    ))
 
 
 def _mental_health_result(
@@ -1554,6 +1632,25 @@ def _negation_aware_immediate(transcript: str) -> bool:
     match so "I don't want to die" is correctly skipped while "I want to die"
     triggers.
     """
+    return _scan_death_wish(transcript)[0]
+
+
+def _negation_present(window: str, negations: tuple[str, ...]) -> bool:
+    """Whole-word match for Latin-script negations. Substring matching found
+    "not" inside "cannot"/"nothing" and "mat" inside "matlab", so "I cannot
+    go on, I want to die" was read as negated and missed."""
+    for neg in negations:
+        if neg.isascii():
+            if re.search(r"(?<![a-z'])" + re.escape(neg) + r"(?![a-z'])", window):
+                return True
+        elif neg in window:
+            return True
+    return False
+
+
+def _scan_death_wish(transcript: str) -> tuple[bool, bool]:
+    """(unnegated wish to die found, negated mention found)."""
+    negated = False
     for pattern, negations in _NEGATION_AWARE_IMMEDIATE_PATTERNS:
         start = 0
         while True:
@@ -1561,10 +1658,11 @@ def _negation_aware_immediate(transcript: str) -> bool:
             if idx == -1:
                 break
             window = transcript[max(0, idx - 35):idx]
-            if not any(neg in window for neg in negations):
-                return True
+            if not _negation_present(window, negations):
+                return True, negated
+            negated = True
             start = idx + 1
-    return False
+    return False, negated
 
 
 def _mental_health_turn(
@@ -1575,7 +1673,11 @@ def _mental_health_turn(
         return _mental_health_result(profile, session_id, turns, immediate=True)
     if _negation_aware_immediate(transcript):
         return _mental_health_result(profile, session_id, turns, immediate=True)
-    distress = any(pattern in transcript for pattern in _MENTAL_DISTRESS_PATTERNS)
+    # "I don't want to die, please help me" is not an emergency, but it is not
+    # a fever either: it opens the safety question rather than a routine
+    # interview.
+    distress = (any(pattern in transcript for pattern in _MENTAL_DISTRESS_PATTERNS)
+                or _scan_death_wish(transcript)[1])
     safety_question_asked = any(
         turn.get("question_goal") == "mental_health_immediate_safety"
         for turn in turns if turn.get("role") == "assistant"
@@ -1645,17 +1747,20 @@ _RF_CHEST = (
     "seene mein dard", "seene me dard", "sene mein dard", "sene me dard",
     "seenay mein dard", "chhati mein dard", "chhati me dard", "seene par dabao",
     "سینے میں درد", "سینے میں شدید درد", "سینے پر دباؤ", "چھاتی میں درد",
+    "सीने में दर्द", "सीने में तेज दर्द", "छाती में दर्द", "सीने पर दबाव",
 )
 _RF_BREATHING_COMPANION = (
     "short of breath", "shortness of breath", "breathless", "difficulty breathing",
     "trouble breathing", "hard to breathe", "can't breathe", "cannot breathe",
     "saans phool", "saans lene mein", "saans lene me", "saans nahi",
     "سانس پھول", "سانس لینے میں", "سانس نہیں",
+    "सांस फूल", "सांस लेने में", "सांस नहीं",
 )
 _RF_CARDIAC_COMPANION = _RF_BREATHING_COMPANION + (
     "sweating", "sweaty", "paseena", "پسینہ", "left arm", "pain in my arm",
     "baazu mein dard", "bazu mein dard", "بازو میں درد", "jaw", "jabray",
     "faint", "passed out", "behosh", "بے ہوش",
+    "पसीना", "बाजू में दर्द", "बेहोश",
 )
 _RF_SWELLING = (
     "throat swelling", "throat is swelling", "swollen throat", "tongue swelling",
@@ -1669,7 +1774,7 @@ _RF_SINGLE: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("cardiac", (
         "having a heart attack", "heart attack ho", "cardiac arrest",
         "dil ka daura pad", "dil ka daura par", "dil ka dora pad",
-        "دل کا دورہ پڑ", "دل کا دورہ پڑا",
+        "دل کا دورہ پڑ", "دل کا دورہ پڑا", "दिल का दौरा पड",
     )),
     ("breathing", (
         "can't breathe", "cannot breathe", "cant breathe", "unable to breathe",
@@ -1679,6 +1784,7 @@ _RF_SINGLE: tuple[tuple[str, tuple[str, ...]], ...] = (
         "سانس نہیں آ رہی", "سانس نہیں آرہی", "سانس رک", "سانس بند ہو",
         "lips turning blue", "lips are blue", "honth neele", "ہونٹ نیلے",
         "choking", "gala ghut",
+        "सांस नहीं आ रही", "सांस नहीं आरही", "सांस रुक", "सांस बंद हो", "होंठ नीले", "गला घुट",
     )),
     ("stroke", (
         "face drooping", "face is drooping", "face has dropped", "slurred speech",
@@ -1691,17 +1797,21 @@ _RF_SINGLE: tuple[tuple[str, tuple[str, ...]], ...] = (
         "lakwa ho gayi", "stroke ho raha", "stroke ho gaya",
         "منہ ٹیڑھا", "چہرہ ٹیڑھا", "زبان لڑکھڑا", "ایک طرف کمزوری",
         "فالج ہو گیا", "فالج ہوگیا", "فالج کا حملہ", "لقوہ ہو گیا",
+        "चेहरा टेढा", "मुंह टेढा", "जुबान लडखडा", "एक तरफ कमजोरी", "लकवा हो गया",
+        "फालिज हो गया", "फालिज का हमला",
     )),
     ("unconscious", (
         "unconscious", "unresponsive", "not waking up", "won't wake up",
         "wont wake up", "not responding to", "behosh hai", "behosh ho gaya",
         "behosh ho gayi", "behosh ho gye", "hosh mein nahi", "hosh me nahi",
         "بے ہوش ہے", "بے ہوش ہو گیا", "بے ہوش ہو گئی", "بےہوش", "ہوش میں نہیں",
+        "बेहोश है", "बेहोश हो गया", "बेहोश हो गई", "होश में नहीं",
     )),
     ("seizure", (
         "seizure", "having a fit", "convulsion", "convulsing",
         "jhatke lag", "jhatkay lag", "jhatke aa", "mirgi ka daura",
         "daura pad raha", "daura par raha", "جھٹکے لگ", "جھٹکے آ", "مرگی کا دورہ",
+        "झटके लग", "झटके आ", "मिर्गी का दौरा",
     )),
     ("bleeding", (
         "bleeding heavily", "heavy bleeding", "bleeding won't stop",
@@ -1711,22 +1821,23 @@ _RF_SINGLE: tuple[tuple[str, tuple[str, ...]], ...] = (
         "khoon nahi ruk", "khoon band nahi", "bohat khoon beh", "bahut khoon beh",
         "khoon ki ulti", "khoon ki ultee",
         "خون نہیں رک", "خون بند نہیں", "بہت خون بہہ", "خون کی الٹی",
+        "खून नहीं रुक", "खून बंद नहीं", "बहुत खून बह", "खून की उल्टी",
     )),
     ("anaphylaxis", (
         "anaphylaxis", "anaphylactic", "throat is closing", "throat closing",
-        "gala band ho raha", "gala band ho rha", "گلا بند ہو",
+        "gala band ho raha", "gala band ho rha", "گلا بند ہو", "गला बंद हो",
     )),
     ("poisoning", (
         "swallowed poison", "drank poison", "ate poison", "took poison",
         "swallowed bleach", "drank bleach", "drank kerosene", "drank pesticide",
         "swallowed pesticide", "zehar kha", "zehar pi", "zeher kha", "zeher pi",
         "zehr kha", "zehr pi", "keera maar dawa", "keeray maar", "keere maar",
-        "زہر کھا", "زہر پی", "کیڑے مار",
+        "زہر کھا", "زہر پی", "کیڑے مار", "जहर खा", "जहर पी", "कीडे मार",
     )),
     ("snakebite", (
         "snake bite", "snakebite", "bitten by a snake", "snake bit",
         "saanp ne kaat", "sanp ne kaat", "saanp ne das", "sanp ne das",
-        "سانپ نے کاٹ", "سانپ نے ڈس",
+        "سانپ نے کاٹ", "سانپ نے ڈس", "सांप ने काट", "सांप ने डस",
     )),
 )
 
@@ -1736,8 +1847,8 @@ _RF_NEG_BEFORE = re.compile(
     + _RF_FILLER + r"$"
 )
 _RF_NEG_AFTER = re.compile(
-    r"^\s*(?:(?:to|tu|bilkul|koi|بالکل|تو)\s+)?(?:nahi|nahin|nhi|نہیں)"
-    r"\s*(?:hai|he|ha|hy|tha|thi|thay|ho|hua|hui|ہے|تھا|تھی|ہوا|ہوئی|[.,!?۔،]|$)"
+    r"^\s*(?:(?:to|tu|bilkul|koi|بالکل|تو|बिल्कुल|तो)\s+)?(?:nahi|nahin|nhi|نہیں|नहीं)"
+    r"\s*(?:hai|he|ha|hy|tha|thi|thay|ho|hua|hui|ہے|تھا|تھی|ہوا|ہوئی|है|था|थी|हुआ|हुई|[.,!?۔،।]|$)"
 )
 
 _RF_FIRST_AID: dict[str, tuple[str, str, str]] = {
@@ -1794,8 +1905,16 @@ _RF_FIRST_AID: dict[str, tuple[str, str, str]] = {
 # my nose" / "naak se saans nahi aa rahi" is a blocked nose, not an airway
 # emergency, and it is one of the commonest cold complaints there is.
 _RF_EXCLUDE_NEAR: dict[str, tuple[str, ...]] = {
-    "breathing": ("nose", "nostril", "naak", "nak se", "ناک"),
+    "breathing": ("nose", "nostril", "naak", "nak se", "ناک", "नाक"),
 }
+
+
+_RF_CHEST = tuple(_safety_normalize(p) for p in _RF_CHEST)
+_RF_BREATHING_COMPANION = tuple(_safety_normalize(p) for p in _RF_BREATHING_COMPANION)
+_RF_CARDIAC_COMPANION = tuple(_safety_normalize(p) for p in _RF_CARDIAC_COMPANION)
+_RF_SWELLING = tuple(_safety_normalize(p) for p in _RF_SWELLING)
+_RF_SINGLE = tuple((c, tuple(_safety_normalize(p) for p in ps)) for c, ps in _RF_SINGLE)
+_RF_EXCLUDE_NEAR = {c: tuple(_safety_normalize(w) for w in ws) for c, ws in _RF_EXCLUDE_NEAR.items()}
 
 
 def _rf_present(text: str, phrases: tuple[str, ...], exclude_near: tuple[str, ...] = ()) -> bool:
@@ -1818,7 +1937,7 @@ def _rf_present(text: str, phrases: tuple[str, ...], exclude_near: tuple[str, ..
 
 def detect_physical_red_flag(text: str) -> str | None:
     """Return the red-flag category for this patient text, or None."""
-    t = " ".join(str(text or "").lower().split())
+    t = _safety_normalize(text)
     if not t:
         return None
     for category, phrases in _RF_SINGLE:
